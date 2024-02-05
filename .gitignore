@@ -1,0 +1,11 @@
+*.pyc
+*.idea
+*.py[cod]
+__pycache__/
+env/
+.env
+settings.json
+prod.env
+dev.env
+.pylintrc
+.DS_Store
