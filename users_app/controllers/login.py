@@ -5,6 +5,7 @@ from django.utils import timezone
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 from users_app.models import User
+from users_app.serializers import SerGetUserProfile
 from dinify_backend.configs import MESSAGES
 
 
@@ -67,6 +68,6 @@ def login(username: str, password: str) -> dict:
         'data': {
             'token': str(token.access_token),
             'refresh': str(token),
-            'profile': {}
+            'profile': SerGetUserProfile(auth_user).data
         }
     }
