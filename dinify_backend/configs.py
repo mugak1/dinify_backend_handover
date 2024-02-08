@@ -2,13 +2,6 @@
 configurations or definitions of various values on the syste
 """
 
-
-# a dictionary of the various configurations to consider
-class ConfigDictionary(object):
-    def __init__(self, dictionary):
-        self.__dict__ = dictionary
-
-
 # the roles that can be granted on the system
 ROLES = {
     'DINIFY_ADMIN': 'dinify_admin',
@@ -44,4 +37,8 @@ MESSAGES = {
     # password change
     'NO_USER_FOUND': 'No user found.',
     'OK_PASSWORD_CHANGE': 'Password changed successfully.',
+
+    # reset password
+    'NO_PHONE_NUMBER': 'No matching user profile found.',
+    'OK_PASSWORD_RESET': 'Password reset successfully. Please check your SMS or email for the new password',
 }

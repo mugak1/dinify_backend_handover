@@ -3,6 +3,7 @@ from dinify_backend.configs import MESSAGES
 from users_app.controllers.self_register import self_register
 from users_app.controllers.login import login
 from users_app.controllers.change_password import change_password
+from users_app.controllers.reset_password import reset_password
 from users_app.models import User
 
 TEST_PHONE = '1234567890'
@@ -102,7 +103,7 @@ class UsersAppTestFunctions(TestCase):
         test_success()
         test_wrong_password()
         test_no_username()
-    
+
     def test_change_password(self):
         """
         test change_password
@@ -123,3 +124,22 @@ class UsersAppTestFunctions(TestCase):
 
         test_success()
         test_wrong_password()
+
+    def test_reset_password(self):
+        """
+        test reset_password
+        """
+        def test_success():
+            """ when the password reset is successful """
+            response = reset_password(TEST_PHONE)
+            self.assertEqual(response.get('status'), 200)
+            self.assertEqual(response.get('message'), MESSAGES.get('OK_PASSWORD_RESET'))
+
+        def test_no_phone_number():
+            """ when the phone number does not exist """
+            response = reset_password('123456780')
+            self.assertEqual(response.get('status'), 400)
+            self.assertEqual(response.get('message'), MESSAGES.get('NO_PHONE_NUMBER'))
+
+        test_success()
+        test_no_phone_number()
