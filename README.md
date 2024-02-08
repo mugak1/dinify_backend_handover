@@ -1,3 +1,6 @@
+# DINIFY BACKEND
+The backend application for dinify_project.
 
+## Getting started
 
-- `controller_classes`: the location of all classes that control logic processed during endpoint requests.
+## code organisation

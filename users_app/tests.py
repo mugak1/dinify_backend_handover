@@ -1,6 +1,6 @@
 from django.test import TestCase
 from dinify_backend.configs import MESSAGES
-from controller_classes.user_controller import UserController
+from users_app.controllers.self_register import self_register
 
 
 # Create your tests here.
@@ -23,7 +23,7 @@ class UsersAppTestFunctions(TestCase):
 
         def test_success():
             """ when the registration is successful """
-            response = UserController(data).self_register()
+            response = self_register(data)
             self.assertEqual(response.get('status'), 200)
             self.assertEqual(
                 response.get('message'),
@@ -31,7 +31,7 @@ class UsersAppTestFunctions(TestCase):
             )
 
         def test_duplicate_phone_number():
-            response = UserController(data).self_register()
+            response = self_register(data)
             self.assertEqual(response.get('status'), 400)
             self.assertEqual(
                 response.get('message'),
@@ -40,7 +40,7 @@ class UsersAppTestFunctions(TestCase):
 
         def test_duplicate_email():
             data['phone_number'] = '256712345679'
-            response = UserController(data).self_register()
+            response = self_register(data)            
             self.assertEqual(response.get('status'), 400)
             self.assertEqual(
                 response.get('message'),

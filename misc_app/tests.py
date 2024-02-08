@@ -1,6 +1,6 @@
 from django.test import TestCase
 from misc_app.controllers.check_required_information import check_required_information
-from controller_classes.misc_controller import MiscController
+
 
 # Create your tests here.
 class MiscAppTestFunctions(TestCase):
@@ -25,15 +25,11 @@ class MiscAppTestFunctions(TestCase):
         ]
 
         # missing key2
-        provided_information1 = {
-            'key1': 'value1',
-        }
-        result = MiscController(
-            {
-                "required_information": required_information,
-                "provided_information": provided_information1
-            }
-        ).check_required_information()
+        provided_information1 = {'key1': 'value1'}
+        result = check_required_information(
+            required_information,
+            provided_information1
+        )
         self.assertEqual(result['status'], False)
 
         # all requirements met
@@ -41,12 +37,10 @@ class MiscAppTestFunctions(TestCase):
             'key1': 'value1',
             'key2': 'value2'
         }
-        result = MiscController(
-            {
-                "required_information": required_information,
-                "provided_information": provided_information2
-            }
-        ).check_required_information()
+        result = check_required_information(
+            required_information,
+            provided_information2
+        )
         self.assertEqual(result['status'], True)
 
         # key2 is not long enough
@@ -54,10 +48,8 @@ class MiscAppTestFunctions(TestCase):
             'key1': 'value1',
             'key2': 'valu'
         }
-        result = MiscController(
-            {
-                "required_information": required_information,
-                "provided_information": provided_information3
-            }
-        ).check_required_information()
+        result = check_required_information(
+            required_information,
+            provided_information3
+        )
         self.assertEqual(result['status'], False)

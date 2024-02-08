@@ -1,7 +1,7 @@
 """
 create a user on dinify
 """
-from controller_classes.misc_controller import MiscController
+from misc_app.controllers.check_required_information import check_required_information
 from dinify_backend.configs import REQUIRED_INFORMATION, MESSAGES
 from users_app.models import User
 
@@ -12,10 +12,10 @@ def self_register(data: dict) -> dict:
     - `data` is the registration data
     """
     # check if all the required information is present
-    info_check = MiscController({
-        'required_information': REQUIRED_INFORMATION.get('new_user'),
-        'provided_information': data
-    }).check_required_information()
+    info_check = check_required_information(
+        REQUIRED_INFORMATION.get('new_user'),
+        data
+    )
     if not info_check.get('status'):
         return {
             'status': 400,
