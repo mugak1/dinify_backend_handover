@@ -8,7 +8,8 @@ def check_required_information(
     provided_information: dict
 ) -> dict:
     """
-    compare the provided information to the required information
+    - Compare the provided information to the required information
+    - If any key is missing or not meeting the minimum length, return a message
     """
     provided_information = dict(provided_information)
     for attribute in required_information:

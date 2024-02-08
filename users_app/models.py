@@ -4,6 +4,7 @@ the models for the Users app
 import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from dinify_backend.configs import ROLES
 
 
 # Create your models here.
@@ -31,6 +32,8 @@ class User(AbstractUser):
 
     roles = models.JSONField(null=True, blank=True)
     prompt_password_change = models.BooleanField(default=False)
+
+    # track if profile is
 
     class Meta:
         """
