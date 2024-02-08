@@ -33,5 +33,11 @@ MESSAGES = {
     # user registration messages
     'PHONE_NUMBER_EXISTS': 'Sorry, a user with this phone number already exists!',
     'EMAIL_EXISTS': 'Sorry, a user with this email address already exists!',
-    'OK_SELF_REGISTER': 'Your account has been successfully created on Dinify!'
+    'OK_SELF_REGISTER': 'Your account has been successfully created on Dinify!',
+
+    # user login
+    'NO_USERNAME': 'No matching phone number or email.',
+    'WRONG_PASSWORD': 'The password is incorrect.',
+    'ACCOUNT_NOT_ACTIVE': 'Your account is not active.',
+    'OK_LOGIN': 'Login successful.',
 }
