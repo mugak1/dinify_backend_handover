@@ -50,7 +50,8 @@ INSTALLED_APPS = [
 
     # the project applications
     'users_app',
-    'misc_app'
+    'misc_app',
+    'restaurant_app'
 ]
 
 MIDDLEWARE = [
