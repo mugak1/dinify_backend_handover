@@ -5,6 +5,7 @@ configurations or definitions of various values on the syste
 # the roles that can be granted on the system
 ROLES = {
     'DINIFY_ADMIN': 'dinify_admin',
+    'RESTAURANT_OWNER': 'restaurant_owner',
     'RESTAURANT_MANAGER': 'restaurant_manager',
     'RESTAURANT_STAFF': 'restaurant_staff',
     'DINER': 'diner'
@@ -18,6 +19,10 @@ REQUIRED_INFORMATION = {
         {'key': 'phone_number', 'label': 'Phone Number', 'type': 'char', 'min_length': 5},
         {'key': 'password', 'label': 'Password', 'type': 'char', 'min_length': 4},
         {'key': 'country', 'label': 'Country', 'type': 'char', 'min_length': 2},
+    ],
+    'restaurant_registration': [
+        {'key': 'name', 'label': 'name', 'type': 'char', 'min_length': 5},
+        {'key': 'location', 'label': 'location', 'type': 'char', 'min_length': 5},
     ]
 }
 
@@ -41,4 +46,8 @@ MESSAGES = {
     # reset password
     'NO_PHONE_NUMBER': 'No matching user profile found.',
     'OK_PASSWORD_RESET': 'Password reset successfully. Please check your SMS or email for the new password',
+
+    # create restaurant
+    'DUPLICATE_RESTAURANT_NAME': 'You already have a restaurant with this name',
+    'OK_CREATE_RESTAURANT': 'The restaurant has been created succesfully.'
 }
