@@ -22,6 +22,7 @@ class Restaurant(BaseModel):
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
     logo = models.ImageField(null=True, blank=True)
     cover_photo = models.ImageField(null=True, blank=True)
+    status = models.CharField(max_length=255, default='pending')
 
     # dynamic configurations
     # if the orders should be prepaid before submission
@@ -64,3 +65,4 @@ class RestaurantEmployee(BaseModel):
         """
         db_table = 'restaurant_employees'
         ordering = ['restaurant', 'user__first_name']
+        unique_together = ['user', 'restaurant']
