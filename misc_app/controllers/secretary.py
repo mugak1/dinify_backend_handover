@@ -2,10 +2,10 @@
 implementation for crud functions to the database
 """
 from django.db import transaction
-from django.utils import timezone
 from dataclasses import dataclass
 from dinify_backend.configs import IGNORE_LOG_FIELDS, STRINGIFY_LOG_FIELDS
 from misc_app.controllers.check_required_information import check_required_information
+from misc_app.controllers.paginator import DinifyPaginator
 
 
 @dataclass
@@ -35,7 +35,7 @@ class Secretary:
                 submitted_data[key] = str(submitted_data[key])
             except KeyError:
                 pass
-        
+
         return submitted_data
 
     def create(self):
@@ -54,7 +54,7 @@ class Secretary:
         with transaction.atomic():
             # check if the required information is present
             info_check = check_required_information(
-                self.args['required_info'],
+                self.args['required_information'],
                 self.args['data']
             )
             if not info_check['status']:
@@ -98,3 +98,48 @@ class Secretary:
                     'status': 400,
                     'message': error_message
                 }
+
+    def read_records(self):
+        """
+        reads records from the database
+        """
+        records = self.args.get('serializer').Meta.model.objects.filter(
+            **self.args.get('filter')
+        )
+
+        if not self.args.get('paginate'):
+            return {
+                'status': 200,
+                'message': self.args.get('success_message'),
+                'data': {
+                    'records': self.args.get('serializer')(
+                        records,
+                        many=True
+                    ).data,
+                    'pagination': {
+                        'paginated': False,
+                        'total_records': len(records),
+                    }
+                }
+            }
+
+        # paginate the records
+        pagination_response = DinifyPaginator({
+            'request': self.args.get('request'),
+            'records': records
+        }).paginate()
+
+        serialized_records = self.args.get('serializer')(
+            pagination_response.get('records'),
+            many=True
+        ).data
+
+        # return response
+        return {
+            'status': 200,
+            'message': self.args.get('success_message'),
+            'data': {
+                'records': serialized_records,
+                'pagination': pagination_response.get('pagination')
+            }
+        }
