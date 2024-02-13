@@ -13,18 +13,24 @@ ROLES = {
 
 REQUIRED_INFORMATION = {
     'new_user': [
-        {'key': 'first_name', 'label': 'First Name', 'type': 'char', 'min_length': 2},
-        {'key': 'last_name', 'label': 'Last Name', 'type': 'char', 'min_length': 2},
-        {'key': 'email', 'label': 'Email', 'type': 'char', 'min_length': 5},
-        {'key': 'phone_number', 'label': 'Phone Number', 'type': 'char', 'min_length': 5},
-        {'key': 'password', 'label': 'Password', 'type': 'char', 'min_length': 4},
-        {'key': 'country', 'label': 'Country', 'type': 'char', 'min_length': 2},
+        {'key': 'first_name', 'label': 'First Name', 'type': 'char', 'min_length': 2, 'text_presentation': str.title},
+        {'key': 'last_name', 'label': 'Last Name', 'type': 'char', 'min_length': 2, 'text_presentation': str.title},
+        {'key': 'email', 'label': 'Email', 'type': 'char', 'min_length': 5, 'text_presentation': str.lower},
+        {'key': 'phone_number', 'label': 'Phone Number', 'type': 'char', 'min_length': 5, 'text_presentation': None},
+        {'key': 'password', 'label': 'Password', 'type': 'char', 'min_length': 4, 'text_presentation': None},
+        {'key': 'country', 'label': 'Country', 'type': 'char', 'min_length': 2, 'text_presentation': None},
     ],
     'restaurant_registration': [
-        {'key': 'name', 'label': 'name', 'type': 'char', 'min_length': 5},
-        {'key': 'location', 'label': 'location', 'type': 'char', 'min_length': 5},
+        {'key': 'name', 'label': 'name', 'type': 'char', 'min_length': 5, 'text_presentation': str.title},
+        {'key': 'location', 'label': 'location', 'type': 'char', 'min_length': 5, 'text_presentation': str.title},
     ]
 }
+
+# fields to ignore or modify when saving to the logs
+IGNORE_LOG_FIELDS = ['password']
+STRINGIFY_LOG_FIELDS = [
+    'logo', 'cover_photo'
+]
 
 # the various messages sent out
 MESSAGES = {
