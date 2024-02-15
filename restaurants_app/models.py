@@ -66,3 +66,73 @@ class RestaurantEmployee(BaseModel):
         db_table = 'restaurant_employees'
         ordering = ['restaurant', 'user__first_name']
         unique_together = ['user', 'restaurant']
+
+
+class MenuSection(BaseModel):
+    """
+    the sections of the menu
+    """
+    name = models.CharField(max_length=255)
+    description = models.TextField(null=True, blank=True)
+    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE)
+    section_banner_image = models.ImageField(null=True, blank=True)
+
+    # if the section is available or not.
+    # e.g. breakfast availability may end at noon
+    available = models.BooleanField(default=True)
+
+    class Meta:
+        """
+        the metadata for the MenuSection model
+        """
+        db_table = 'menu_sections'
+        ordering = ['name']
+        unique_together = ['name', 'restaurant']
+
+
+class MenuItem(BaseModel):
+    """
+    the items in the menu
+    """
+    name = models.CharField(max_length=255)
+    description = models.TextField(null=True, blank=True)
+    primary_price = models.FloatField()
+    discounted_price = models.FloatField(null=True, blank=True)
+    running_discount = models.BooleanField(default=False)
+    section = models.ForeignKey(MenuSection, on_delete=models.CASCADE)
+    image = models.ImageField(null=True, blank=True)
+
+    # if the kitchen can process the item or not
+    available = models.BooleanField(default=True)
+
+    class Meta:
+        """
+        the metadata for the MenuItem model
+        """
+        db_table = 'menu_items'
+        ordering = ['section', 'name']
+        unique_together = ['name', 'section']
+
+
+class Table(BaseModel):
+    """
+    the tables at the restaurant
+    """
+    number = models.IntegerField()
+    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE)
+
+    room_name = models.CharField(max_length=255, null=True, blank=True)
+    prepayment_required = models.BooleanField(default=False)
+    smoking_zone = models.BooleanField(default=False)
+    outdoor_seating = models.BooleanField(default=False)
+
+    # if the table is available for use or not
+    available = models.BooleanField(default=True)
+
+    class Meta:
+        """
+        the metadata for the Table model
+        """
+        db_table = 'tables'
+        ordering = ['number']
+        unique_together = ['number', 'restaurant']
