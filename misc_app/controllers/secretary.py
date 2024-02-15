@@ -111,7 +111,7 @@ class Secretary:
                     affected_model=self.model_name,
                     affected_record=str(record.data.get('id')),
                     action='create',
-                    narration='Successfully create a new record.',
+                    narration='Created a new record.',
                     result=ACTION_LOG_STATUSES.get('success'),
                     user_id=self.user_id,
                     username=self.username,
@@ -161,7 +161,7 @@ class Secretary:
             affected_model=self.model_name,
             affected_record=None,
             action='read',
-            narration='Successfully read records',
+            narration='Read records',
             result=ACTION_LOG_STATUSES.get('success'),
             user_id=self.user_id,
             username=self.username,
@@ -212,12 +212,9 @@ class Secretary:
         update the record
         """
         with transaction.atomic():
-            data = self.args.get('data')
-            serializer = self.serializer
-
             # get the current record
             record = self.serializer.Meta.model.objects.get(
-                id=data.get('id')
+                id=self.data.get('id')
             )
 
             # formulate the new data to consider
@@ -226,8 +223,8 @@ class Secretary:
             for item in edit_considerations:
                 try:
                     key = item.get('key')
-                    if data.get(key) is not None:
-                        new_data[key] = data.get(key)
+                    if self.data.get(key) is not None:
+                        new_data[key] = self.data.get(key)
                 except KeyError:
                     pass
 
@@ -248,11 +245,24 @@ class Secretary:
             # TODO determine the changes that have been made
             consider = [info.get('key') for info in edit_considerations]
             changes = determine_changes({
-                'old_info': serializer(record, many=False).data,
+                'old_info': self.serializer(record, many=False).data,
                 'new_info': new_data,
                 'consider': consider
             })
             if len(changes) < 1:
+                # save the action performed
+                save_action(
+                    affected_model=self.model_name,
+                    affected_record=self.data.get('id'),
+                    action='update',
+                    narration='No changes detected.',
+                    result=ACTION_LOG_STATUSES.get('failed'),
+                    user_id=self.user_id,
+                    username=self.username,
+                    submitted_data=new_data,
+                    changes=None,
+                    filter_information=None
+                )
                 return {
                     'status': 400,
                     'message': 'No changes detected'
@@ -260,14 +270,26 @@ class Secretary:
 
             # update the record
             new_data['time_last_updated'] = timezone.now()
-            record = serializer(
+            record = self.serializer(
                 record,
                 data=new_data,
                 partial=True
             )
             if record.is_valid():
                 record.save()
-                # save to the log 
+                # save to the log
+                save_action(
+                    affected_model=self.model_name,
+                    affected_record=self.data.get('id'),
+                    action='update',
+                    narration='Updated a record',
+                    result=ACTION_LOG_STATUSES.get('success'),
+                    user_id=self.user_id,
+                    username=self.username,
+                    submitted_data=new_data,
+                    changes=changes,
+                )
+
                 return {
                     'status': 200,
                     'message': self.ok_message
@@ -277,6 +299,18 @@ class Secretary:
                 error_message = ""
                 for _, value in record.errors.items():
                     error_message += f"{', '.join(value)}\n"
+
+                save_action(
+                    affected_model=self.model_name,
+                    affected_record=self.data.get('id'),
+                    action='update',
+                    narration=error_message,
+                    result=ACTION_LOG_STATUSES.get('failed'),
+                    user_id=self.user_id,
+                    username=self.username,
+                    submitted_data=new_data,
+                    changes=changes,
+                )
                 return {
                     'status': 400,
                     'message': error_message
@@ -287,8 +321,19 @@ class Secretary:
         flags a record as deleted
         """
         # check if the user has provided the reason for deleting the record
-        deletion_reason = self.args.get('data').get('deletion_reason')
+        deletion_reason = self.data.get('deletion_reason')
         if deletion_reason is None:
+            save_action(
+                affected_model=self.model_name,
+                affected_record=self.data.get('id'),
+                action='delete',
+                narration=MESSAGES.get('NO_DELETION_REASON'),
+                result=ACTION_LOG_STATUSES.get('failed'),
+                user_id=self.user_id,
+                username=self.username,
+                submitted_data=self.data,
+                changes=None,
+            )
             return {
                 'status': 400,
                 'message': MESSAGES.get('NO_DELETION_REASON')
@@ -301,6 +346,18 @@ class Secretary:
             id=self.args.get('data').get('id')
         )
         if record.deleted:
+            save_action(
+                affected_model=self.model_name,
+                affected_record=self.data.get('id'),
+                action='delete',
+                narration=MESSAGES.get('ALREADY_DELETED'),
+                result=ACTION_LOG_STATUSES.get('failed'),
+                user_id=self.user_id,
+                username=self.username,
+                submitted_data=self.data,
+                changes=None,
+            )
+            
             return {
                 'status': 400,
                 'message': MESSAGES.get('ALREADY_DELETED')
@@ -321,6 +378,17 @@ class Secretary:
 
         if record.is_valid():
             record.save()
+            save_action(
+                affected_model=self.model_name,
+                affected_record=self.data.get('id'),
+                action='delete',
+                narration='Deleted a record',
+                result=ACTION_LOG_STATUSES.get('success'),
+                user_id=self.user_id,
+                username=self.username,
+                submitted_data=self.data,
+                changes=None,
+            )
             return {
                 'status': 200,
                 'message': MESSAGES.get('OK_DELETION')
@@ -330,6 +398,18 @@ class Secretary:
             error_message = ""
             for _, value in record.errors.items():
                 error_message += f"{', '.join(value)}\n"
+            save_action(
+                affected_model=self.model_name,
+                affected_record=self.data.get('id'),
+                action='delete',
+                narration=error_message,
+                result=ACTION_LOG_STATUSES.get('success'),
+                user_id=self.user_id,
+                username=self.username,
+                submitted_data=self.data,
+                changes=None,
+            )
+
             return {
                 'status': 400,
                 'message': error_message
