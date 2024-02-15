@@ -6,7 +6,8 @@ from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 from users_app.models import User
 from users_app.serializers import SerGetUserProfile
-from dinify_backend.configs import MESSAGES
+from dinify_backend.configs import MESSAGES, ACTION_LOG_STATUSES
+from misc_app.controllers.save_action_log import save_action
 
 
 def login(username: str, password: str) -> dict:
@@ -31,18 +32,39 @@ def login(username: str, password: str) -> dict:
     )
 
     if auth_user is None:
-        failure_reason = "Invalid password"
         # check if the username exists
         if not User.objects.filter(username=username).exists():
-            failure_reason = "No matching username"
+            save_action(
+                affected_model='User',
+                affected_record=None,
+                action='login',
+                narration=MESSAGES.get('NO_USERNAME'),
+                result=ACTION_LOG_STATUSES.get('failed'),
+                user_id=None,
+                username=username,
+                submitted_data={},
+                changes=None,
+                filter_information=None
+            )
             return {
                 'status': 401,
                 'message': MESSAGES.get('NO_USERNAME')
             }
         # check if the user account is not active
         if not User.objects.get(username=username).is_active:
-            failure_reason = "Account not active"
-            # TODO save to indicate that the user account is not active
+            # save to indicate that the user account is not active
+            save_action(
+                affected_model='User',
+                affected_record=None,
+                action='login',
+                narration=MESSAGES.get('ACCOUNT_NOT_ACTIVE'),
+                result=ACTION_LOG_STATUSES.get('failed'),
+                user_id=None,
+                username=username,
+                submitted_data={},
+                changes=None,
+                filter_information=None
+            )
             return {
                 'status': 401,
                 'message': MESSAGES.get('ACCOUNT_NOT_ACTIVE')
@@ -60,7 +82,19 @@ def login(username: str, password: str) -> dict:
     auth_user.save()
     token = RefreshToken.for_user(auth_user)
 
-    # TODO save action
+    # save action
+    save_action(
+        affected_model='User',
+        affected_record=str(auth_user.id),
+        action='login',
+        narration=MESSAGES.get('OK_LOGIN'),
+        result=ACTION_LOG_STATUSES.get('success'),
+        user_id=None,
+        username=username,
+        submitted_data={},
+        changes=None,
+        filter_information=None
+    )
 
     return {
         'status': 200,

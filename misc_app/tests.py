@@ -6,7 +6,6 @@ from restaurants_app.serializers import SerializerPutRestaurantEmployee, Seriali
 from restaurants_app.tests import seed_restaurant, TEST_RESTAURANT_NAME
 from restaurants_app.models import Restaurant
 from dinify_backend.configs import (
-    REQUIRED_INFORMATION,
     ROLES,
     EDIT_INFORMATION
 )

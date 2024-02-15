@@ -2,7 +2,8 @@
 implementation to change user password
 """
 from users_app.models import User
-from dinify_backend.configs import MESSAGES
+from dinify_backend.configs import MESSAGES, ACTION_LOG_STATUSES
+from misc_app.controllers.save_action_log import save_action
 
 
 def change_password(user_id, old_password, new_password):
@@ -11,14 +12,37 @@ def change_password(user_id, old_password, new_password):
     """
     # check if the user exists
     if not User.objects.filter(id=user_id).exists():
+        save_action(
+            affected_model='User',
+            affected_record=None,
+            action='change-password',
+            narration=MESSAGES.get('NO_USER_FOUND'),
+            result=ACTION_LOG_STATUSES.get('failed'),
+            user_id=None,
+            username=None,
+            submitted_data={'user_id': user_id},
+            changes=None,
+            filter_information=None
+        )
         return {
             'status': 400,
             'message': MESSAGES.get('NO_USER_FOUND'),
         }
     user = User.objects.get(id=user_id)
     if not user.check_password(old_password):
-        # TODO save the action
-
+        # save the action
+        save_action(
+            affected_model='User',
+            affected_record=user_id,
+            action='change-password',
+            narration=MESSAGES.get('WRONG_PASSWORD'),
+            result=ACTION_LOG_STATUSES.get('failed'),
+            user_id=None,
+            username=None,
+            submitted_data={'user_id': user_id},
+            changes=None,
+            filter_information=None
+        )
         return {
             'status': 400,
             'message': MESSAGES.get('WRONG_PASSWORD'),
@@ -28,6 +52,18 @@ def change_password(user_id, old_password, new_password):
     user.save()
 
     # TODO save the action
+    save_action(
+        affected_model='User',
+        affected_record=user_id,
+        action='change-password',
+        narration=MESSAGES.get('OK_PASSWORD_CHANGE'),
+        result=ACTION_LOG_STATUSES.get('success'),
+        user_id=None,
+        username=None,
+        submitted_data={'user_id': user_id},
+        changes=None,
+        filter_information=None
+    )
 
     # TODO send an email
 

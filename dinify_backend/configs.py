@@ -20,34 +20,34 @@ ROLES = {
 
 REQUIRED_INFORMATION = {
     'new_user': [
-        {'key': 'first_name', 'label': 'First Name', 'type': 'char', 'min_length': 2, 'text_presentation': str.title},
-        {'key': 'last_name', 'label': 'Last Name', 'type': 'char', 'min_length': 2, 'text_presentation': str.title},
-        {'key': 'email', 'label': 'Email', 'type': 'char', 'min_length': 5, 'text_presentation': str.lower},
-        {'key': 'phone_number', 'label': 'Phone Number', 'type': 'char', 'min_length': 5, 'text_presentation': None},
-        {'key': 'password', 'label': 'Password', 'type': 'char', 'min_length': 4, 'text_presentation': None},
-        {'key': 'country', 'label': 'Country', 'type': 'char', 'min_length': 2, 'text_presentation': None},
+        {'key': 'first_name', 'label': 'First Name', 'type': 'char', 'min_length': 2, 'text_presentation': str.title},  # noqa
+        {'key': 'last_name', 'label': 'Last Name', 'type': 'char', 'min_length': 2, 'text_presentation': str.title},  # noqa
+        {'key': 'email', 'label': 'Email', 'type': 'char', 'min_length': 5, 'text_presentation': str.lower},  # noqa
+        {'key': 'phone_number', 'label': 'Phone Number', 'type': 'char', 'min_length': 5, 'text_presentation': None},  # noqa
+        {'key': 'password', 'label': 'Password', 'type': 'char', 'min_length': 4, 'text_presentation': None},  # noqa
+        {'key': 'country', 'label': 'Country', 'type': 'char', 'min_length': 2, 'text_presentation': None},  # noqa
     ],
     'restaurant_registration': [
-        {'key': 'name', 'label': 'name', 'type': 'char', 'min_length': 5, 'text_presentation': str.title},
-        {'key': 'location', 'label': 'location', 'type': 'char', 'min_length': 5, 'text_presentation': str.title},
+        {'key': 'name', 'label': 'name', 'type': 'char', 'min_length': 5, 'text_presentation': str.title},  # noqa
+        {'key': 'location', 'label': 'location', 'type': 'char', 'min_length': 5, 'text_presentation': str.title},  # noqa
     ]
 }
 
 
 EDIT_INFORMATION = {
     'restaurant_registration': [
-        {'key': 'name', 'label': 'name', 'type': 'char', 'min_length': 5, 'text_presentation': str.title},
-        {'key': 'location', 'label': 'location', 'type': 'char', 'min_length': 5, 'text_presentation': str.title},
-        {'key': 'logo', 'label': 'logo', 'type': 'file', 'min_length': 5, 'text_presentation': None},
-        {'key': 'cover_photo', 'label': 'cover photo', 'type': 'file', 'min_length': 5, 'text_presentation': None},
-        {'key': 'status', 'label': 'status', 'type': 'char', 'min_length': 5, 'text_presentation': str.lower},
-        {'key': 'require_order_prepayments', 'label': 'require order prepayments', 'type': 'bool', 'min_length': 5, 'text_presentation': None},
-        {'key': 'expose_order_ratings', 'label': 'expose order ratings', 'type': 'bool', 'min_length': 5, 'text_presentation': None},
-        {'key': 'allow_deliveries', 'label': 'allow deliveries', 'type': 'bool', 'min_length': 5, 'text_presentation': None},
-        {'key': 'allow_pickups', 'label': 'allow pickups', 'type': 'bool', 'min_length': 5, 'text_presentation': None},
-        {'key': 'preferred_subscription_method', 'label': 'preferred subscription method', 'type': 'char', 'min_length': 5, 'text_presentation': str.lower},
-        {'key': 'order_surcharge_percentage', 'label': 'order surcharge percentage', 'type': 'float', 'min_length': 5, 'text_presentation': None},
-        {'key': 'flat_fee', 'label': 'flat fee', 'type': 'float', 'min_length': 5, 'text_presentation': None},
+        {'key': 'name', 'label': 'name', 'type': 'char', 'min_length': 5, 'text_presentation': str.title},  # noqa
+        {'key': 'location', 'label': 'location', 'type': 'char', 'min_length': 5, 'text_presentation': str.title},  # noqa
+        {'key': 'logo', 'label': 'logo', 'type': 'file', 'min_length': 5, 'text_presentation': None},  # noqa
+        {'key': 'cover_photo', 'label': 'cover photo', 'type': 'file', 'min_length': 5, 'text_presentation': None},  # noqa
+        {'key': 'status', 'label': 'status', 'type': 'char', 'min_length': 5, 'text_presentation': str.lower},  # noqa
+        {'key': 'require_order_prepayments', 'label': 'require order prepayments', 'type': 'bool', 'min_length': 5, 'text_presentation': None},  # noqa
+        {'key': 'expose_order_ratings', 'label': 'expose order ratings', 'type': 'bool', 'min_length': 5, 'text_presentation': None},  # noqa
+        {'key': 'allow_deliveries', 'label': 'allow deliveries', 'type': 'bool', 'min_length': 5, 'text_presentation': None},  # noqa
+        {'key': 'allow_pickups', 'label': 'allow pickups', 'type': 'bool', 'min_length': 5, 'text_presentation': None},  # noqa
+        {'key': 'preferred_subscription_method', 'label': 'preferred subscription method', 'type': 'char', 'min_length': 5, 'text_presentation': str.lower},  # noqa
+        {'key': 'order_surcharge_percentage', 'label': 'order surcharge percentage', 'type': 'float', 'min_length': 5, 'text_presentation': None},  # noqa
+        {'key': 'flat_fee', 'label': 'flat fee', 'type': 'float', 'min_length': 5, 'text_presentation': None},  # noqa
     ]
 }
 
@@ -76,7 +76,7 @@ MESSAGES = {
 
     # reset password
     'NO_PHONE_NUMBER': 'No matching user profile found.',
-    'OK_PASSWORD_RESET': 'Password reset successfully. Please check your SMS or email for the new password',
+    'OK_PASSWORD_RESET': 'Password reset successfully. Please check your SMS or email for the new password',  # noqa
 
     # create restaurant
     'DUPLICATE_RESTAURANT_NAME': 'You already have a restaurant with this name',

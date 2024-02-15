@@ -4,7 +4,10 @@ implementation for crud functions to the database
 from django.db import transaction
 from django.utils import timezone
 from dataclasses import dataclass
-from dinify_backend.configs import IGNORE_LOG_FIELDS, STRINGIFY_LOG_FIELDS, MESSAGES, ACTION_LOG_STATUSES
+from dinify_backend.configs import (
+    IGNORE_LOG_FIELDS, STRINGIFY_LOG_FIELDS, MESSAGES,
+    ACTION_LOG_STATUSES
+)
 from misc_app.controllers.check_required_information import check_required_information
 from misc_app.controllers.paginator import DinifyPaginator
 from misc_app.controllers.determine_changes import determine_changes
@@ -358,7 +361,7 @@ class Secretary:
                 submitted_data=self.data,
                 changes=None,
             )
-            
+
             return {
                 'status': 400,
                 'message': MESSAGES.get('ALREADY_DELETED')
