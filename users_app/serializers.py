@@ -16,5 +16,6 @@ class SerGetUserProfile(ModelSerializer):
         model = User
         fields = [
             'id', 'first_name', 'last_name',
-            'email', 'phone_number', 'country', 'roles'
+            'email', 'phone_number', 'country', 'roles',
+            'prompt_password_change'
         ]

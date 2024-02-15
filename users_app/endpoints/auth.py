@@ -2,6 +2,10 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
 from users_app.controllers.self_register import self_register
+from users_app.controllers.login import login
+from users_app.controllers.reset_password import reset_password
+from users_app.controllers.change_password import change_password
+from misc_app.controllers.decode_auth_token import decode_jwt_token
 
 
 class UsersAuthenticationEndpoint(APIView):
@@ -15,11 +19,29 @@ class UsersAuthenticationEndpoint(APIView):
         handle the POST method
         """
 
+        response = {'status': 500, 'message': "Invalid request"}
+
         if action == 'register':
-            response = self_register(
-                request.data
+            response = self_register(request.data)
+        elif action == "login":
+            response = login(
+                request.data.get('username'),
+                request.data.get('password')
             )
-            return Response(
-                response,
-                status=response['status']
+        elif action == "reset-password":
+            response = reset_password(
+                request.data.get('phone_number')
             )
+        elif action == "change-password":
+            # decode the token to get the user id
+            auth = decode_jwt_token(request)
+            response = change_password(
+                user_id=auth['id'],
+                old_password=request.data.get('old_password'),
+                new_password=request.data['new_password'],  # not using get to avoid None
+            )
+
+        return Response(
+            response,
+            status=response['status']
+        )
