@@ -104,38 +104,40 @@ class RestaurantSetupEndpoint(APIView):
 
         serializers = {
             'restaurants': SerializerPublicGetRestaurant,
-            'employees': SerializerGetRestaurantEmployee
-            # 'menu_sections': 
+            'employees': SerializerGetRestaurantEmployee,
+            'menusections': SerializerPublicGetMenuSection
         }
 
-        if config_detail == 'restaurants':
-            # TODO determine the correct serializer to use
-            secretary_args = {
-                'request': request,
-                'serializer': SerializerPublicGetRestaurant,
-                'filter': orm_filter,
-                'paginate': True,
-                'user_id': auth['id'],
-                'username': auth['username'],
-                'success_message': "Successfully retrieved the restaurants",
-                'error_message': "Error while retrieving restaurants"
-            }
+        success_messages = {
+            'restaurants': 'Successfully retrieved the restaurants',
+            'employees': 'Successfully retrieved the employees',
+            'menusections': 'Successfully retrieved the menu sections'
+        }
 
-            response = Secretary(secretary_args).read()
+        error_messages = {
+            'restaurants': 'Error while retrieving restaurants',
+            'employees': 'Error while retrieving employees',
+            'menusections': 'Error while retrieving menu sections'
+        }
 
-        if config_detail == 'employees':
-            secretary_args = {
-                'request': request,
-                'serializer': SerializerGetRestaurantEmployee,
-                'filter': orm_filter,
-                'paginate': True,
-                'user_id': auth['id'],
-                'username': auth['username'],
-                'success_message': "Successfully retrieved the employees",
-                'error_message': "Error while retrieving employees"
-            }
+        serializer = serializers.get(config_detail)
+        # TODO determine the correct serializer to use depending on the role
 
-            response = Secretary(secretary_args).read()
+        success_message = success_messages.get(config_detail)
+        error_message = error_messages.get(config_detail)
+
+        secretary_args = {
+            'request': request,
+            'serializer': serializer,
+            'filter': orm_filter,
+            'paginate': True,
+            'user_id': auth['id'],
+            'username': auth['username'],
+            'success_message': success_message,
+            'error_message': error_message
+        }
+
+        response = Secretary(secretary_args).read()
 
         return Response(
             response,
@@ -150,30 +152,47 @@ class RestaurantSetupEndpoint(APIView):
         # decode the token
         auth = decode_jwt_token(request)
 
-        if config_detail == 'restaurants':
-            # TODO check if the user has permissions to edit the details
-            secretary_args = {
-                'serializer': SerializerPutRestaurant,
-                'data': request.data,
-                'edit_considerations': EDIT_INFORMATION.get('restaurant_registration'),
-                'user_id': auth['id'],
-                'username': auth['username'],
-                'success_message': 'The details of the restaurant have been updated successfully.',
-                'error_message': 'An error occurred while updating the details of the restaurant.'
-            }
-            response = Secretary(secretary_args).update()
+        serializers = {
+            'restaurants': SerializerPutRestaurant,
+            'employees': SerializerPutRestaurantEmployee,
+            'menusections': SerializerPutMenuSection
+        }
 
-        if config_detail == 'employees':
-            secretary_args = {
-                'serializer': SerializerPutRestaurantEmployee,
-                'data': request.data,
-                'edit_considerations': EDIT_INFORMATION.get('restaurant_employee'),
-                'user_id': auth['id'],
-                'username': auth['username'],
-                'success_message': 'The details of the employee have been updated successfully.',
-                'error_message': 'An error occurred while updating the details of the employee.'
-            }
-            response = Secretary(secretary_args).update()
+        edit_information = {
+            'restaurants': EDIT_INFORMATION.get('restaurant'),
+            'employees': EDIT_INFORMATION.get('restaurant_employee'),
+            'menusections': EDIT_INFORMATION.get('menu_section'),                                              
+        }
+
+        success_messages = {
+            'restaurants': 'The details of the restaurant have been updated successfully.',
+            'employees': 'The details of the employee have been updated successfully',
+            'menusections': 'The details of the menu section have been updated successfully.',
+        }
+
+        error_messages = {
+            'restaurants': 'An error occurred while updating the details of the restaurant.',
+            'employees': 'An error occurred while updating the details of the employee.',
+            'menusections': 'An error occurred while updating the details of the menu section.',
+        }
+
+        # TODO check if the user has permissions to edit the details
+
+        serializer = serializers.get(config_detail)
+        edit_information = edit_information.get(config_detail)
+        success_message = success_messages.get(config_detail)
+        error_message = error_messages.get(config_detail)
+
+        secretary_args = {
+            'serializer': serializer,
+            'data': request.data,
+            'edit_considerations': edit_information,
+            'user_id': auth['id'],
+            'username': auth['username'],
+            'success_message': success_message,
+            'error_message': error_message
+        }
+        response = Secretary(secretary_args).update()
 
         return Response(
             response,
@@ -190,7 +209,8 @@ class RestaurantSetupEndpoint(APIView):
 
         serializer = {
             'restaurant': SerializerPutRestaurant,
-            'employees': SerializerPutRestaurantEmployee
+            'employees': SerializerPutRestaurantEmployee,
+            'menusections': SerializerPutMenuSection,
         }
 
         secretary_args = {

@@ -16,9 +16,15 @@ EMPLOYEE_FILTERS = {
     'active': 'active',
 }
 
+MENU_SECTIION_FILTERS = {
+    'restaurant': 'restaurant',
+    'name': 'name__icontains',
+}
+
 FILTER_DEFINITIONS = {
     'restaurants': RESTAURANT_FILTERS,
     'employees': EMPLOYEE_FILTERS,
+    'menusections': MENU_SECTIION_FILTERS,
 
 }
 
