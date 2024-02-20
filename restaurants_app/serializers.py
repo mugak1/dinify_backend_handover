@@ -17,6 +17,24 @@ class SerializerPutRestaurant(ModelSerializer):
         fields = '__all__'
 
 
+class SerializerPublicGetRestaurant(ModelSerializer):
+    """
+    serializer for getting public restaurant details
+    """
+    class Meta:
+        model = Restaurant
+        fields = ("id", "name", "location", "logo", "cover_photo")
+
+
+class SerializerEmployeeGetRestaurant(ModelSerializer):
+    """
+    serializer for getting restaurant details for the employee
+    """
+    class Meta:
+        model = RestaurantEmployee
+        fields = ("id", "name", "location")
+
+
 class SerializerPutRestaurantEmployee(ModelSerializer):
     """
     serializer for adding and editing restaurant employees
@@ -24,5 +42,3 @@ class SerializerPutRestaurantEmployee(ModelSerializer):
     class Meta:
         model = RestaurantEmployee
         fields = '__all__'
-
-        
