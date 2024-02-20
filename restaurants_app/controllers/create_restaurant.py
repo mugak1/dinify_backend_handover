@@ -63,6 +63,12 @@ def create_restaurant(data: dict, auth_info: dict) -> dict:
                 }
 
             raise Exception('Failed to create restaurant employee')
-
-    # TODO show the actual errors from the serializer
-    raise Exception('Something went wrong')
+    else:
+        print(f"RestaurantError-Create:{record.errors}")
+        error_message = ""
+        for _, value in record.errors.items():
+            error_message += f"{', '.join(value)}\n"
+        return {
+            'status': 400,
+            'message': error_message
+        }
