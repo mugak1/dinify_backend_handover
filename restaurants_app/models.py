@@ -18,10 +18,10 @@ class Restaurant(BaseModel):
     the model for the restaurant
     """
     name = models.CharField(max_length=255, db_index=True)
-    location = models.CharField(max_length=255, null=True, blank=True)
+    location = models.CharField(max_length=255, null=True, blank=True, db_index=True)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
-    logo = models.ImageField(null=True, blank=True)
-    cover_photo = models.ImageField(null=True, blank=True)
+    logo = models.ImageField(null=True, blank=True, upload_to='restaurant_logos/')
+    cover_photo = models.ImageField(null=True, blank=True, upload_to='restaurant_cover_photos/')
     status = models.CharField(max_length=255, default='pending')
 
     # dynamic configurations
@@ -76,7 +76,7 @@ class MenuSection(BaseModel):
     name = models.CharField(max_length=255)
     description = models.TextField(null=True, blank=True)
     restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE)
-    section_banner_image = models.ImageField(null=True, blank=True)
+    section_banner_image = models.ImageField(null=True, blank=True, upload_to='menu_section_banners/')
 
     # if the section is available or not.
     # e.g. breakfast availability may end at noon
@@ -101,7 +101,7 @@ class MenuItem(BaseModel):
     discounted_price = models.FloatField(null=True, blank=True)
     running_discount = models.BooleanField(default=False)
     section = models.ForeignKey(MenuSection, on_delete=models.CASCADE)
-    image = models.ImageField(null=True, blank=True)
+    image = models.ImageField(null=True, blank=True, upload_to='menu_items/')
 
     # if the kitchen can process the item or not
     available = models.BooleanField(default=True)
