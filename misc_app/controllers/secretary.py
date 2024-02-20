@@ -214,6 +214,8 @@ class Secretary:
         """
         update the record
         """
+        log_data = self.formulate_log_data()
+
         with transaction.atomic():
             # get the current record
             record = self.serializer.Meta.model.objects.get(
@@ -253,24 +255,33 @@ class Secretary:
                 'consider': consider
             })
             if len(changes) < 1:
-                # save the action performed
-                # the log also contains the edits
-                save_action(
-                    affected_model=self.model_name,
-                    affected_record=self.data.get('id'),
-                    action='update',
-                    narration='No changes detected.',
-                    result=ACTION_LOG_STATUSES.get('failed'),
-                    user_id=self.user_id,
-                    username=self.username,
-                    submitted_data=new_data,
-                    changes=None,
-                    filter_information=None
-                )
-                return {
-                    'status': 400,
-                    'message': 'No changes detected'
-                }
+                # check if any of the file fields is provided
+                file_fields_present = False
+                for key in STRINGIFY_LOG_FIELDS:
+                    check = self.data.get(key)
+                    if check is not None:
+                        file_fields_present = True
+                        break
+
+                if not file_fields_present:
+                    # save the action performed
+                    # the log also contains the edits
+                    save_action(
+                        affected_model=self.model_name,
+                        affected_record=self.data.get('id'),
+                        action='update',
+                        narration='No changes detected.',
+                        result=ACTION_LOG_STATUSES.get('failed'),
+                        user_id=self.user_id,
+                        username=self.username,
+                        submitted_data=log_data,
+                        changes=None,
+                        filter_information=None
+                    )
+                    return {
+                        'status': 400,
+                        'message': 'No changes detected'
+                    }
 
             # update the record
             new_data['time_last_updated'] = timezone.now()
@@ -282,6 +293,7 @@ class Secretary:
             if record.is_valid():
                 record.save()
                 # save to the log
+                # construct the log data to consider
                 save_action(
                     affected_model=self.model_name,
                     affected_record=self.data.get('id'),
@@ -290,7 +302,7 @@ class Secretary:
                     result=ACTION_LOG_STATUSES.get('success'),
                     user_id=self.user_id,
                     username=self.username,
-                    submitted_data=new_data,
+                    submitted_data=log_data,
                     changes=changes,
                 )
 
