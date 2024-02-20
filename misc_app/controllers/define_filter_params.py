@@ -13,6 +13,7 @@ EMPLOYEE_FILTERS = {
     'restaurant': 'restaurant',
     'user_phone': 'user__phone_number__icontains',
     'user_email': 'user__email__icontains',
+    'active': 'active',
 }
 
 FILTER_DEFINITIONS = {

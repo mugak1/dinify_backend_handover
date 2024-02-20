@@ -2,6 +2,7 @@
 endpoints for restaurant configurations
 """
 from calendar import c
+from logging import config
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from restaurants_app.controllers.create_restaurant import create_restaurant
@@ -118,6 +119,44 @@ class RestaurantSetupEndpoint(APIView):
                 'error_message': 'An error occurred while updating the details of the restaurant.'
             }
             response = Secretary(secretary_args).update()
+
+        if config_detail == 'employees':
+            secretary_args = {
+                'serializer': SerializerPutRestaurantEmployee,
+                'data': request.data,
+                'edit_considerations': EDIT_INFORMATION.get('restaurant_employee'),
+                'user_id': auth['id'],
+                'username': auth['username'],
+                'success_message': 'The details of the employee have been updated successfully.',
+                'error_message': 'An error occurred while updating the details of the employee.'
+            }
+            response = Secretary(secretary_args).update()
+
+        return Response(
+            response,
+            status=response['status']
+        )
+
+    def delete(self, request, config_detail):
+        """
+        handle the DELETE method
+        """
+        response = {'status': 500, 'message': "Invalid request"}
+        # decode the token
+        auth = decode_jwt_token(request)
+
+        serializer = {
+            'restaurant': SerializerPutRestaurant,
+            'employees': SerializerPutRestaurantEmployee
+        }
+        
+        secretary_args = {
+            'serializer': serializer[config_detail],
+            'data': request.data,
+            'user_id': auth['id'],
+            'username': auth['username'],
+        }
+        response = Secretary(secretary_args).delete()
 
         return Response(
             response,

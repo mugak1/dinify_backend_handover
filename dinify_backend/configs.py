@@ -68,6 +68,10 @@ EDIT_INFORMATION = {
         {'key': 'order_surcharge_percentage', 'label': 'order surcharge percentage', 'type': 'float', 'min_length': 5, 'text_presentation': None},  # noqa
         {'key': 'flat_fee', 'label': 'flat fee', 'type': 'float', 'min_length': 5, 'text_presentation': None},  # noqa
     ],
+    'restaurant_employee': [
+        {'key': 'roles', 'label': 'Roles', 'type': 'list', 'min_length': 5, 'text_presentation': None},  # noqa
+        {'key': 'active', 'label': 'active', 'type': 'bool', 'min_length': 5, 'text_presentation': None},  # noqa    
+    ],
     'menu_section': [
         {'key': 'name', 'label': 'name', 'type': 'char', 'min_length': 5, 'text_presentation': str.title},  # noqa
         {'key': 'description', 'label': 'name', 'type': 'char', 'min_length': 5, 'text_presentation': None},  # noqa
