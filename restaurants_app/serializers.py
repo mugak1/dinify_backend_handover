@@ -2,7 +2,7 @@
 the serializers for the restaurant app
 """
 from rest_framework.serializers import ModelSerializer, SerializerMethodField
-from restaurants_app.models import Restaurant, RestaurantEmployee
+from restaurants_app.models import Restaurant, RestaurantEmployee, MenuSection, MenuItem
 
 
 class SerializerPutRestaurant(ModelSerializer):
@@ -62,3 +62,21 @@ class SerializerGetRestaurantEmployee(ModelSerializer):
         returns the name of the employee
         """
         return f"{employee.user.first_name} {employee.user.last_name}"
+
+
+class SerializerPutMenuSection(ModelSerializer):
+    """
+    serializer for adding menu section
+    """
+    class Meta:
+        model = MenuSection
+        fields = '__all__'
+
+
+class SerializerPublicGetMenuSection(ModelSerializer):
+    """
+    serializer for getting the menu section
+    """
+    class Meta:
+        model = MenuSection
+        fields = '__all__'

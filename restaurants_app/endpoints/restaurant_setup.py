@@ -11,7 +11,9 @@ from misc_app.controllers.define_filter_params import define_filter_params
 from misc_app.controllers.secretary import Secretary
 from restaurants_app.serializers import (
     SerializerPutRestaurant, SerializerPublicGetRestaurant,
-    SerializerPutRestaurantEmployee, SerializerGetRestaurantEmployee
+    SerializerPutRestaurantEmployee, SerializerGetRestaurantEmployee,
+
+    SerializerPutMenuSection, SerializerPublicGetMenuSection,
 )
 from dinify_backend.configs import EDIT_INFORMATION, REQUIRED_INFORMATION
 
@@ -37,18 +39,53 @@ class RestaurantSetupEndpoint(APIView):
                 data,
                 auth
             )
+            return Response(
+                response,
+                status=response['status']
+            )
 
-        if config_detail == 'employees':
-            secretary_args = {
-                'serializer': SerializerPutRestaurantEmployee,
-                'data': request.data,
-                'required_information': REQUIRED_INFORMATION.get('restaurant_employee'),
-                'user_id': auth['id'],
-                'username': auth['username'],
-                'success_message': 'The employee has been added successfully.',
-                'error_message': 'An error occurred while adding the employee.'
-            }
-            response = Secretary(secretary_args).create()
+        serializers = {
+            'employees': SerializerPutRestaurantEmployee,
+            'menusections': SerializerPutMenuSection,
+        }
+
+        required_information = {
+            'employees': REQUIRED_INFORMATION.get('restaurant_employee'),
+            'menusections': REQUIRED_INFORMATION.get('menu_section'),
+        }
+
+        success_messages = {
+            'employees': 'The employee has been added successfully.',
+            'menusections': 'The menu section has been added successfully.',
+        }
+
+        error_messages = {
+            'employees': 'An error occurred while adding the employee.',
+            'menusections': 'An error occurred while adding the menu section.',
+        }
+
+        post_data = request.data
+
+        try:
+            post_data = post_data.dict()
+        except Exception as error:
+            print(f"Error: {error}")
+
+        serializer = serializers.get(config_detail)
+        required_information = required_information.get(config_detail)
+        success_message = success_messages.get(config_detail)
+        error_message = error_messages.get(config_detail)
+
+        secretary_args = {
+            'serializer': serializer,
+            'data': post_data,
+            'required_information': required_information,
+            'user_id': auth['id'],
+            'username': auth['username'],
+            'success_message': success_message,
+            'error_message': error_message
+        }
+        response = Secretary(secretary_args).create()
 
         return Response(
             response,
@@ -64,6 +101,12 @@ class RestaurantSetupEndpoint(APIView):
         auth = decode_jwt_token(request)
 
         orm_filter = define_filter_params(request.GET, config_detail)
+
+        serializers = {
+            'restaurants': SerializerPublicGetRestaurant,
+            'employees': SerializerGetRestaurantEmployee
+            # 'menu_sections': 
+        }
 
         if config_detail == 'restaurants':
             # TODO determine the correct serializer to use
@@ -149,7 +192,7 @@ class RestaurantSetupEndpoint(APIView):
             'restaurant': SerializerPutRestaurant,
             'employees': SerializerPutRestaurantEmployee
         }
-        
+
         secretary_args = {
             'serializer': serializer[config_detail],
             'data': request.data,
