@@ -2,7 +2,9 @@
 the serializers for the restaurant app
 """
 from rest_framework.serializers import ModelSerializer, SerializerMethodField
-from restaurants_app.models import Restaurant, RestaurantEmployee, MenuSection, MenuItem
+from restaurants_app.models import (
+    Restaurant, RestaurantEmployee, MenuSection, MenuItem, Table
+)
 
 
 class SerializerPutRestaurant(ModelSerializer):
@@ -105,3 +107,20 @@ class SerializerPublicGetMenuItem(ModelSerializer):
             'discounted_price', 'running_discount', 'image',
             'available'
         )
+
+
+class SerializerPutTable(ModelSerializer):
+    """
+    serializer for adding a table
+    """
+    class Meta:
+        model = Table
+        fields = '__all__'
+
+class SerializerPublicGetTable(ModelSerializer):
+    """
+    serializer for getting tables
+    """
+    class Meta:
+        model = Table
+        fields = '__all__'

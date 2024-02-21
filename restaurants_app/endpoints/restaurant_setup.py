@@ -15,6 +15,7 @@ from restaurants_app.serializers import (
 
     SerializerPutMenuSection, SerializerPublicGetMenuSection,
     SerializerPutMenuItem, SerializerPublicGetMenuItem,
+    SerializerPutTable, SerializerPublicGetTable
 )
 from dinify_backend.configs import EDIT_INFORMATION, REQUIRED_INFORMATION
 
@@ -49,24 +50,28 @@ class RestaurantSetupEndpoint(APIView):
             'employees': SerializerPutRestaurantEmployee,
             'menusections': SerializerPutMenuSection,
             'menuitems': SerializerPutMenuItem,
+            'tables': SerializerPutTable
         }
 
         required_information = {
             'employees': REQUIRED_INFORMATION.get('restaurant_employee'),
             'menusections': REQUIRED_INFORMATION.get('menu_section'),
             'menuitems': REQUIRED_INFORMATION.get('menu_item'),
+            'tables': REQUIRED_INFORMATION.get('table')
         }
 
         success_messages = {
             'employees': 'The employee has been added successfully.',
             'menusections': 'The menu section has been added successfully.',
             'menuitems': 'The menu item has been added successfully.',
+            'tables': 'The table has been added successfully'
         }
 
         error_messages = {
             'employees': 'An error occurred while adding the employee.',
             'menusections': 'An error occurred while adding the menu section.',
             'menuitems': 'An error occurred while adding the menu item.',
+            'tables': 'An error occurred while adding the table'
         }
 
         post_data = request.data
@@ -112,20 +117,23 @@ class RestaurantSetupEndpoint(APIView):
             'employees': SerializerGetRestaurantEmployee,
             'menusections': SerializerPublicGetMenuSection,
             'menuitems': SerializerPublicGetMenuItem,
+            'tables': SerializerPublicGetTable,
         }
 
         success_messages = {
             'restaurants': 'Successfully retrieved the restaurants',
             'employees': 'Successfully retrieved the employees',
             'menusections': 'Successfully retrieved the menu sections',
-            'menuitems': 'Successfully retrieved the menu items'
+            'menuitems': 'Successfully retrieved the menu items',
+            'tables': 'Successfully retrieved the tables'
         }
 
         error_messages = {
             'restaurants': 'Error while retrieving restaurants',
             'employees': 'Error while retrieving employees',
             'menusections': 'Error while retrieving menu sections',
-            'menuitems': 'Error while retrieving menu items'
+            'menuitems': 'Error while retrieving menu items',
+            'tables': 'Error while retrieving the tables'
         }
 
         serializer = serializers.get(config_detail)
@@ -165,13 +173,15 @@ class RestaurantSetupEndpoint(APIView):
             'employees': SerializerPutRestaurantEmployee,
             'menusections': SerializerPutMenuSection,
             'menuitems': SerializerPutMenuItem,
+            'tables': SerializerPutTable
         }
 
         edit_information = {
             'restaurants': EDIT_INFORMATION.get('restaurant'),
             'employees': EDIT_INFORMATION.get('restaurant_employee'),
             'menusections': EDIT_INFORMATION.get('menu_section'),
-            'menuitems': EDIT_INFORMATION.get('menu_item'),                                 
+            'menuitems': EDIT_INFORMATION.get('menu_item'),
+            'tables': EDIT_INFORMATION.get('table')
         }
 
         success_messages = {
@@ -179,6 +189,7 @@ class RestaurantSetupEndpoint(APIView):
             'employees': 'The details of the employee have been updated successfully',
             'menusections': 'The details of the menu section have been updated successfully.',
             'menuitems': 'The details of the menu item have been updated successfully.',
+            'tables': 'The details of the table have been updated successfully.',
         }
 
         error_messages = {
@@ -186,6 +197,7 @@ class RestaurantSetupEndpoint(APIView):
             'employees': 'An error occurred while updating the details of the employee.',
             'menusections': 'An error occurred while updating the details of the menu section.',
             'menuitems': 'An error occurred while updating the details of the menu item.',
+            'tables': 'An error occurred while updating the details of the table.',
         }
 
         # TODO check if the user has permissions to edit the details
@@ -224,6 +236,7 @@ class RestaurantSetupEndpoint(APIView):
             'employees': SerializerPutRestaurantEmployee,
             'menusections': SerializerPutMenuSection,
             'menuitems': SerializerPutMenuItem,
+            'tables': SerializerPutTable
         }
 
         secretary_args = {
