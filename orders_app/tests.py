@@ -60,6 +60,7 @@ class TestOrderFunctions(TestCase):
                 ]
             }
             result = Order(data).initiate_order()
-            print("\n===\n", result, "\n===")
+            self.assertEqual(result['status'], 200)
+            self.assertEqual(len(result['data']['unavailable_items']), 1)
 
         test_post_paid_initiate()

@@ -117,6 +117,7 @@ class SerializerPutTable(ModelSerializer):
         model = Table
         fields = '__all__'
 
+
 class SerializerPublicGetTable(ModelSerializer):
     """
     serializer for getting tables
