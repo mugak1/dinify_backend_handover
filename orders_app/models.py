@@ -40,9 +40,12 @@ class OrderItem(BaseModel):
     discounted_price = models.FloatField()
     discounted = models.BooleanField(default=False)
 
+    options = models.JSONField(default=list)
+
     total_cost = models.FloatField()
     discounted_cost = models.FloatField()
     savings = models.FloatField()
+    cost_of_options = models.FloatField(default=0.0)
     actual_cost = models.FloatField()
 
     status = models.CharField(max_length=50, default='initiated')

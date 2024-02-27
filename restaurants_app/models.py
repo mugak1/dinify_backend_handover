@@ -42,6 +42,8 @@ class Restaurant(BaseModel):
     order_surcharge_percentage = models.FloatField(default=1.0)
     flat_fee = models.FloatField(default=0.0)
 
+    branding_configuration = models.JSONField(default=dict)
+
     class Meta:
         """
         the metadata for the Restaurant model
@@ -76,7 +78,7 @@ class MenuSection(BaseModel):
     name = models.CharField(max_length=255)
     description = models.TextField(null=True, blank=True)
     restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE)
-    section_banner_image = models.ImageField(null=True, blank=True, upload_to='menu_section_banners/')
+    section_banner_image = models.ImageField(null=True, blank=True, upload_to='menu_section_banners/')  # noqa
 
     # if the section is available or not.
     # e.g. breakfast availability may end at noon
@@ -91,20 +93,65 @@ class MenuSection(BaseModel):
         unique_together = ['name', 'restaurant']
 
 
+class SectionGroup(BaseModel):
+    """
+    the groups for a section
+    """
+    name = models.CharField(max_length=255)
+    description = models.TextField(null=True, blank=True)
+    section = models.ForeignKey(MenuSection, on_delete=models.CASCADE)
+    available = models.BooleanField(default=True)
+
+    class Meta:
+        """
+        the metadata for the SectionGroup model
+        """
+        db_table = 'section_groups'
+        ordering = ['name']
+        unique_together = ['name', 'section']
+
+
 class MenuItem(BaseModel):
     """
     the items in the menu
     """
+    section = models.ForeignKey(MenuSection, on_delete=models.CASCADE)
+    section_group = models.ForeignKey(SectionGroup, on_delete=models.CASCADE, null=True, blank=True)
+    image = models.ImageField(null=True, blank=True, upload_to='menu_items/')
+
     name = models.CharField(max_length=255)
     description = models.TextField(null=True, blank=True)
     primary_price = models.FloatField()
+
     discounted_price = models.FloatField(null=True, blank=True)
     running_discount = models.BooleanField(default=False)
-    section = models.ForeignKey(MenuSection, on_delete=models.CASCADE)
-    image = models.ImageField(null=True, blank=True, upload_to='menu_items/')
+    discount_description = models.TextField(null=True, blank=True)
+    discount_details = models.JSONField(default=dict)
+    # e.g. {
+    #     recurring_days: [],
+    #     start_date: '',
+    #     end_date: '',
+    #     start_time: '',
+    #     end_time: '',
+    #     discount_percentage: 0.0,
+    #     discount_amount: 0.0
+    # }
 
     # if the kitchen can process the item or not
     available = models.BooleanField(default=True)
+    is_extra = models.BooleanField(default=False)
+
+    options = models.JSONField(default=dict)
+    # e.g. {
+    # min_selections: 0,
+    # max_selections: 0,
+    # options : [{
+    #   name: '',
+    #   selectable: boolean, i.e. does it have options to select from
+    #   options: [Spicy, Not spicy, Extra spicy],
+    #   cost: 0
+    # }, {...}, {...}]
+    extras_applicable = models.JSONField(default=list)
 
     class Meta:
         """

@@ -100,12 +100,15 @@ class SerializerPublicGetMenuItem(ModelSerializer):
     """
     serializer for getting the menu Item
     """
+    has_options = SerializerMethodField()
+
     class Meta:
         model = MenuItem
         fields = (
             'id', 'name', 'description', 'primary_price',
             'discounted_price', 'running_discount', 'image',
-            'available'
+            'available',
+            'has_options', 'options'
         )
 
 
@@ -116,6 +119,7 @@ class SerializerPutTable(ModelSerializer):
     class Meta:
         model = Table
         fields = '__all__'
+
 
 class SerializerPublicGetTable(ModelSerializer):
     """
