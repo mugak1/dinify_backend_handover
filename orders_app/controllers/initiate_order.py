@@ -9,6 +9,7 @@ def any_present_ongoing_order(table):
     """
     determines if a table has an ongoing order
     """
+    # TODO check if this is an ongoing order
 
 
 def initiate_order(data):
