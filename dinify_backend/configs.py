@@ -2,6 +2,39 @@
 configurations or definitions of various values on the syste
 """
 
+# string definitions in the application
+
+# account types
+AccountType_Restaurant = 'restaurant'
+AccountType_DinifyRevenue = 'dinify_revenue'
+
+
+# payment modes
+PaymentMode_Cash = 'cash'
+PaymentMode_MobileMoney = 'momo'
+PaymentMode_Card = 'card'
+
+# account status
+AccountStatus_Active = 'active'
+AccountStatus_Inactive = 'inactive'
+AccountStatus_Blocked = 'blocked'
+
+# transaction types
+TransactionType_OrderPayment = 'order_payment'
+TransactionType_OrderRefund = 'order_refund'
+TransactionType_OrderCharge = 'order_charge'
+TransactionType_Disbursement = 'disbursement'
+TransactionType_Subscription = 'subscription'
+
+# transaction statuses
+TransactionStatus_Success = 'success'
+TransactionStatus_Failed = 'failed'
+TransactionStatus_Pending = 'pending'
+
+# transaction platforms
+TransactionPlatform_Web = 'web'
+
+
 ACTION_LOG_STATUSES = {
     'success': 'success',
     'failed': 'failed',
