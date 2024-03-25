@@ -8,7 +8,7 @@ from dinify_backend.configs import (
     PaymentMode_Cash, PaymentMode_MobileMoney, PaymentMode_Card,
     AccountStatus_Active, AccountStatus_Inactive, AccountStatus_Blocked,
     TransactionType_OrderPayment, TransactionType_OrderRefund, TransactionType_OrderCharge, TransactionType_Disbursement, TransactionType_Subscription,  # noqa
-    TransactionStatus_Success, TransactionStatus_Failed, TransactionStatus_Pending,
+    TransactionStatus_Success, TransactionStatus_Failed, TransactionStatus_Pending, TransactionStatus_Initiated,
     TransactionPlatform_Web
 )
 
@@ -16,7 +16,7 @@ ACCOUNT_TYPES = [AccountType_Restaurant, AccountType_DinifyRevenue]
 PAYMENT_MODES = [PaymentMode_Cash, PaymentMode_MobileMoney, PaymentMode_Card]
 ACCOUNT_STATUSES = [AccountStatus_Active, AccountStatus_Inactive, AccountStatus_Blocked]
 TRANSACTION_TYPES = [TransactionType_OrderPayment, TransactionType_OrderRefund, TransactionType_OrderCharge, TransactionType_Disbursement, TransactionType_Subscription]  # noqa
-TRANSACTION_STATUSES = [TransactionStatus_Success, TransactionStatus_Failed, TransactionStatus_Pending]  # noqa
+TRANSACTION_STATUSES = [TransactionStatus_Success, TransactionStatus_Failed, TransactionStatus_Pending, TransactionStatus_Initiated]  # noqa
 TRANSACTION_PLATFORMS = [TransactionPlatform_Web]
 
 
@@ -92,7 +92,7 @@ class DinifyTransaction(BaseModel):
     restaurant = models.ForeignKey(Restaurant, on_delete=models.SET_NULL, null=True, blank=True)
     order = models.ForeignKey(Order, on_delete=models.SET_NULL, null=True, blank=True)
     transaction_type = models.CharField(validators=[validate_transaction_type], max_length=255, db_index=True)  # noqa
-    transaction_status = models.CharField(validators=[validate_transaction_status], max_length=255, db_index=True)  # noqa
+    transaction_status = models.CharField(validators=[validate_transaction_status], max_length=255, db_index=True, default=TransactionStatus_Initiated)  # noqa
     transaction_platform = models.CharField(validators=[validate_transaction_platform], max_length=255, db_index=True)  # noqa
 
     transaction_amount = models.DecimalField(default=0.0, max_digits=50, decimal_places=2)
@@ -107,6 +107,11 @@ class DinifyTransaction(BaseModel):
 
     # the account balances/amounts will be tracked using a json
     account_balances = models.JSONField(default=dict)
+
+    # for manual payments
+    manual_payment = models.BooleanField(default=False)
+    gross_amount_paid = models.DecimalField(default=0.0, max_digits=50, decimal_places=2)
+    customer_balance = models.DecimalField(default=0.0, max_digits=50, decimal_places=2)
 
     class Meta:
         db_table = 'transactions'

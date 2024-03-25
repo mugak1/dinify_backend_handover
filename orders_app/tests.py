@@ -1,5 +1,6 @@
 from django.test import TestCase
-from orders_app.controllers.order import Order
+from orders_app.controllers.order import Order as OrderController
+from orders_app.models import Order
 from users_app.tests import seed_user, TEST_PHONE
 from users_app.models import User
 from restaurants_app.tests import (
@@ -11,6 +12,27 @@ from restaurants_app.tests import (
     TEST_DISCOUNTED_MENU_ITEM_NAME, TEST_TABLE_NUMBER1, TEST_TABLE_NUMBER2
 )
 from restaurants_app.models import Restaurant, Table, MenuItem
+
+
+def seed_order():
+    """
+    seed the order for the test
+    """
+    restaurant = Restaurant.objects.get(name=TEST_RESTAURANT_NAME)
+    table = Table.objects.get(number=TEST_TABLE_NUMBER1)
+    user = User.objects.get(username=TEST_PHONE)
+    Order.objects.create(
+        restaurant=restaurant,
+        table=table,
+        customer=user,
+        total_cost=10000,
+        discounted_cost=9000,
+        savings=1000,
+        actual_cost=9000,
+        prepayment_required=True,
+        payment_status='paid',
+        order_status='completed'
+    )
 
 
 # Create your tests here.
@@ -25,6 +47,7 @@ class TestOrderFunctions(TestCase):
         seed_menu_section()
         seed_menu_items()
         seed_tables()
+        seed_order()
 
     def test_initiate_order(self):
         """
@@ -58,7 +81,7 @@ class TestOrderFunctions(TestCase):
 
                 ]
             }
-            result = Order(data).initiate_order()
+            result = OrderController(data).initiate_order()
             self.assertEqual(result['status'], 200)
             self.assertEqual(len(result['data']['unavailable_items']), 1)
             self.assertEqual(len(result['data']['available_items']), 3)
@@ -83,7 +106,7 @@ class TestOrderFunctions(TestCase):
                     }
                 ]
             }
-            result = Order(data).initiate_order()
+            result = OrderController(data).initiate_order()
             self.assertEqual(result['status'], 200)
             self.assertEqual(len(result['data']['unavailable_items']), 0)
             self.assertEqual(len(result['data']['available_items']), 3)

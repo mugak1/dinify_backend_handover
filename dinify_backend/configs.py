@@ -29,6 +29,8 @@ TransactionType_Subscription = 'subscription'
 TransactionStatus_Success = 'success'
 TransactionStatus_Failed = 'failed'
 TransactionStatus_Pending = 'pending'
+TransactionStatus_Initiated = 'initiated'
+
 
 # transaction platforms
 TransactionPlatform_Web = 'web'
@@ -36,6 +38,20 @@ TransactionPlatform_Web = 'web'
 # telecoms
 AirtelUg = 'airtelug'
 MtnUg = 'mtnug'
+
+# payment statuses
+PaymentStatus_Paid = 'paid'
+PaymentStatus_Failed = 'failed'
+PaymentStatus_Pending = 'pending'
+
+# order statuses
+OrderStatus_Initiated = 'initiated'
+OrderStatus_Pending = 'pending'
+OrderStatus_Served = 'paid'
+OrderStatus_Cancelled = 'cancelled'
+OrderItemStatus_Initiated = 'initiated'
+OrderItemStatus_Preparing = 'preparing'
+OrderItemStatus_Served = 'served'
 
 
 ACTION_LOG_STATUSES = {

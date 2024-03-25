@@ -74,6 +74,9 @@ class BaseModel(models.Model):
         related_name='%(class)s_deleted_by'
     )
 
+    # determine if the record has been archived
+    archived = models.BooleanField(default=False)
+
     class Meta:
         """
         the metadata for the BaseModel model
