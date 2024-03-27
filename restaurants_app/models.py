@@ -43,6 +43,7 @@ class Restaurant(BaseModel):
     flat_fee = models.FloatField(default=0.0)
 
     branding_configuration = models.JSONField(default=dict)
+    country = models.CharField(max_length=5, default="UG")
 
     class Meta:
         """
