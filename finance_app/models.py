@@ -1,3 +1,4 @@
+from email.policy import default
 from django.db import models
 from django.core.exceptions import ValidationError
 from users_app.models import BaseModel
@@ -9,7 +10,7 @@ from dinify_backend.configs import (
     AccountStatus_Active, AccountStatus_Inactive, AccountStatus_Blocked,
     TransactionType_OrderPayment, TransactionType_OrderRefund, TransactionType_OrderCharge, TransactionType_Disbursement, TransactionType_Subscription,  # noqa
     TransactionStatus_Success, TransactionStatus_Failed, TransactionStatus_Pending, TransactionStatus_Initiated,
-    TransactionPlatform_Web
+    TransactionPlatform_Web, ProcessingStatus_Pending
 )
 
 ACCOUNT_TYPES = [AccountType_Restaurant, AccountType_DinifyRevenue]
@@ -66,15 +67,38 @@ class DinifyAccount(BaseModel):
     account_status = models.CharField(validators=[validate_account_status], default=AccountStatus_Active, max_length=20)  # noqa
 
     # account amounts
-    actual_balance = models.DecimalField(default=0.0, max_digits=50, decimal_places=2)
-    available_balance = models.DecimalField(default=0.0, max_digits=50, decimal_places=2)
-    cumulative_in = models.DecimalField(default=0.0, max_digits=100, decimal_places=2)
-    cumulative_out = models.DecimalField(default=0.0, max_digits=100, decimal_places=2)
+    # mobile money
+    momo_actual_balance = models.DecimalField(default=0.0, max_digits=50, decimal_places=2)
+    momo_available_balance = models.DecimalField(default=0.0, max_digits=50, decimal_places=2)
+    momo_cumulative_in = models.DecimalField(default=0.0, max_digits=100, decimal_places=2)
+    momo_cumulative_out = models.DecimalField(default=0.0, max_digits=100, decimal_places=2)
 
-    cumulative_in_charges = models.DecimalField(default=0.0, max_digits=100, decimal_places=2)
-    cumulative_out_charges = models.DecimalField(default=0.0, max_digits=100, decimal_places=2)
-    cumulative_refunds = models.DecimalField(default=0.0, max_digits=100, decimal_places=2)
-    cumulative_disbursements = models.DecimalField(default=0.0, max_digits=100, decimal_places=2)
+    momo_cumulative_in_charges = models.DecimalField(default=0.0, max_digits=100, decimal_places=2)
+    momo_cumulative_out_charges = models.DecimalField(default=0.0, max_digits=100, decimal_places=2)
+    momo_cumulative_refunds = models.DecimalField(default=0.0, max_digits=100, decimal_places=2)
+    momo_cumulative_disbursements = models.DecimalField(default=0.0, max_digits=100, decimal_places=2)
+
+    # card i.e. bank
+    card_actual_balance = models.DecimalField(default=0.0, max_digits=50, decimal_places=2)
+    card_available_balance = models.DecimalField(default=0.0, max_digits=50, decimal_places=2)
+    card_cumulative_in = models.DecimalField(default=0.0, max_digits=100, decimal_places=2)
+    card_cumulative_out = models.DecimalField(default=0.0, max_digits=100, decimal_places=2)
+
+    card_cumulative_in_charges = models.DecimalField(default=0.0, max_digits=100, decimal_places=2)
+    card_cumulative_out_charges = models.DecimalField(default=0.0, max_digits=100, decimal_places=2)
+    card_cumulative_refunds = models.DecimalField(default=0.0, max_digits=100, decimal_places=2)
+    card_cumulative_disbursements = models.DecimalField(default=0.0, max_digits=100, decimal_places=2)
+
+    # cash collections
+    cash_actual_balance = models.DecimalField(default=0.0, max_digits=50, decimal_places=2)
+    cash_available_balance = models.DecimalField(default=0.0, max_digits=50, decimal_places=2)
+    cash_cumulative_in = models.DecimalField(default=0.0, max_digits=100, decimal_places=2)
+    cash_cumulative_out = models.DecimalField(default=0.0, max_digits=100, decimal_places=2)
+
+    cash_cumulative_in_charges = models.DecimalField(default=0.0, max_digits=100, decimal_places=2)
+    cash_cumulative_out_charges = models.DecimalField(default=0.0, max_digits=100, decimal_places=2)
+    cash_cumulative_refunds = models.DecimalField(default=0.0, max_digits=100, decimal_places=2)
+    cash_cumulative_disbursements = models.DecimalField(default=0.0, max_digits=100, decimal_places=2)
 
     class Meta:
         """
@@ -112,6 +136,14 @@ class DinifyTransaction(BaseModel):
     manual_payment = models.BooleanField(default=False)
     gross_amount_paid = models.DecimalField(default=0.0, max_digits=50, decimal_places=2)
     customer_balance = models.DecimalField(default=0.0, max_digits=50, decimal_places=2)
+
+    # to track the processing of the transaction
+    processed = models.CharField(max_length=25, default=ProcessingStatus_Pending)  # i.e. accounts updated, revenue collected, etc.
+
+    # for restaurants where Dinify has surcharge
+    revenue_collected = models.BooleanField(default=False)  # i.e. revenue collected from the transaction
+    revenue_initiation_transaction = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True)  # noqa
+    revenue_collection_timestamp = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         db_table = 'transactions'

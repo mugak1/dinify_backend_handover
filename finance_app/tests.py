@@ -11,7 +11,9 @@ from restaurants_app.tests import (
     TEST_RESTAURANT_NAME, TEST_TABLE_NUMBER1
 )
 from finance_app.controllers.initiate_order_payment import initiate_order_payment
+from finance_app.controllers.process_payment_feedback import process_payment_feedback
 from dinify_backend.configs import PaymentMode_MobileMoney
+from dinify_backend.string_messages import OK_ORDER_PAYMENT_INITIATED, OK_ORDER_PAYMENT_PROCESSED
 
 
 def seed_account():
@@ -25,6 +27,19 @@ def seed_account():
         account_type=AccountType_Restaurant,
         restaurant=restaurant
     )
+
+
+def simulate_aggregator_feedback(
+    desired_aggregator: str,    
+    desired_aggregator_status: str,
+    desired_status: str
+) -> dict:
+    return {
+        "aggregator": desired_aggregator,
+        "aggregator_reference": "123456789",
+        "aggregator_status": desired_aggregator_status,
+        "status": desired_status
+    }
 
 
 # Create your tests here.
@@ -44,21 +59,44 @@ class FinanceAppTestFunctions(TestCase):
         seed_tables()
         seed_order()
 
-    def test_initiate_order_payment(self):
-        restaurant = Restaurant.objects.get(name=TEST_RESTAURANT_NAME)
-        table = Table.objects.get(number=TEST_TABLE_NUMBER1)
-        user = User.objects.get(username=TEST_PHONE)
+    def test_order_payment(self):
+        self.transaction_id = None
 
-        order = Order.objects.get(
-            restaurant=restaurant,
-            table=table,
-            customer=user
-        )
+        def test_initiate():
+            restaurant = Restaurant.objects.get(name=TEST_RESTAURANT_NAME)
+            table = Table.objects.get(number=TEST_TABLE_NUMBER1)
+            user = User.objects.get(username=TEST_PHONE)
 
-        result = initiate_order_payment(
-            order=order,
-            payment_mode=PaymentMode_MobileMoney,
-            msisdn='256706087495'
-        )
+            order = Order.objects.get(
+                restaurant=restaurant,
+                table=table,
+                customer=user
+            )
 
-        self.assertEqual(result['status'], 200)
+            result = initiate_order_payment(
+                order=order,
+                payment_mode=PaymentMode_MobileMoney,
+                msisdn='256706087495'
+            )
+            self.assertEqual(result['status'], 200)
+            self.assertEqual(result['message'], OK_ORDER_PAYMENT_INITIATED)
+            self.transaction_id = result['data']['transaction_id']
+
+        def test_process_payment_feedback():
+            feedback = simulate_aggregator_feedback(
+                desired_aggregator='flutterwave',
+                desired_aggregator_status='success',
+                desired_status='success'
+            )
+            result = process_payment_feedback(
+                transaction_id=self.transaction_id,
+                aggregator=feedback['aggregator'],
+                aggregator_reference=feedback['aggregator_reference'],
+                aggregator_status=feedback['aggregator_status'],
+                status=feedback['status']
+            )
+            self.assertEqual(result['status'], 200)
+            self.assertEqual(result['message'], OK_ORDER_PAYMENT_PROCESSED)
+
+        test_initiate()
+        test_process_payment_feedback()

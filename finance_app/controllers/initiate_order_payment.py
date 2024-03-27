@@ -8,6 +8,7 @@ from dinify_backend.configs import (
     TransactionPlatform_Web, PaymentMode_Cash, PaymentMode_Card,
     PaymentMode_MobileMoney
 )
+from dinify_backend.string_messages import OK_ORDER_PAYMENT_INITIATED, ERR_ORDER_PAYMENT_INITIATION
 
 
 def initiate_order_payment(
@@ -50,5 +51,8 @@ def initiate_order_payment(
 
     return {
         'status': 200,
-        'message': 'Order payment has been initiated. Please confirm once prompted.'
+        'message': OK_ORDER_PAYMENT_INITIATED,
+        'data': {
+            "transaction_id": str(order_payment.id)
+        }
     }

@@ -53,6 +53,11 @@ OrderItemStatus_Initiated = 'initiated'
 OrderItemStatus_Preparing = 'preparing'
 OrderItemStatus_Served = 'served'
 
+# processing status
+ProcessingStatus_Pending = 'pending'
+ProcessingStatus_PendingRevenueAcknowledgement = 'pending_revenue_acknowledgement'
+ProcessingStatus_Done = 'done'
+
 
 ACTION_LOG_STATUSES = {
     'success': 'success',

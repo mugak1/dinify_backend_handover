@@ -6,6 +6,7 @@ from dinify_backend.configs import (
     TransactionStatus_Success,
     PaymentStatus_Paid,
 )
+from dinify_backend.string_messages import OK_ORDER_PAYMENT_PROCESSED
 
 
 def process_payment_feedback(
@@ -62,5 +63,5 @@ def process_order_payment(
         order.save()
         return {
             'status': 200,
-            'message': 'Order payment has been processed successfully'
+            'message': OK_ORDER_PAYMENT_PROCESSED
         }
