@@ -1,4 +1,3 @@
-from email.policy import default
 from django.db import models
 from django.core.exceptions import ValidationError
 from users_app.models import BaseModel
@@ -9,7 +8,7 @@ from dinify_backend.configs import (
     PaymentMode_Cash, PaymentMode_MobileMoney, PaymentMode_Card,
     AccountStatus_Active, AccountStatus_Inactive, AccountStatus_Blocked,
     TransactionType_OrderPayment, TransactionType_OrderRefund, TransactionType_OrderCharge, TransactionType_Disbursement, TransactionType_Subscription,  # noqa
-    TransactionStatus_Success, TransactionStatus_Failed, TransactionStatus_Pending, TransactionStatus_Initiated,
+    TransactionStatus_Success, TransactionStatus_Failed, TransactionStatus_Pending, TransactionStatus_Initiated,  # noqa
     TransactionPlatform_Web, ProcessingStatus_Pending
 )
 
@@ -76,7 +75,7 @@ class DinifyAccount(BaseModel):
     momo_cumulative_in_charges = models.DecimalField(default=0.0, max_digits=100, decimal_places=2)
     momo_cumulative_out_charges = models.DecimalField(default=0.0, max_digits=100, decimal_places=2)
     momo_cumulative_refunds = models.DecimalField(default=0.0, max_digits=100, decimal_places=2)
-    momo_cumulative_disbursements = models.DecimalField(default=0.0, max_digits=100, decimal_places=2)
+    momo_cumulative_disbursements = models.DecimalField(default=0.0, max_digits=100, decimal_places=2)  # noqa
 
     # card i.e. bank
     card_actual_balance = models.DecimalField(default=0.0, max_digits=50, decimal_places=2)
@@ -87,7 +86,7 @@ class DinifyAccount(BaseModel):
     card_cumulative_in_charges = models.DecimalField(default=0.0, max_digits=100, decimal_places=2)
     card_cumulative_out_charges = models.DecimalField(default=0.0, max_digits=100, decimal_places=2)
     card_cumulative_refunds = models.DecimalField(default=0.0, max_digits=100, decimal_places=2)
-    card_cumulative_disbursements = models.DecimalField(default=0.0, max_digits=100, decimal_places=2)
+    card_cumulative_disbursements = models.DecimalField(default=0.0, max_digits=100, decimal_places=2)  # noqa
 
     # cash collections
     cash_actual_balance = models.DecimalField(default=0.0, max_digits=50, decimal_places=2)
@@ -98,7 +97,7 @@ class DinifyAccount(BaseModel):
     cash_cumulative_in_charges = models.DecimalField(default=0.0, max_digits=100, decimal_places=2)
     cash_cumulative_out_charges = models.DecimalField(default=0.0, max_digits=100, decimal_places=2)
     cash_cumulative_refunds = models.DecimalField(default=0.0, max_digits=100, decimal_places=2)
-    cash_cumulative_disbursements = models.DecimalField(default=0.0, max_digits=100, decimal_places=2)
+    cash_cumulative_disbursements = models.DecimalField(default=0.0, max_digits=100, decimal_places=2)  # noqa
 
     class Meta:
         """
@@ -138,10 +137,10 @@ class DinifyTransaction(BaseModel):
     customer_balance = models.DecimalField(default=0.0, max_digits=50, decimal_places=2)
 
     # to track the processing of the transaction
-    processed = models.CharField(max_length=25, default=ProcessingStatus_Pending)  # i.e. accounts updated, revenue collected, etc.
+    processed = models.CharField(max_length=25, default=ProcessingStatus_Pending)  # i.e. accounts updated, revenue collected, etc.  # noqa
 
     # for restaurants where Dinify has surcharge
-    revenue_collected = models.BooleanField(default=False)  # i.e. revenue collected from the transaction
+    revenue_collected = models.BooleanField(default=False)  # i.e. revenue collected from the transaction  # noqa
     revenue_initiation_transaction = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True)  # noqa
     revenue_collection_timestamp = models.DateTimeField(null=True, blank=True)
 

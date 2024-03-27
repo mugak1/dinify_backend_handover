@@ -57,6 +57,8 @@ def process_order_payment(
     """
     order = Order.objects.select_for_update().get(id=transaction_record.order.id)
     if transaction_status == TransactionStatus_Success:
+        # TODO check if the cumulative amount paid is equal to the order amount
+        
         order.payment_status = PaymentStatus_Paid
         if order.order_status == "Served":
             order.order_status = "Paid"

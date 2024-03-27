@@ -62,7 +62,10 @@ def initiate_order_payment(
             print(f"Order initiation payment error: {flutterwave_response.get('message')}")
             return {
                 'status': 400,
-                'message': ERR_ORDER_PAYMENT_INITIATION
+                'message': ERR_ORDER_PAYMENT_INITIATION,
+                'data': {
+                    "transaction_id": str(order_payment.id)
+                }
             }
         else:
             return {

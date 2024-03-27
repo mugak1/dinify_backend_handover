@@ -47,7 +47,7 @@ class Flutterwave:
             }
 
         req_body = {
-            "tx_ref": (self.transaction_id).replace('-', ''),
+            "tx_ref": self.transaction_id,
             "amount": self.amount,
             "currency": self.currency,
             "email": self.email,
@@ -67,8 +67,9 @@ class Flutterwave:
             headers=self.HEADERS,
             # timeout=60000
         )
-        print(f"Flutterwave MoMo Collection\n...Request...\n{req_body}\n...Response...\n{response.json()}")  # noqa
-        return response.json()
+        response = response.json()
+        print(f"\n===Flutterwave MoMo Collection\n...Request...\n{req_body}\n...Response...\n{response}")  # noqa
+        return response
 
     # {'status': 'error', 'message': 'str.replace is not a function', 'data': None}
     # {
@@ -99,5 +100,6 @@ class Flutterwave:
             data=req_body,
             headers=self.HEADERS
         )
-        print(f"Flutterwave MoMo Payout\n...Request...\n{req_body}\n...Response...\n{response.json()}")  # noqa
-        return response.json()
+        response = response.json()
+        print(f"\n===Flutterwave MoMo Payout\n...Request...\n{req_body}\n...Response...\n{response}")  # noqa
+        return response
