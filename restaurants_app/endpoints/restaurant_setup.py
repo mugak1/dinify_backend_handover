@@ -35,7 +35,13 @@ class RestaurantSetupEndpoint(APIView):
         if config_detail == 'restaurants':
             # TODO if the user is not a Dinify admin,.
             # then set the owner value from the auth details
-            data = request.data.copy()
+            post_data = request.data
+            try:
+                post_data = post_data.dict()
+            except Exception as error:
+                print(f"Error: {error}")
+
+            data = post_data.copy()
             data['owner'] = auth['user_id']
             response = create_restaurant(
                 data,
