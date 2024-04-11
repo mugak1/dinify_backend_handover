@@ -79,12 +79,17 @@ class SerializerPublicGetMenuSection(ModelSerializer):
     """
     serializer for getting the menu section
     """
+    item_count = SerializerMethodField()
+
     class Meta:
         model = MenuSection
         fields = (
             'id', 'name', 'description', 'section_banner_image',
-            'available'
+            'available', 'item_count'
         )
+
+    def get_item_count(self, menu_section):
+        return MenuItem.objects.filter(section=menu_section).count()
 
 
 class SerializerPutMenuItem(ModelSerializer):
