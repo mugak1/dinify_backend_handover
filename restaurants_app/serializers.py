@@ -116,6 +116,9 @@ class SerializerPublicGetMenuItem(ModelSerializer):
             'has_options', 'options'
         )
 
+    def get_has_options(self, menu_item):
+        return len(menu_item.options) > 0
+
 
 class SerializerPutTable(ModelSerializer):
     """
