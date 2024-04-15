@@ -38,8 +38,13 @@ MESSAGES = {
     'ORDER_INITIATED': 'The order has been initiated successfully',
 }
 
+ERR_GENERAL = 'Sorry, an error occurred'
 
 # finance messages
 OK_ORDER_PAYMENT_INITIATED = 'Order payment has been initiated. Please confirm once prompted.'
 ERR_ORDER_PAYMENT_INITIATION = 'Failed to initiate order payment. Please try again.'
 OK_ORDER_PAYMENT_PROCESSED = 'Order payment has been processed successfully.'
+
+
+OK_GET_RECORD_DETAIL = 'The details of the record have been retrieved successfully.'
+ERR_UNSPECIFIED_RECORD_DETAILS = 'Please specify the record type and the record id'

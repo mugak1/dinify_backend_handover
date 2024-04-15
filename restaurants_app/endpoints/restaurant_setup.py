@@ -14,11 +14,12 @@ from restaurants_app.serializers import (
 
     SerializerPutMenuSection, SerializerPublicGetMenuSection,
     SerializerPutMenuItem, SerializerPublicGetMenuItem,
-    SerializerPutTable, SerializerPublicGetTable
+    SerializerPutTable, SerializerPublicGetTable,
 )
 from restaurants_app.models import MenuSection, SectionGroup
 from dinify_backend.configss.required_information import REQUIRED_INFORMATION
 from dinify_backend.configss.edit_information import EDIT_INFORMATION
+from dinify_backend.configss.messages import OK_GET_RECORD_DETAIL, ERR_GENERAL, ERR_UNSPECIFIED_RECORD_DETAILS
 
 
 class RestaurantSetupEndpoint(APIView):
@@ -147,7 +148,10 @@ class RestaurantSetupEndpoint(APIView):
         """
         response = {'status': 500, 'message': "Invalid request"}
         # decode the token
-        auth = decode_jwt_token(request)
+        # auth = decode_jwt_token(request)
+
+        if config_detail == 'details':
+            return self.get_detail(request)
 
         orm_filter = define_filter_params(request.GET, config_detail)
 
@@ -186,8 +190,8 @@ class RestaurantSetupEndpoint(APIView):
             'serializer': serializer,
             'filter': orm_filter,
             'paginate': True,
-            'user_id': auth['id'],
-            'username': auth['username'],
+            'user_id': request.user.id,
+            'username': request.user.username,
             'success_message': success_message,
             'error_message': error_message
         }
@@ -290,3 +294,41 @@ class RestaurantSetupEndpoint(APIView):
             response,
             status=response['status']
         )
+
+    def get_detail(self, request):
+        try:
+            serializers = {
+                'restaurants': SerializerPutRestaurant,
+                'employees': SerializerGetRestaurantEmployee,
+                'menusections': SerializerPutMenuSection,
+                'menuitems': SerializerPutMenuItem,
+                'tables': SerializerPutTable,
+            }
+
+            record = request.GET.get('record')
+            id = request.GET.get('id')
+
+            if record is None or id is None:
+                response = {
+                    'status': 400,
+                    'message': ERR_UNSPECIFIED_RECORD_DETAILS
+                }
+                return Response(response, status=200)
+
+            serializer = serializers.get(record)
+            db_record = serializer.Meta.model.objects.get(
+                id=id
+            )
+            response = {
+                'status': 200,
+                'message': OK_GET_RECORD_DETAIL,
+                'data': serializer(db_record, many=False).data
+            }
+            return Response(response, status=200)
+        except Exception as error:
+            print(f"Error while getting record detail: {error}")
+            response = {
+                'status': 400,
+                'message': ERR_GENERAL
+            }
+            return Response(response, status=200)
