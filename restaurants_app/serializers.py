@@ -25,7 +25,7 @@ class SerializerPublicGetRestaurant(ModelSerializer):
     """
     class Meta:
         model = Restaurant
-        fields = ("id", "name", "location", "logo", "cover_photo")
+        fields = ("id", "name", "location", "logo", "cover_photo", "status")
 
 
 class SerializerEmployeeGetRestaurant(ModelSerializer):
