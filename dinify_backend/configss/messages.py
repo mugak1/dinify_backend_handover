@@ -48,3 +48,10 @@ OK_ORDER_PAYMENT_PROCESSED = 'Order payment has been processed successfully.'
 
 OK_GET_RECORD_DETAIL = 'The details of the record have been retrieved successfully.'
 ERR_UNSPECIFIED_RECORD_DETAILS = 'Please specify the record type and the record id'
+
+
+OK_ORDER_UPDATED = 'The order has been updated.'
+ERR_ORDER_UPDATED = 'Sorry, an error occurred while updating the order.'
+
+
+OK_SCANNED_TABLE = 'The table details have been retrieved successfully.'

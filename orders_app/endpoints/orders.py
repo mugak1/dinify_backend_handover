@@ -4,13 +4,20 @@ endpoints to handle order
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
-from users_app.models import User
+from orders_app.models import Order
 from orders_app.controllers.initiate_order import initiate_order
+from orders_app.controllers.manage_order import update_order_status
+from dinify_backend.configss.string_definitions import (
+    OrderStatus_Pending,
+    OrderItemStatus_Preparing, OrderItemStatus_Served,
+    OrderStatus_Cancelled,
+    OrderStatus_Served
+)
 
 
 class OrdersEndpoint(APIView):
     """
-    the endpoint for handling orders
+    The endpoint for handling orders
     """
     permission_classes = [AllowAny]
 
@@ -37,3 +44,34 @@ class OrdersEndpoint(APIView):
 
             response = initiate_order(data)
             return Response(response, status=200)
+
+    def put(self, request, action):
+        if action in ['submit', 'prepare', 'serve']:
+            data = request.data
+            source = data.get('source')
+
+            user = request.user.pk
+            if user is None:
+                if action not in ['submit']:
+                    response = {
+                        'status': 400,
+                        'message': 'Please log in'
+                    }
+                    return Response(response, status=400)
+                else:
+                    user = None
+
+            order_statuses = {
+                'submit': OrderStatus_Pending,
+                'prepare': OrderItemStatus_Preparing,
+                'serve': OrderStatus_Served
+            }
+            new_status = order_statuses.get(action)
+            order = Order.objects.get(id=request.data.get('id'))
+            response = update_order_status(
+                order=order,
+                new_status=new_status,
+                user=user
+            )
+
+            return Response(response, status=400)

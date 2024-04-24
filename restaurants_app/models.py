@@ -20,8 +20,8 @@ class Restaurant(BaseModel):
     name = models.CharField(max_length=255, db_index=True)
     location = models.CharField(max_length=255, null=True, blank=True, db_index=True)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
-    logo = models.ImageField(null=True, blank=True, upload_to='restaurant_logos/')
-    cover_photo = models.ImageField(null=True, blank=True, upload_to='restaurant_cover_photos/')
+    logo = models.ImageField(null=True, upload_to='restaurant_logos/')
+    cover_photo = models.ImageField(null=True, upload_to='restaurant_cover_photos/')
     status = models.CharField(max_length=255, default='pending')
 
     # dynamic configurations
