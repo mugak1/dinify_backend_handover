@@ -33,10 +33,17 @@ TABLE_FILTERS = {
     'number': 'number',
 }
 
+GROUP_FILTERS = {
+    'name': 'name__icontains',
+    'description': 'description__icontains',
+    'section': 'section'
+}
+
 FILTER_DEFINITIONS = {
     'restaurants': RESTAURANT_FILTERS,
     'employees': EMPLOYEE_FILTERS,
     'menusections': MENU_SECTIION_FILTERS,
+    'sectiongroups': GROUP_FILTERS,
     'menuitems': MENU_ITEM_FILTERS,
     'tables': TABLE_FILTERS,
 }

@@ -24,12 +24,11 @@ from dinify_backend.configss.required_information import (
     RI_RESTAURANT_EMPLOYEES,
     RI_SECTION_GROUP
 )
-from dinify_backend.configss.edit_information import EDIT_INFORMATION
+from dinify_backend.configss.edit_information import EDIT_INFORMATION, EI_SECTION_GROUP
 from dinify_backend.configss.messages import (
     OK_GET_RECORD_DETAIL, ERR_GENERAL,
-    ERR_UNSPECIFIED_RECORD_DETAILS, 
-    OK_ADDED_SECTION_GROUP, ERR_ADDED_SECTION_GROUP
-
+    ERR_UNSPECIFIED_RECORD_DETAILS,
+    OK_ADDED_SECTION_GROUP, ERR_ADDED_SECTION_GROUP, OK_RETRIEVED_SECTION_GROUP, ERR_RETRIEVED_SECTION_GROUP, OK_UPDATED_SECTION_GROUP, ERR_UPDATED_SECTION_GROUP  # noqa
 )
 
 
@@ -174,6 +173,7 @@ class RestaurantSetupEndpoint(APIView):
             'restaurants': SerializerPublicGetRestaurant,
             'employees': SerializerGetRestaurantEmployee,
             'menusections': SerializerPublicGetMenuSection,
+            'sectiongroups': SerializerPublicGetSectionGroup,
             'menuitems': SerializerPublicGetMenuItem,
             'tables': SerializerPublicGetTable,
         }
@@ -182,6 +182,7 @@ class RestaurantSetupEndpoint(APIView):
             'restaurants': 'Successfully retrieved the restaurants',
             'employees': 'Successfully retrieved the employees',
             'menusections': 'Successfully retrieved the menu sections',
+            'sectiongroups': OK_RETRIEVED_SECTION_GROUP,
             'menuitems': 'Successfully retrieved the menu items',
             'tables': 'Successfully retrieved the tables'
         }
@@ -190,6 +191,7 @@ class RestaurantSetupEndpoint(APIView):
             'restaurants': 'Error while retrieving restaurants',
             'employees': 'Error while retrieving employees',
             'menusections': 'Error while retrieving menu sections',
+            'sectiongroups': ERR_RETRIEVED_SECTION_GROUP,
             'menuitems': 'Error while retrieving menu items',
             'tables': 'Error while retrieving the tables'
         }
@@ -230,6 +232,7 @@ class RestaurantSetupEndpoint(APIView):
             'restaurants': SerializerPutRestaurant,
             'employees': SerializerPutRestaurantEmployee,
             'menusections': SerializerPutMenuSection,
+            'sectiongroups': SerializerPutSectionGroup,
             'menuitems': SerializerPutMenuItem,
             'tables': SerializerPutTable
         }
@@ -238,6 +241,7 @@ class RestaurantSetupEndpoint(APIView):
             'restaurants': EDIT_INFORMATION.get('restaurants'),
             'employees': EDIT_INFORMATION.get('restaurant_employee'),
             'menusections': EDIT_INFORMATION.get('menu_section'),
+            'sectiongroups': EI_SECTION_GROUP,
             'menuitems': EDIT_INFORMATION.get('menu_item'),
             'tables': EDIT_INFORMATION.get('table')
         }
@@ -246,6 +250,7 @@ class RestaurantSetupEndpoint(APIView):
             'restaurants': 'The details of the restaurant have been updated successfully.',
             'employees': 'The details of the employee have been updated successfully',
             'menusections': 'The details of the menu section have been updated successfully.',
+            'sectiongroups': OK_UPDATED_SECTION_GROUP,
             'menuitems': 'The details of the menu item have been updated successfully.',
             'tables': 'The details of the table have been updated successfully.',
         }
@@ -254,6 +259,7 @@ class RestaurantSetupEndpoint(APIView):
             'restaurants': 'An error occurred while updating the details of the restaurant.',
             'employees': 'An error occurred while updating the details of the employee.',
             'menusections': 'An error occurred while updating the details of the menu section.',
+            'sectiongroups': ERR_UPDATED_SECTION_GROUP,
             'menuitems': 'An error occurred while updating the details of the menu item.',
             'tables': 'An error occurred while updating the details of the table.',
         }
@@ -293,6 +299,7 @@ class RestaurantSetupEndpoint(APIView):
             'restaurant': SerializerPutRestaurant,
             'employees': SerializerPutRestaurantEmployee,
             'menusections': SerializerPutMenuSection,
+            'sectiongroups': SerializerPutSectionGroup,
             'menuitems': SerializerPutMenuItem,
             'tables': SerializerPutTable
         }

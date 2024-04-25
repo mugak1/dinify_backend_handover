@@ -58,3 +58,7 @@ OK_SCANNED_TABLE = 'The table details have been retrieved successfully.'
 
 OK_ADDED_SECTION_GROUP = 'The section group has been added successfully.'
 ERR_ADDED_SECTION_GROUP = 'An error occurred while adding the section group.'
+OK_RETRIEVED_SECTION_GROUP = 'Successfully retrieved the section groups.'
+ERR_RETRIEVED_SECTION_GROUP = 'Erro while retrieving section groups.'
+OK_UPDATED_SECTION_GROUP = 'he details of the section group have been updated successfully.'
+ERR_UPDATED_SECTION_GROUP = 'An error occurred while updating the details of the section group.'
