@@ -212,9 +212,13 @@ class SerializerPublicGetTableDetails(ModelSerializer):
         if logo is not None:
             if len(str(logo)) < 1:
                 logo = None
+            else:
+                logo = str(logo)
         if cover_photo is not None:
             if len(str(cover_photo)) < 1:
                 cover_photo = None
+            else:
+                cover_photo = str(cover_photo)
         return {
             'id': str(restaurant.pk),
             'name': restaurant.name,
