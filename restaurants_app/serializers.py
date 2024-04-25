@@ -128,6 +128,7 @@ class SerializerPublicGetMenuItem(ModelSerializer):
     serializer for getting the menu Item
     """
     has_options = SerializerMethodField()
+    group = SerializerMethodField()
 
     class Meta:
         model = MenuItem
@@ -135,11 +136,19 @@ class SerializerPublicGetMenuItem(ModelSerializer):
             'id', 'name', 'description', 'primary_price',
             'discounted_price', 'running_discount', 'image',
             'available',
-            'has_options', 'options'
+            'has_options', 'options', 'group'
         )
 
     def get_has_options(self, menu_item):
         return len(menu_item.options) > 0
+
+    def get_group(self, menu_item):
+        if menu_item.section_group is None:
+            return None
+        return {
+            'id': str(menu_item.group.pk),
+            'name': menu_item.group.name
+        }
 
 
 class SerializerPutTable(ModelSerializer):
@@ -213,3 +222,34 @@ class SerializerPublicGetTableDetails(ModelSerializer):
             'cover_photo': cover_photo,
             'branding_configuration': restaurant.branding_configuration
         }
+
+
+class SerializerGetFullMenu(ModelSerializer):
+    item_count = SerializerMethodField()
+    groups = SerializerMethodField()
+    items = SerializerMethodField()
+
+    class Meta:
+        model = MenuSection
+        fields = (
+            'id', 'name', 'section_banner_image', 'available',
+            'item_count', 'groups', 'items'
+        )
+
+    def get_groups(self, section):
+        groups = SectionGroup.objects.filter(section=section)
+        return [
+            {
+                'id': str(group.pk),
+                'name': str(group.name)
+            } for group in groups
+        ]
+
+    def get_items(self, section):
+        items = MenuItem.objects.filter(section=section)
+        return SerializerPublicGetMenuItem(
+            items, many=True
+        ).data
+
+    def get_item_count(self, section):
+        return MenuItem.objects.filter(section=section).count()

@@ -1,6 +1,6 @@
-from restaurants_app.models import Table
-from restaurants_app.serializers import SerializerPublicGetTableDetails
-from dinify_backend.configss.messages import OK_SCANNED_TABLE
+from restaurants_app.models import Table, MenuSection
+from restaurants_app.serializers import SerializerPublicGetTableDetails, SerializerGetFullMenu
+from dinify_backend.configss.messages import OK_SCANNED_TABLE, OK_RETRIEVED_FULL_MENU
 
 
 def handle_table_scan(table_id: str) -> dict:
@@ -14,3 +14,17 @@ def handle_table_scan(table_id: str) -> dict:
         'data': table_data
     }
 
+
+def handle_show_menu(restaurant_id: str) -> dict:
+    sections = MenuSection.objects.filter(
+        restaurant=restaurant_id
+    )
+    menu_data = SerializerGetFullMenu(
+        sections, many=True
+    ).data
+
+    return {
+        'status': 200,
+        'message': OK_RETRIEVED_FULL_MENU,
+        'data': menu_data
+    }
