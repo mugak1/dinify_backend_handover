@@ -1,5 +1,6 @@
 from django.test import TestCase
-from orders_app.controllers.order import Order as OrderController
+# from orders_app.controllers.order import Order as OrderController
+from orders_app.controllers.initiate_order import initiate_order
 from orders_app.models import Order
 from users_app.tests import seed_user, TEST_PHONE
 from users_app.models import User
@@ -60,7 +61,7 @@ class TestOrderFunctions(TestCase):
         def test_post_paid_initiate():
             data = {
                 'customer': None,
-                'created_by': None, 
+                'created_by': None,
                 'restaurant': str(restaurant.pk),
                 'table': str(table1.pk),
                 'items': [
@@ -83,7 +84,7 @@ class TestOrderFunctions(TestCase):
 
                 ]
             }
-            result = OrderController(data).initiate_order()
+            result = initiate_order(data)
             self.assertEqual(result['status'], 200)
             self.assertEqual(len(result['data']['unavailable_items']), 1)
             self.assertEqual(len(result['data']['available_items']), 3)
@@ -108,7 +109,8 @@ class TestOrderFunctions(TestCase):
                     }
                 ]
             }
-            result = OrderController(data).initiate_order()
+            result = initiate_order(data)
+            print(result)
             self.assertEqual(result['status'], 200)
             self.assertEqual(len(result['data']['unavailable_items']), 0)
             self.assertEqual(len(result['data']['available_items']), 3)

@@ -127,7 +127,7 @@ def initiate_order(data):
         # save the order
         order_data = {
             'restaurant': data['restaurant'],
-            'table': data['table'],
+            'table': data['table'],  # replace with the order details
 
             'total_cost': total_cost,
             'discounted_cost': discounted_cost,
@@ -169,6 +169,8 @@ def initiate_order(data):
         'data': {
             'order_details': {
                 'id': order_id,
+                'time_created': order_record.data['time_created'],
+                'order_number': order_record.data['order_number'],
 
                 'restaurant': data['restaurant'],
                 'table': data['table'],

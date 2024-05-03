@@ -1,10 +1,19 @@
+from django.db.models.signals import pre_save
+from django.dispatch import receiver
 from django.db import models
+from django.db import transaction
+from datetime import datetime
 from users_app.models import User, BaseModel
 from restaurants_app.models import Restaurant, MenuItem, Table
 from dinify_backend.configss.string_definitions import (
     PaymentStatus_Pending, OrderStatus_Initiated,
     OrderItemStatus_Initiated
 )
+
+
+# tusker lite
+# tusker lite
+# 
 
 
 # Create your models here.
@@ -14,6 +23,7 @@ class Order(BaseModel):
     """
     restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE, related_name='restaurant')
     table = models.ForeignKey(Table, on_delete=models.CASCADE, related_name='table')
+    order_number = models.IntegerField(null=True)
 
     customer_phone = models.CharField(max_length=50, null=True, blank=True)
     customer_email = models.EmailField(max_length=50, null=True, blank=True)
@@ -62,3 +72,15 @@ class OrderItem(BaseModel):
     class Meta:
         db_table = 'order_items'
         ordering = ['item__name']
+
+
+@receiver(pre_save, sender=Order)
+def create_order_number(sender, instance, **kwargs):
+    with transaction.atomic():
+        # get the count of today's order for the restaurant
+        date_today = datetime.now().date()
+        count = Order.objects.select_for_update().filter(
+            restaurant=instance.restaurant,
+            time_created__date=date_today
+        ).count()
+        instance.order_number = count+1
