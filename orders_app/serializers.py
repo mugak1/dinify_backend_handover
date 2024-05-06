@@ -51,7 +51,8 @@ class SerializerListGetOrder(ModelSerializer):
             'total_cost', 'discounted_cost', 'savings',
             'actual_cost', 'prepayment_required',
             'payment_status', 'order_status',
-            'items', 'order_number', 'time_created', 'table_details'
+            'items', 'order_number', 'time_created', 'table_details',
+            'order_remarks'
         )
 
     def get_items(self, order):
