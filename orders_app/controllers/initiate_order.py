@@ -128,6 +128,7 @@ def initiate_order(data):
         order_data = {
             'restaurant': data['restaurant'],
             'table': data['table'],  # replace with the order details
+            'order_remarks': data.get('order_remarks'),
 
             'total_cost': total_cost,
             'discounted_cost': discounted_cost,
