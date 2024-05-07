@@ -9,7 +9,7 @@ from orders_app.models import Order, OrderItem
 from dinify_backend.configss.messages import (
     OK_ORDER_UPDATED, ERR_ORDER_UPDATED,
     ERR_UPDATING_ITEM_STATUS_UNSUPPORTED_STATUS,
-    OK_UPDATED_ITEM_STATUS
+    OK_UPDATED_ITEM_STATUS, ERR_ORDER_ITEM_NOT_AVAILABLE
 )
 from dinify_backend.configss.string_definitions import (
     OrderItemStatus_Initiated,
@@ -65,6 +65,7 @@ def update_item_status(
     """
     update the status of an order item
     """
+    print(f"{item_id} - {new_status}")
     if new_status not in [OrderItemStatus_Preparing, OrderItemStatus_Served]:
         return {
             'status': 400,
@@ -75,6 +76,12 @@ def update_item_status(
         item = OrderItem.objects.select_for_update().get(
             id=item_id
         )
+
+        if not item.available:
+            return {
+                'status': 200,
+                'message': ERR_ORDER_ITEM_NOT_AVAILABLE
+            }
 
         time_now = datetime.now()
 
