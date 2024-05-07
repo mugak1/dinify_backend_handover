@@ -1,5 +1,6 @@
 from rest_framework.serializers import ModelSerializer, SerializerMethodField
 from orders_app.models import Order, OrderItem
+from dinify_backend.configss.string_definitions import OrderItemStatus_Served
 
 
 class SerializerPutOrder(ModelSerializer):
@@ -43,6 +44,7 @@ class SerializerListOrderItem(ModelSerializer):
 class SerializerListGetOrder(ModelSerializer):
     items = SerializerMethodField()
     table_details = SerializerMethodField()
+    count_items_served = SerializerMethodField()
 
     class Meta:
         model = Order
@@ -52,7 +54,7 @@ class SerializerListGetOrder(ModelSerializer):
             'actual_cost', 'prepayment_required',
             'payment_status', 'order_status',
             'items', 'order_number', 'time_created', 'table_details',
-            'order_remarks'
+            'order_remarks', 'count_items_served'
         )
 
     def get_items(self, order):
@@ -64,3 +66,9 @@ class SerializerListGetOrder(ModelSerializer):
             'table_number': order.table.number,
             'table_room_name': order.table.room_name
         }
+
+    def get_count_items_served(self, order):
+        return OrderItem.objects.values('id').filter(
+            order=order,
+            status=OrderItemStatus_Served
+        ).count()

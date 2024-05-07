@@ -65,7 +65,6 @@ def update_item_status(
     """
     update the status of an order item
     """
-    print(f"{item_id} - {new_status}")
     if new_status not in [OrderItemStatus_Preparing, OrderItemStatus_Served]:
         return {
             'status': 400,
