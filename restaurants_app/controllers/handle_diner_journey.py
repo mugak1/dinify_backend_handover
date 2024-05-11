@@ -3,6 +3,7 @@ from restaurants_app.serializers import SerializerPublicGetTableDetails, Seriali
 from dinify_backend.configss.messages import OK_SCANNED_TABLE, OK_RETRIEVED_FULL_MENU
 from orders_app.models import Order
 from orders_app.serializers import SerializerPublicOrderDetails
+from finance_app.models import DinifyTransaction
 
 
 def handle_table_scan(table_id: str) -> dict:
@@ -45,5 +46,25 @@ def handle_show_order_details(order_id: str) -> dict:
         'status': 200,
         'message': 'Successfully retrieved the order details',
         'data':  SerializerPublicOrderDetails(order, many=False).data
+    }
+    return response
+
+
+def handle_show_transaction_details(transaction_id: str) -> dict:
+    if transaction_id is None:
+        response = {
+            'status': 400,
+            'message': 'Please provide the transaction reference'
+        }
+        return response
+
+    transaction_record = DinifyTransaction.objects.values(
+        'id', 'order', 'transaction_amount', 'transaction_status'
+    ).get(id=transaction_id)
+
+    response = {
+        'status': 200,
+        'message': 'Successfully retrieved the transaction details',
+        'data': transaction_record
     }
     return response
