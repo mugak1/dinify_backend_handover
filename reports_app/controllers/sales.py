@@ -76,7 +76,7 @@ def generate_restaurant_sales_summary(
 
     stats = {
         "number_of_sales": num_sales,
-        "gross_sales_amount": sales_amount,
+        "gross_sales_amount": sales_amount if sales_amount is not None else 0,
         "sales_by_payment_channel": {item['payment_mode']: item['num_sales'] for item in sales_by_payment_channel}, # noqa
         "sales_amount_by_payment_channel": {item['payment_mode']: item['total_amount'] for item in amount_by_payment_channel}, # noqa
         "average_order_amount": avg_order_amount if avg_order_amount is not None else 0,
@@ -152,6 +152,33 @@ def generate_restaurant_sales_trends(
         )
 
 
+def make_graph_series_data(x_title: str, y_values: list, x_detail: str) -> dict:
+    graph_series = {}
+    x_values = []
+    for item in y_values:
+        for key, value in item.items():
+            if key not in graph_series and key != x_detail:
+                graph_series[key] = []
+            if key != x_detail:
+                graph_series[key].append(value)
+            else:
+                x_values.append(value)
+    series = [
+        {
+            "name": key.replace('_', ' ').title(),
+            "data": values
+        } for key, values in graph_series.items()
+    ]
+
+    return {
+        'series': series,
+        'xaxis': {
+            'categories': x_values,
+            'title': {'text': x_title}
+        }
+    }
+
+
 def get_daily_trends(
     restaurant_id: str,
     date_from: str,
@@ -170,9 +197,7 @@ def get_daily_trends(
         x_categories.append(str(day0))
         day0 += timedelta(days=1)
 
-    def get_daily_tabular_trend_data(
-        days: list
-    ) -> list:
+    def get_daily_tabular_trend_data(days: list):
         for day in days:
             summary = generate_restaurant_sales_summary(
                 restaurant_id=restaurant_id,
@@ -182,10 +207,38 @@ def get_daily_trends(
             summary['date'] = str(day)
             trend_table.append(summary)
 
+    def get_daily_graph_trend_data(days: list):
+        for day in days:
+            summary = generate_restaurant_sales_summary(
+                restaurant_id=restaurant_id,
+                date_from=day,
+                date_to=day
+            ).get('data')
+            summary['date'] = str(day)
+            for key, value in summary.get('sales_by_payment_channel').items():
+                summary[f'NoSales_{key.title()}'] = value
+            for key, value in summary.get('sales_amount_by_payment_channel').items():
+                summary[f'SalesAmount_{key.title()}'] = value
+            del summary['sales_by_payment_channel']
+            del summary['sales_amount_by_payment_channel']
+            trend_graph.append(summary)
+
     if trend_result == 'table':
         get_daily_tabular_trend_data(days)
         return {
             'status': 200,
-            'message': 'Successfully retrieved the trend data',
+            'message': 'Successfully retrieved the trend data in tabular format.',
             'data': trend_table
+        }
+    if trend_result == 'graph':
+        get_daily_graph_trend_data(days)
+        data = make_graph_series_data(
+            x_title='Days',
+            y_values=trend_graph,
+            x_detail='date'
+        )
+        return {
+            'status': 200,
+            'message': 'Successfully retrieved the trend data in graph series.',
+            'data': data
         }
