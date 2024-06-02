@@ -12,7 +12,8 @@ from reports_app.controllers.sales import (
 )
 from reports_app.controllers.diners import (
     generate_restaurant_diners_summary,
-    generate_restaurant_diners_listing
+    generate_restaurant_diners_listing,
+    generate_restaurant_diners_trends
 )
 
 
@@ -59,6 +60,14 @@ class RestaurantReportsEndpoint(APIView):
                 restaurant_id=request.GET.get('restaurant', None),
                 date_from=request.GET.get('from', str(datetime.now().date())),
                 date_to=request.GET.get('to', str(datetime.now().date()))
+            )
+        if report_name == 'diners-trends':
+            response = generate_restaurant_diners_trends(
+                restaurant_id=request.GET.get('restaurant', None),
+                date_from=request.GET.get('from', str(datetime.now().date())),
+                date_to=request.GET.get('to', str(datetime.now().date())),
+                trend_category=request.GET.get('category', 'daily'),
+                trend_result=request.GET.get('result', 'table')
             )
 
         return Response(response, status=200)
