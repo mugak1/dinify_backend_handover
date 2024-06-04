@@ -1,3 +1,4 @@
+from typing import Optional
 from misc_app.controllers.clean_dates import clean_dates
 from finance_app.models import DinifyTransaction
 from dinify_backend.configss.string_definitions import (
@@ -12,6 +13,7 @@ from dinify_backend.configss.string_definitions import (
     TransactionType_Subscription
 )
 from django.db.models import Sum
+from finance_app.serializers import SerializerGetRestaurantTransactionListing
 
 TRANSACTION_STATUSES = [
     TransactionStatus_Success,
@@ -80,4 +82,43 @@ def generate_restaurant_transaction_summary(
             'transaction_status_overview': transaction_status_overview,
             'transaction_type_overview': transaction_type_overview,
         }
+    }
+
+
+def generate_restaurant_transaction_listing(
+    restaurant_id: str,
+    date_from: str,
+    date_to: str,
+    transaction_type: Optional[str] = None,
+    transaction_status: Optional[str] = None
+) -> dict:
+    dates = clean_dates(date_from=date_from, date_to=date_to)
+    if dates.get('status') != 200:
+        return dates
+    date_from = dates.get('date_from')
+    date_to = dates.get('date_to')
+
+    transactions = None
+    filters = {
+        'restaurant_id': restaurant_id
+    }
+    if date_to == date_from:
+        filters['time_created__date'] = date_from
+    else:
+        filters['time_created__date__gte'] = date_from
+        filters['time_created__date__lte'] = date_to
+    if transaction_type is not None:
+        filters['transaction_type'] = transaction_type
+    if transaction_status is not None:
+        filters['transaction_status'] = transaction_status
+
+    transactions = DinifyTransaction.objects.filter(**filters)
+    transactions = SerializerGetRestaurantTransactionListing(
+        transactions,
+        many=True
+    ).data
+    return {
+        'status': 200,
+        'message': 'Transaction listing generated successfully',
+        'data': transactions
     }
