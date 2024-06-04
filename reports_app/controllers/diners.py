@@ -325,6 +325,7 @@ def get_quarterly_trends(
             'data': data
         }
 
+
 def get_annual_trends(
     restaurant_id: str,
     date_from: str,
