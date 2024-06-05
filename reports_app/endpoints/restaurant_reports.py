@@ -4,19 +4,19 @@ endpoints to handle order
 from datetime import datetime
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from reports_app.controllers.dashboard import generate_restaurant_dashboard_details
-from reports_app.controllers.sales import (
+from reports_app.controllers.restaurant.dashboard import generate_restaurant_dashboard_details
+from reports_app.controllers.restaurant.sales import (
     generate_restaurant_sales_summary,
     generate_restaurant_sales_listing,
     generate_restaurant_sales_trends
 )
-from reports_app.controllers.diners import (
+from reports_app.controllers.restaurant.diners import (
     generate_restaurant_diners_summary,
     generate_restaurant_diners_listing,
     generate_restaurant_diners_trends
 )
-from reports_app.controllers.menu import generate_restaurant_menu_summary
-from reports_app.controllers.transactions import (
+from reports_app.controllers.restaurant.menu import generate_restaurant_menu_summary
+from reports_app.controllers.restaurant.transactions import (
     generate_restaurant_transaction_summary,
     generate_restaurant_transaction_listing
 )
