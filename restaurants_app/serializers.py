@@ -12,7 +12,6 @@ from dinify_backend.configss.string_definitions import (
 )
 
 
-
 class SerializerPutRestaurant(ModelSerializer):
     """
     seriailizer for adding and editing restaurant details
@@ -265,18 +264,58 @@ class SerializerGetFullMenu(ModelSerializer):
 
 
 class SerializerAdminGetOrderReview(ModelSerializer):
+    customer = SerializerMethodField()
+
     class Meta:
         model = Order
         fields = (
             'id', 'rating', 'review',
-            'block_review'
+            'block_review', 'customer'
         )
+
+    def get_customer(self, order):
+        if order.customer is None:
+            return ''
+        return f'{order.customer.first_name}'
 
 
 class SerializerAdminGetOrderItemReview(ModelSerializer):
+    customer = SerializerMethodField()
+
     class Meta:
         model = OrderItem
         fields = (
             'id', 'order', 'rating', 'review',
-            'block_review'
+            'block_review', 'customer'
         )
+
+    def get_customer(self, order):
+        if order.customer is None:
+            return ''
+        return f'{order.customer.first_name}'
+
+
+class SerializerPublicGetOrderReview(ModelSerializer):
+    customer = SerializerMethodField()
+
+    class Meta:
+        model = Order
+        fields = ('rating', 'review', 'customer')
+
+    def get_customer(self, order):
+        if order.customer is None:
+            return ''
+        return f'{order.customer.first_name}'
+
+
+class SerializerPublicGetOrderItemReview(ModelSerializer):
+    customer = SerializerMethodField()
+
+    class Meta:
+        model = OrderItem
+        fields = ('rating', 'review', 'customer')
+
+    def get_customer(self, order):
+        if order.customer is None:
+            return ''
+        return f'{order.customer.first_name}'
