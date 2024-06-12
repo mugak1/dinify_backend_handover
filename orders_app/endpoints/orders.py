@@ -67,7 +67,6 @@ class OrdersEndpoint(APIView):
                 return Response(response, status=200)
         elif action == 'block-review':
             # check that the token is provided
-            print(request.user)
             if request.user is None or request.user.is_anonymous:
                 response = {
                     'status': 400,

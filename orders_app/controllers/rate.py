@@ -47,6 +47,11 @@ def block_review(
 ) -> dict:
     if order is not None:
         order = Order.objects.get(id=order)
+        if order.block_review:
+            return {
+                'status': 400,
+                'message': 'This review has already been blocked.'
+            }
         order.block_review = True
         if block_reason is not None:
             order.block_review_reason = block_reason
@@ -54,10 +59,15 @@ def block_review(
         order.save()
         return {
             'status': 200,
-            'message': 'Reviewing has been blocked for this order.'
+            'message': 'The order review has been blocked.'
         }
     if order_item is not None:
         order_item = OrderItem.objects.get(id=order_item)
+        if order_item.block_review:
+            return {
+                'status': 400,
+                'message': 'This review has already been blocked.'
+            }
         order_item.block_review = True
         if block_reason is not None:
             order_item.block_review_reason = block_reason
@@ -66,5 +76,5 @@ def block_review(
         order_item.save()
         return {
             'status': 200,
-            'message': 'Reviewing has been blocked for this item.'
+            'message': 'The item review has been blocked.'
         }
