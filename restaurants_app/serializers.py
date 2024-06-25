@@ -184,7 +184,7 @@ class SerializerPublicGetTableDetails(ModelSerializer):
         model = Table
         fields = (
             'id', 'number', 'room_name', 'prepayment_required',
-            'available', 'current_order', 'restaurant'
+            'available', 'current_order', 'restaurant', 'reserved'
         )
 
     def get_current_order(self, table):
