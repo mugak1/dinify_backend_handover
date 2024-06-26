@@ -151,7 +151,7 @@ class SerializerPublicGetMenuItem(ModelSerializer):
             return None
         return {
             'id': str(menu_item.section_group.pk),
-            'name': menu_item.group.name
+            'name': menu_item.section_group.name
         }
 
 
