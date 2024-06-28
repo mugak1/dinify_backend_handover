@@ -1,24 +1,44 @@
+import datetime
 from django.db import transaction
 from restaurants_app.models import Restaurant, MenuItem, Table
 from django.core.exceptions import ObjectDoesNotExist
 from dinify_backend.configss.messages import MESSAGES
+from dinify_backend.configss.string_definitions import (
+    OrderStatus_Initiated,
+    OrderStatus_Pending,
+    OrderStatus_Preparing
+)
 from orders_app.serializers import SerializerPutOrder, SerializerPutOrderItem
+from orders_app.models import Order
 
 
-def any_present_ongoing_order(table):
+def any_present_ongoing_order(table) -> dict:
     """
     determines if a table has an ongoing order
     """
     # TODO check if this is an ongoing order
+    present_orders = Order.objects.values('id').filter(
+        table=table,
+        order_status__in=[
+            OrderStatus_Initiated,
+            OrderStatus_Pending,
+            OrderStatus_Preparing
+        ]
+    ).order_by(
+        '-time_created'
+    )
+    if present_orders.count() > 0:
+        return {
+            'present': True,
+            'order_id': present_orders.first()['id']
+        }
+    return {'present': False}
 
 
 def initiate_order(data):
     """
     initiates an order that a customer has placed
     """
-
-    # check if the table has any other ongoing order
-
     # check if the restaurant is not blocked
     try:
         restaurant = Restaurant.objects.get(pk=data['restaurant'])
@@ -53,6 +73,17 @@ def initiate_order(data):
         if table.prepayment_required:
             # TODO process the payment process
             pass
+
+    # check if the table has any other ongoing order
+    ongoing_orders = any_present_ongoing_order(table)
+    if ongoing_orders.get('present'):
+        return {
+            'status': 400,
+            'message': 'The table has an ongoing order',
+            'data': {
+                'order_id': ongoing_orders.get('order_id'),
+            }
+        }
 
     # check if all items are available
     order_items = []
@@ -195,3 +226,4 @@ def initiate_order(data):
             'available_items': available_items
         }
     }
+

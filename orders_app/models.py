@@ -11,11 +11,6 @@ from dinify_backend.configss.string_definitions import (
 )
 
 
-# tusker lite
-# tusker lite
-# 
-
-
 # Create your models here.
 class Order(BaseModel):
     """
@@ -37,9 +32,18 @@ class Order(BaseModel):
     actual_cost = models.FloatField()  # the actual cost that is payable by the customer
     prepayment_required = models.BooleanField(default=False)
 
+    total_paid = models.DecimalField(default=0.0, max_digits=50, decimal_places=2)
+    balance_payable = models.DecimalField(default=0.0, max_digits=50, decimal_places=2)
+
     payment_status = models.CharField(max_length=50, default=PaymentStatus_Pending)
     order_status = models.CharField(max_length=50, default=OrderStatus_Initiated)
     last_updated_by = models.ForeignKey(User, null=True, on_delete=models.SET_NULL, related_name='last_updated_by')  # noqa
+
+    rating = models.IntegerField(null=True, blank=True)
+    review = models.TextField(null=True, blank=True)
+    block_review = models.BooleanField(default=False)
+    block_review_reason = models.TextField(null=True, blank=True)
+    review_blocked_by = models.ForeignKey(User, null=True, on_delete=models.SET_NULL, related_name='order_review_blocked_by')  # noqa
 
     class Meta:
         db_table = 'orders'
@@ -54,6 +58,11 @@ class OrderItem(BaseModel):
     item = models.ForeignKey(MenuItem, on_delete=models.CASCADE, related_name='item')
     available = models.BooleanField(default=True)
 
+    # tracking options and choices
+    option = models.CharField(max_length=50, null=True)
+    option_choice = models.CharField(max_length=50, null=True)
+    option_cost = models.FloatField(null=True)
+
     quantity = models.IntegerField()
     unit_price = models.FloatField()
     discounted_price = models.FloatField()
@@ -67,6 +76,12 @@ class OrderItem(BaseModel):
     cost_of_options = models.FloatField(default=0.0)
     actual_cost = models.FloatField()
 
+    rating = models.IntegerField(null=True, blank=True)
+    review = models.TextField(null=True, blank=True)
+    block_review = models.BooleanField(default=False)
+    block_review_reason = models.TextField(null=True, blank=True)
+    review_blocked_by = models.ForeignKey(User, null=True, on_delete=models.SET_NULL, related_name='order_item_review_blocked_by')  # noqa
+
     status = models.CharField(max_length=50, default=OrderItemStatus_Initiated)
     last_updated_by = models.ForeignKey(User, null=True, on_delete=models.SET_NULL, related_name='order_item_last_updated_by')  # noqa
 
@@ -77,11 +92,12 @@ class OrderItem(BaseModel):
 
 @receiver(pre_save, sender=Order)
 def create_order_number(sender, instance, **kwargs):
-    with transaction.atomic():
-        # get the count of today's order for the restaurant
-        date_today = datetime.now().date()
-        count = Order.objects.select_for_update().filter(
-            restaurant=instance.restaurant,
-            time_created__date=date_today
-        ).count()
-        instance.order_number = count+1
+    if instance.order_number is None:
+        with transaction.atomic():
+            # get the count of today's order for the restaurant
+            date_today = datetime.now().date()
+            count = Order.objects.select_for_update().filter(
+                restaurant=instance.restaurant,
+                time_created__date=date_today
+            ).count()
+            instance.order_number = count+1

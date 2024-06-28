@@ -126,10 +126,11 @@ class MenuItem(BaseModel):
 
     discounted_price = models.FloatField(null=True, blank=True)
     running_discount = models.BooleanField(default=False)
+    consider_discount_object = models.BooleanField(default=False)
     discount_description = models.TextField(null=True, blank=True)
     discount_details = models.JSONField(default=dict)
     # e.g. {
-    #     recurring_days: [],
+    #     recurring_days: [1-7] monday is 1, sunday is 7,
     #     start_date: '',
     #     end_date: '',
     #     start_time: '',
@@ -149,7 +150,7 @@ class MenuItem(BaseModel):
     # options : [{
     #   name: '',
     #   selectable: boolean, i.e. does it have options to select from
-    #   options: [Spicy, Not spicy, Extra spicy],
+    #   choices: [Spicy, Not spicy, Extra spicy],
     #   cost: 0
     # }, {...}, {...}]
     extras_applicable = models.JSONField(default=list)
@@ -177,6 +178,7 @@ class Table(BaseModel):
 
     # if the table is available for use or not
     available = models.BooleanField(default=True)
+    reserved = models.BooleanField(default=False)
 
     class Meta:
         """

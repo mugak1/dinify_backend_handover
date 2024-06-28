@@ -2,7 +2,7 @@
 the serializers for the restaurant app
 """
 from rest_framework.serializers import ModelSerializer, SerializerMethodField
-from orders_app.models import Order
+from orders_app.models import Order, OrderItem
 from restaurants_app.models import (
     Restaurant, RestaurantEmployee, MenuSection, MenuItem, Table,
     SectionGroup
@@ -85,16 +85,20 @@ class SerializerPublicGetMenuSection(ModelSerializer):
     serializer for getting the menu section
     """
     item_count = SerializerMethodField()
+    has_groups = SerializerMethodField()
 
     class Meta:
         model = MenuSection
         fields = (
             'id', 'name', 'description', 'section_banner_image',
-            'available', 'item_count'
+            'available', 'item_count', 'has_groups'
         )
 
     def get_item_count(self, menu_section):
         return MenuItem.objects.filter(section=menu_section).count()
+
+    def get_has_groups(self, menu_section):
+        return SectionGroup.objects.filter(section=menu_section).count() > 0
 
 
 class SerializerPutSectionGroup(ModelSerializer):
@@ -146,8 +150,8 @@ class SerializerPublicGetMenuItem(ModelSerializer):
         if menu_item.section_group is None:
             return None
         return {
-            'id': str(menu_item.group.pk),
-            'name': menu_item.group.name
+            'id': str(menu_item.section_group.pk),
+            'name': menu_item.section_group.name
         }
 
 
@@ -180,7 +184,7 @@ class SerializerPublicGetTableDetails(ModelSerializer):
         model = Table
         fields = (
             'id', 'number', 'room_name', 'prepayment_required',
-            'available', 'current_order', 'restaurant'
+            'available', 'current_order', 'restaurant', 'reserved'
         )
 
     def get_current_order(self, table):
@@ -257,3 +261,61 @@ class SerializerGetFullMenu(ModelSerializer):
 
     def get_item_count(self, section):
         return MenuItem.objects.filter(section=section).count()
+
+
+class SerializerAdminGetOrderReview(ModelSerializer):
+    customer = SerializerMethodField()
+
+    class Meta:
+        model = Order
+        fields = (
+            'id', 'rating', 'review',
+            'block_review', 'customer'
+        )
+
+    def get_customer(self, order):
+        if order.customer is None:
+            return ''
+        return f'{order.customer.first_name}'
+
+
+class SerializerAdminGetOrderItemReview(ModelSerializer):
+    customer = SerializerMethodField()
+
+    class Meta:
+        model = OrderItem
+        fields = (
+            'id', 'order', 'rating', 'review',
+            'block_review', 'customer'
+        )
+
+    def get_customer(self, order):
+        if order.customer is None:
+            return ''
+        return f'{order.customer.first_name}'
+
+
+class SerializerPublicGetOrderReview(ModelSerializer):
+    customer = SerializerMethodField()
+
+    class Meta:
+        model = Order
+        fields = ('rating', 'review', 'customer')
+
+    def get_customer(self, order):
+        if order.customer is None:
+            return ''
+        return f'{order.customer.first_name}'
+
+
+class SerializerPublicGetOrderItemReview(ModelSerializer):
+    customer = SerializerMethodField()
+
+    class Meta:
+        model = OrderItem
+        fields = ('rating', 'review', 'customer')
+
+    def get_customer(self, order):
+        if order.customer is None:
+            return ''
+        return f'{order.customer.first_name}'
