@@ -1,4 +1,5 @@
 from datetime import datetime
+from pickletools import stringnl_noescape
 from typing import Optional, Union
 from django.db import transaction
 from restaurants_app.models import Restaurant, MenuItem, Table
@@ -401,3 +402,65 @@ def v2_initiate_order(
             'unavailable_extras': order_details.get('unavailable_extras')
         }
     }
+
+
+def handle_add_order_items(
+    order_id: str,
+    items: list
+) -> dict:
+    """
+    - check that the order exists
+    - add the order items
+    - update the order amounts
+    - construct and return the response
+    """
+    # check that the order exists
+    try:
+        order = Order.objects.get(pk=order_id)
+    except ObjectDoesNotExist:
+        return {
+            'status': 400,
+            'message': "Invalid order selected"
+        }
+    except Exception as error:
+        print(f"AddOrderItems-Error: {error}")
+        return {
+            'status': 400,
+            'message': MESSAGES.get('GENERAL_ERROR')
+        }
+
+    # check that order items are provided
+    if items is None:
+        return {
+            'status': 400,
+            'message': MESSAGES.get('NO_ORDER_ITEMS')
+        }
+    if len(items) < 1:
+        return {
+            'status': 400,
+            'message': MESSAGES.get('NO_ORDER_ITEMS')
+        }
+    with transaction.atomic():
+        # process the order items
+        for item in items:
+            add_order_item(item=item, order_id=order_id)
+
+        # update the order amounts
+        update_order_amounts(order=order)
+
+        order.refresh_from_db()
+
+        order_details = serialize_order_details(order=order)
+        return {
+            'status': 200,
+            'message': 'The order item(s) have been added successfully.',
+            'data': {
+                'order_details': order_details.get('order'),
+                'order_items': order_details.get('order_items'),
+                'available_items': order_details.get('available_items'),
+                'unavailable_items': order_details.get('unavailable_items'),
+                'extras': order_details.get('extras'),
+                'available_extras': order_details.get('available_extras'),
+                'unavailable_extras': order_details.get('unavailable_extras')
+            }
+        }

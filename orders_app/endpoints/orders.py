@@ -7,7 +7,10 @@ from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
 from orders_app.models import Order
 from orders_app.controllers.initiate_order import initiate_order
-from orders_app.controllers.v2_initiate_order import v2_initiate_order
+from orders_app.controllers.v2_initiate_order import (
+    handle_add_order_items,
+    v2_initiate_order
+)
 from orders_app.controllers.rate import rate_and_review
 from orders_app.controllers.manage_order import update_order_status, update_item_status
 from orders_app.controllers.rate import block_review
@@ -190,5 +193,15 @@ class V2OrdersEndpoint(APIView):
                 order_remarks=order_remarks,
                 customer=customer,
                 created_by=created_by,
+            )
+            return Response(response, status=200)
+
+        elif action == 'add-items':
+            data = request.data
+            order_id = data.get('order')
+            items = data.get('items')
+            response = handle_add_order_items(
+                order_id=order_id,
+                items=items
             )
             return Response(response, status=200)

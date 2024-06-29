@@ -33,7 +33,8 @@ from orders_app.controllers.v2_initiate_order import (
     determine_effective_unit_price,
     add_order_item,
     update_order_amounts,
-    v2_initiate_order
+    v2_initiate_order,
+    handle_add_order_items
 )
 
 
@@ -306,4 +307,37 @@ class TestOrderFunctions(TestCase):
             table_id=str(table.pk),
             items=items
         )
+        self.assertEqual(response['status'], 200)
+    
+    def test_handle_add_order_items(self):
+        menu_item1 = MenuItem.objects.get(name=TEST_MENU_ITEM1_NAME)
+        menu_item2 = MenuItem.objects.get(name=TEST_MENU_ITEM2_NAME)
+        table = Table.objects.get(number=TEST_TABLE_NUMBER4)
+        restaurant = Restaurant.objects.get(name=TEST_RESTAURANT_NAME)
+        order_record = Order.objects.get(
+            table=Table.objects.get(number=TEST_TABLE_NUMBER3)
+        )
+
+        old_total_cost = order_record.total_cost
+
+        items = [
+            {
+                'item': str(menu_item1.pk),
+                'quantity': 2
+            },
+            {
+                'item': str(MenuItem.objects.get(name=TEST_OPTION_MENU_ITEM_NAME).pk),
+                'quantity': 1,
+                'option': 0,
+                'choice': 1,
+                'extras': [str(menu_item1.pk), str(menu_item2.pk)]
+            }
+        ]
+        response = handle_add_order_items(
+            order_id=str(order_record.pk),
+            items=items
+        )
+        order_record.refresh_from_db()
+        new_total_cost = order_record.total_cost
+        self.assertGreater(new_total_cost, old_total_cost)
         self.assertEqual(response['status'], 200)
