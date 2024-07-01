@@ -308,12 +308,10 @@ class TestOrderFunctions(TestCase):
             items=items
         )
         self.assertEqual(response['status'], 200)
-    
+
     def test_handle_add_order_items(self):
         menu_item1 = MenuItem.objects.get(name=TEST_MENU_ITEM1_NAME)
         menu_item2 = MenuItem.objects.get(name=TEST_MENU_ITEM2_NAME)
-        table = Table.objects.get(number=TEST_TABLE_NUMBER4)
-        restaurant = Restaurant.objects.get(name=TEST_RESTAURANT_NAME)
         order_record = Order.objects.get(
             table=Table.objects.get(number=TEST_TABLE_NUMBER3)
         )

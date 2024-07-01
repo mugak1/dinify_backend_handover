@@ -86,12 +86,13 @@ class SerializerPublicGetMenuSection(ModelSerializer):
     """
     item_count = SerializerMethodField()
     has_groups = SerializerMethodField()
+    groups = SerializerMethodField()
 
     class Meta:
         model = MenuSection
         fields = (
             'id', 'name', 'description', 'section_banner_image',
-            'available', 'item_count', 'has_groups'
+            'available', 'item_count', 'has_groups', 'groups'
         )
 
     def get_item_count(self, menu_section):
@@ -99,6 +100,15 @@ class SerializerPublicGetMenuSection(ModelSerializer):
 
     def get_has_groups(self, menu_section):
         return SectionGroup.objects.filter(section=menu_section).count() > 0
+
+    def get_groups(self, menu_section):
+        groups = SectionGroup.objects.filter(section=menu_section)
+        return [
+            {
+                'id': str(group.pk),
+                'name': group.name
+            } for group in groups
+        ]
 
 
 class SerializerPutSectionGroup(ModelSerializer):
