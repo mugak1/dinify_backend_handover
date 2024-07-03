@@ -4,7 +4,10 @@ endpoints for restaurant configurations
 import ast
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from restaurants_app.controllers.create_restaurant import create_restaurant
+from restaurants_app.controllers.create_restaurant import (
+    create_restaurant,
+    admin_register_restaurant
+)
 from misc_app.controllers.decode_auth_token import decode_jwt_token
 from misc_app.controllers.define_filter_params import define_filter_params
 from misc_app.controllers.secretary import Secretary
@@ -45,6 +48,8 @@ class RestaurantSetupEndpoint(APIView):
         response = {'status': 500, 'message': "Invalid request"}
         # decode the token
         auth = decode_jwt_token(request)
+        print(f'detail is{config_detail}')
+        print('\n\nssssssssss\n\n')
 
         if config_detail == 'restaurants':
             # TODO if the user is not a Dinify admin,.
@@ -65,6 +70,19 @@ class RestaurantSetupEndpoint(APIView):
                 response,
                 status=response['status']
             )
+        if config_detail == 'admin-register-restaurant':
+            post_data = request.data
+            try:
+                post_data = post_data.dict()
+            except Exception as error:
+                print(f"Error: {error}")
+
+            data = post_data.copy()
+            response = admin_register_restaurant(
+                data=data,
+                auth_info=auth
+            )
+            return Response(response, status=response['status'])
 
         serializers = {
             'employees': SerializerPutRestaurantEmployee,
@@ -310,6 +328,8 @@ class RestaurantSetupEndpoint(APIView):
             'success_message': success_message,
             'error_message': error_message
         }
+
+        print(f'\n\nthe submitted data for {config_detail} is:\n {put_data}\n\n')
         response = Secretary(secretary_args).update()
 
         return Response(

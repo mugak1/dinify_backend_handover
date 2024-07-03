@@ -4,7 +4,9 @@ from dinify_backend.configs import ROLES
 from dinify_backend.configss.messages import MESSAGES
 from users_app.tests import TEST_PHONE, seed_user
 from users_app.models import User
-from restaurants_app.controllers.create_restaurant import create_restaurant
+from restaurants_app.controllers.create_restaurant import (
+    create_restaurant, admin_register_restaurant
+)
 from restaurants_app.models import Restaurant, RestaurantEmployee, MenuSection, MenuItem, Table
 
 
@@ -178,3 +180,24 @@ class RestaurantAppTestFunctions(TestCase):
 
         test_missing_info()
         test_ok()
+
+    def test_admin_register_restaurant(self):
+        user_id = str(User.objects.get(username=TEST_PHONE).pk)
+        auth_info = {
+            'user_id': user_id
+        }
+
+        data = {
+            'name': 'Test Restaurant',
+            'location': 'Test location',
+
+            'first_name': 'Test',
+            'last_name': 'Owner',
+            'email': 'sample@org.org',
+            'phone_number': '256777777777',
+            'country': 'UG',
+        }
+
+        result = admin_register_restaurant(data, auth_info)
+        print(f'admin result: {result}')
+        self.assertEqual(result['status'], 200)

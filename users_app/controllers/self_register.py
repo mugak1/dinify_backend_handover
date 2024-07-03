@@ -1,13 +1,18 @@
 """
 create a user on dinify
 """
+from typing import Optional
 from misc_app.controllers.check_required_information import check_required_information
 from dinify_backend.configss.messages import MESSAGES
 from dinify_backend.configss.required_information import REQUIRED_INFORMATION
 from users_app.models import User
 
 
-def self_register(data: dict) -> dict:
+def self_register(
+    data: dict,
+    return_user_id: Optional[bool] = False,
+    send_credential_email: Optional[bool] = False
+) -> dict:
     """
     Handle user self registration
     - `data` is the registration data
@@ -41,7 +46,7 @@ def self_register(data: dict) -> dict:
     email = data.get('email')
     if email is not None:
         email = email.strip().lower()
-    User.objects.create_user(
+    user = User.objects.create_user(
         first_name=data.get('first_name').strip().title(),
         last_name=data.get('last_name').strip().title(),
         email=email,
@@ -51,7 +56,15 @@ def self_register(data: dict) -> dict:
         password=data.get('password')
     )
 
+    if return_user_id:
+        return {
+            'status': 200,
+            'user_id': user.id,
+        }
+
     # TODO send welcome email
+
+    # TODO send credentials email
 
     return {
         'status': 200,

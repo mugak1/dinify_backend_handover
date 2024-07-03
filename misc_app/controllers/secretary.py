@@ -255,6 +255,7 @@ class Secretary:
                 'new_info': new_data,
                 'consider': consider
             })
+
             if len(changes) < 1:
                 # check if any of the file fields is provided
                 file_fields_present = False
