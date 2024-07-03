@@ -295,17 +295,20 @@ class Secretary:
                 record.save()
                 # save to the log
                 # construct the log data to consider
-                save_action(
-                    affected_model=self.model_name,
-                    affected_record=self.data.get('id'),
-                    action='update',
-                    narration='Updated a record',
-                    result=ACTION_LOG_STATUSES.get('success'),
-                    user_id=self.user_id,
-                    username=self.username,
-                    submitted_data=log_data,
-                    changes=changes,
-                )
+                try:
+                    save_action(
+                        affected_model=self.model_name,
+                        affected_record=self.data.get('id'),
+                        action='update',
+                        narration='Updated a record',
+                        result=ACTION_LOG_STATUSES.get('success'),
+                        user_id=self.user_id,
+                        username=self.username,
+                        submitted_data=log_data,
+                        changes=changes,
+                    )
+                except Exception as error:
+                    print(f'SecretaryError-Update:{error}')
 
                 return {
                     'status': 200,
