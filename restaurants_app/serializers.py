@@ -266,7 +266,11 @@ class SerializerGetFullMenu(ModelSerializer):
         )
 
     def get_groups(self, section):
-        groups = SectionGroup.objects.filter(section=section)
+        groups = SectionGroup.objects.filter(
+            section=section,
+            approved=True,
+            enabled=True
+        )
         return [
             {
                 'id': str(group.pk),
@@ -275,13 +279,21 @@ class SerializerGetFullMenu(ModelSerializer):
         ]
 
     def get_items(self, section):
-        items = MenuItem.objects.filter(section=section)
+        items = MenuItem.objects.filter(
+            section=section,
+            approved=True,
+            enabled=True
+        )
         return SerializerPublicGetMenuItem(
             items, many=True
         ).data
 
     def get_item_count(self, section):
-        return MenuItem.objects.filter(section=section).count()
+        return MenuItem.objects.filter(
+            section=section,
+            approved=True,
+            enabled=True
+        ).count()
 
 
 class SerializerAdminGetOrderReview(ModelSerializer):

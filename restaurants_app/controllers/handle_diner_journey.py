@@ -26,7 +26,9 @@ def handle_table_scan(table_id: str) -> dict:
 
 def handle_show_menu(restaurant_id: str) -> dict:
     sections = MenuSection.objects.filter(
-        restaurant=restaurant_id
+        restaurant=restaurant_id,
+        approved=True,
+        enabled=True
     )
     menu_data = SerializerGetFullMenu(
         sections, many=True

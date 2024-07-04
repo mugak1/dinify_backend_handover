@@ -92,7 +92,6 @@ class MenuSection(BaseModel):
     approved = models.BooleanField(default=False)
     enabled = models.BooleanField(default=False)
 
-
     class Meta:
         """
         the metadata for the MenuSection model
