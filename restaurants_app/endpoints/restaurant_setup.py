@@ -48,8 +48,6 @@ class RestaurantSetupEndpoint(APIView):
         response = {'status': 500, 'message': "Invalid request"}
         # decode the token
         auth = decode_jwt_token(request)
-        print(f'detail is{config_detail}')
-        print('\n\nssssssssss\n\n')
 
         if config_detail == 'restaurants':
             # TODO if the user is not a Dinify admin,.

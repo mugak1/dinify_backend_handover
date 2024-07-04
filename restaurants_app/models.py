@@ -45,6 +45,9 @@ class Restaurant(BaseModel):
     branding_configuration = models.JSONField(default=dict)
     country = models.CharField(max_length=5, default="UG")
 
+    # for batch approvals
+    first_time_menu_approval = models.BooleanField(default=False)
+
     class Meta:
         """
         the metadata for the Restaurant model
@@ -85,6 +88,11 @@ class MenuSection(BaseModel):
     # e.g. breakfast availability may end at noon
     available = models.BooleanField(default=True)
 
+    # for approvals and enabling items
+    approved = models.BooleanField(default=False)
+    enabled = models.BooleanField(default=False)
+
+
     class Meta:
         """
         the metadata for the MenuSection model
@@ -102,6 +110,10 @@ class SectionGroup(BaseModel):
     description = models.TextField(null=True, blank=True)
     section = models.ForeignKey(MenuSection, on_delete=models.CASCADE)
     available = models.BooleanField(default=True)
+
+    # for approvals and enabling items
+    approved = models.BooleanField(default=False)
+    enabled = models.BooleanField(default=False)
 
     class Meta:
         """
@@ -154,6 +166,10 @@ class MenuItem(BaseModel):
     #   cost: 0
     # }, {...}, {...}]
     extras_applicable = models.JSONField(default=list)
+
+    # for approvals and enabling items
+    approved = models.BooleanField(default=False)
+    enabled = models.BooleanField(default=False)
 
     class Meta:
         """

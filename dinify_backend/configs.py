@@ -19,5 +19,5 @@ ROLES = {
 # fields to ignore or modify when saving to the logs
 IGNORE_LOG_FIELDS = ['password']
 STRINGIFY_LOG_FIELDS = [
-    'logo', 'cover_photo', 'section_banner_image', 'image'
+    'logo', 'cover_photo', 'section_banner_image', 'image',
 ]
