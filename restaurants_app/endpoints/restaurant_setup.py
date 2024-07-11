@@ -304,18 +304,21 @@ class RestaurantSetupEndpoint(APIView):
         # convert the options and extras_applicable to a list
         if config_detail == 'menuitems':
             try:
-                put_data = put_data.dict()
+                if type(put_data) is not dict:
+                    put_data = put_data.dict()
             except Exception as error:
-                print(f"Error: {error}")
+                print(f"Error parsing data to dict: {error}")
 
             options = put_data.get('options')
             if options is not None:
                 # convert the options to dict
-                put_data['options'] = ast.literal_eval(options)
+                if type(put_data) is not dict:
+                    put_data['options'] = ast.literal_eval(options)
 
             extras_applicable = put_data.get('extras_applicable')
             if extras_applicable is not None:
-                put_data['extras_applicable'] = ast.literal_eval(extras_applicable)
+                if type(put_data) is not dict:
+                    put_data['extras_applicable'] = ast.literal_eval(extras_applicable)
 
         secretary_args = {
             'serializer': serializer,
