@@ -23,7 +23,7 @@ from restaurants_app.serializers import (
     SerializerAdminGetOrderReview, SerializerAdminGetOrderItemReview
 )
 from orders_app.serializers import SerializerListGetOrder
-from restaurants_app.models import MenuSection, SectionGroup
+from restaurants_app.models import Restaurant, MenuSection, SectionGroup, MenuItem
 from dinify_backend.configss.required_information import (
     REQUIRED_INFORMATION,
     RI_RESTAURANT_EMPLOYEES,
@@ -115,6 +115,23 @@ class RestaurantSetupEndpoint(APIView):
         }
 
         post_data = request.data
+
+        # attempt to auto approve menu items if a first time approval has already been done
+        if config_detail in ['menusections', 'sectiongroups', 'menuitems']:
+            restaurant_id = None
+            if config_detail == 'menusections':
+                restaurant_id = post_data.get('restaurant')
+            if config_detail in ['sectiongroups', 'menuitems']:
+                restaurant_id = MenuSection.objects.get(
+                    id=post_data['section']
+                ).restaurant.pk
+                restaurant_id = str(restaurant_id)
+
+            if restaurant_id is not None:
+                restaurant = Restaurant.objects.get(id=restaurant_id)
+
+                post_data['approved'] = restaurant.first_time_menu_approval
+                post_data['enabled'] = restaurant.first_time_menu_approval
 
         try:
             post_data = post_data.dict()

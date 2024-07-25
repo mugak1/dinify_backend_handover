@@ -36,19 +36,20 @@ def first_time_batch_approval(
 
     with transaction.atomic():
         if approval_decision == 'approve':
+            # flag the restaurant detail to indicate that a first time memenu approval has been done
+            restaurant.first_time_menu_approval = True
+            restaurant.save()
+
             # bulk update the menu sections
             sections = MenuSection.objects.filter(restaurant=restaurant)
-            print(sections.count())
             sections.update(approved=True, enabled=True)
-            
+
             # bulk update the section groups
             groups = SectionGroup.objects.filter(section__restaurant=restaurant)
-            print(groups.count())
             groups.update(approved=True, enabled=True)
 
             # bulk update the menu items
             items = MenuItem.objects.filter(section__restaurant=restaurant)
-            print(items.count())
             items.update(approved=True, enabled=True)
 
             response = {
