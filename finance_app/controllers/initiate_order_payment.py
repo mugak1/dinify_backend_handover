@@ -106,7 +106,8 @@ def initiate_order_payment(
             currency=account.account_currency,
             msisdn=msisdn,
             transaction_reference=str(order_payment.id),
-            timestamp=str(order_payment.time_created)
+            timestamp=str(order_payment.time_created),
+            dpo_transaction_token=None
         ).create_token()
 
         if dpo_token is not None:
