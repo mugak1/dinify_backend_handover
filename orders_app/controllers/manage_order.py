@@ -73,9 +73,7 @@ def update_item_status(
         }
 
     with transaction.atomic():
-        item = OrderItem.objects.select_for_update().get(
-            id=item_id
-        )
+        item = OrderItem.objects.select_for_update().get(id=item_id)
 
         if not item.available:
             return {
@@ -92,22 +90,16 @@ def update_item_status(
 
         # check if to set the order status to served
         if new_status in [OrderItemStatus_Preparing, OrderItemStatus_Served]:
-            order = Order.objects.select_for_update().get(
-                id=item.order.pk
-            )
+            order = Order.objects.select_for_update().get(id=item.order.pk)
             available_order_items = OrderItem.objects.filter(
                 order=order,
                 available=True
-            ).exclude(
-                status=OrderItemStatus_Unavailable
-            )
+            ).exclude(status=OrderItemStatus_Unavailable)
 
-            updated_items = available_order_items.filter(
-                status=new_status
-            )
+            updated_items = available_order_items.filter(status=new_status)
 
             if available_order_items.count() == updated_items.count():
-                order.order_status = OrderStatus_Served
+                order.order_status = new_status  # OrderStatus_Served
                 order.last_updated_by = user
                 order.time_last_updated = time_now
                 order.save()
