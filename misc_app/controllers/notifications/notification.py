@@ -9,4 +9,5 @@ class Notification:
 
     def create_notification(self):
         message = build_messages(self.msg_data)
+        recipients = []
         print(message)

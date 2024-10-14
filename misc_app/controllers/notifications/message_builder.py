@@ -2,7 +2,7 @@ from misc_app.controllers.notifications.msg_builder_menu import make_menu_messag
 from misc_app.controllers.notifications.msg_builder_menu_groups import make_menu_group_messages
 from misc_app.controllers.notifications.msg_builder_menu_items import make_menu_item_messages
 from misc_app.controllers.notifications.msg_builder_restaurant import make_restaurant_messages
-from misc_app.controllers.notificaitons.msg_builder_user import make_user_messages
+from misc_app.controllers.notifications.msg_builder_user import make_user_messages
 
 footer = """
     <p>&nbsp;</p>

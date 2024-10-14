@@ -146,6 +146,12 @@ class RestaurantSetupEndpoint(APIView):
                 post_data['approved'] = restaurant.first_time_menu_approval
                 post_data['enabled'] = restaurant.first_time_menu_approval
 
+        if config_detail == 'tables':
+            try:
+                post_data['number'] = str(post_data.get('number'))
+            except Exception as error:
+                print(f"Error converting table number to string: {error}")
+
         try:
             post_data = post_data.dict()
         except Exception as error:

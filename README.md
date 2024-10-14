@@ -5,7 +5,6 @@ The backend application for dinify_project.
 
 ## code organisation
 
-
 ## Background tasks
 - Determine customer who has made the order...`python manage.py determine-customers`
 - Verify DPO tokens...`python manage.py verify-dpo-tokens`
@@ -16,3 +15,4 @@ The backend application for dinify_project.
 /home/scripts/determinecustomers.sh > /home/script_logs/determine_customers/`date +\%Y-\%m-\%d`.log 2>&1
 
 /home/scripts/verifydpotokens.sh > /home/script_logs/verify_dpo_tokens/`date +\%Y-\%m-\%d`.log 2>&1
+
