@@ -1,5 +1,4 @@
 from datetime import datetime
-from pickletools import stringnl_noescape
 from typing import Optional, Union
 from django.db import transaction
 from restaurants_app.models import Restaurant, MenuItem, Table
@@ -264,8 +263,8 @@ def process_item_extras(
 def update_order_amounts(order: Order) -> dict:
     # get the order items
     order_items = OrderItem.objects.select_for_update().filter(
-        order=order,
-        deleted=False
+        deleted=False,
+        order=order
     )
     total_cost = sum([item.total_cost for item in order_items])
     discounted_cost = sum([item.discounted_cost for item in order_items])
@@ -273,6 +272,9 @@ def update_order_amounts(order: Order) -> dict:
     actual_cost = discounted_cost
     total_paid = 0
     balance_payable = 0
+
+    # get the total payments done on the order
+
 
     order.total_cost = total_cost
     order.discounted_cost = discounted_cost
@@ -466,3 +468,23 @@ def handle_add_order_items(
                 'unavailable_extras': order_details.get('unavailable_extras')
             }
         }
+
+
+def handle_delete_items(
+    order_item: str,
+    reason: str,
+    user: User
+) -> dict:
+    with transaction.atomic():
+        order_item = OrderItem.objects.select_for_update().get(pk=order_item)
+        order_item.deleted = True
+        order_item.deletion_reason = reason
+        order_item.deleted_by = user
+        order_item.save()
+
+        update_order_amounts(order=order_item.order)
+
+    return {
+        'status': 200,
+        'message': 'The order item has been updated successfully.'
+    }

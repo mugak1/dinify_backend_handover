@@ -8,7 +8,8 @@ from orders_app.models import Order
 from orders_app.controllers.initiate_order import initiate_order
 from orders_app.controllers.v2_initiate_order import (
     handle_add_order_items,
-    v2_initiate_order
+    v2_initiate_order,
+    handle_delete_items
 )
 from orders_app.controllers.rate import rate_and_review
 from orders_app.controllers.manage_order import update_order_status, update_item_status
@@ -202,5 +203,16 @@ class V2OrdersEndpoint(APIView):
             response = handle_add_order_items(
                 order_id=order_id,
                 items=items
+            )
+            return Response(response, status=200)
+
+    def delete(self, request, action):
+        if action == 'add-items':
+            data = request.data
+            item_id = data.get('item')
+            response = handle_delete_items(
+                order_item=item_id,
+                reason=data.get('reason'),
+                user=request.user
             )
             return Response(response, status=200)
