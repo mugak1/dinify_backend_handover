@@ -5,8 +5,28 @@ from restaurants_app.models import (
     MenuSection,
     SectionGroup,
     MenuItem,
+    RestaurantEmployee
 )
 from misc_app.controllers.save_action_log import save_action
+from dinify_backend.configss.string_definitions import(
+    RESTAURANT_OWNER,
+    RESTAURANT_MANAGER
+)
+
+
+def check_permissions(
+    restaurant_id: str,
+    user_id: str,
+) -> dict:
+    employee_record = RestaurantEmployee.objects.get(
+        user_id=user_id,
+        restaurant_id=restaurant_id
+    )
+    accepted_roles = [RESTAURANT_OWNER, RESTAURANT_MANAGER]
+    if any(role in accepted_roles for role in employee_record.roles):
+        return True
+    else:
+        return False
 
 
 def first_time_batch_approval(
@@ -24,6 +44,35 @@ def first_time_batch_approval(
     }
 
     # TODO check that the user has the necessary rights
+    has_permission = check_permissions(
+        restaurant_id=restaurant_id,
+        user_id=auth.get('user_id')
+    )
+    if not has_permission:
+        return {
+            'status': 401,
+            'message': 'You do not have the necessary permissions to perform this action.'
+        }
+
+    # check if the person is not the one who created the menu
+    # pick a random menu section and check who created it
+    first_menu_section = MenuSection.objects.filter(
+        restaurant_id=restaurant_id
+    ).first()
+    if first_menu_section is None:
+        return {
+            'status': 400,
+            'message': 'Sorry, the restaurant does not have any menu sections.'
+        }
+
+    if first_menu_section.created_by == auth.get('user_id'):
+        return {
+            'status': 400,
+            'message': 'Sorry, you cannot approve a menu that you created.'
+        }
+
+
+
 
     # get the restaurant
     restaurant = Restaurant.objects.get(id=restaurant_id)
