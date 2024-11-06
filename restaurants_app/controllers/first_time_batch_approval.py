@@ -18,14 +18,18 @@ def check_permissions(
     restaurant_id: str,
     user_id: str,
 ) -> dict:
-    employee_record = RestaurantEmployee.objects.get(
-        user_id=user_id,
-        restaurant_id=restaurant_id
-    )
-    accepted_roles = [RESTAURANT_OWNER, RESTAURANT_MANAGER]
-    if any(role in accepted_roles for role in employee_record.roles):
-        return True
-    else:
+    try:
+        employee_record = RestaurantEmployee.objects.get(
+            user_id=user_id,
+            restaurant_id=restaurant_id
+        )
+        accepted_roles = [RESTAURANT_OWNER, RESTAURANT_MANAGER]
+        if any(role in accepted_roles for role in employee_record.roles):
+            return True
+        else:
+            return False
+    except Exception as error:
+        print(f'FirstTimeBatchApprovalPermissionError: {error}')
         return False
 
 
