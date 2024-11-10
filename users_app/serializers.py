@@ -24,7 +24,10 @@ class SerGetUserProfile(ModelSerializer):
         ]
 
     def get_restaurant_roles(self, user):
-        res_roles = RestaurantEmployee.objects.filter(user=user)
+        res_roles = RestaurantEmployee.objects.filter(
+            user=user,
+            deleted=False
+        )
         return [
             {
                 'restaurant': res_role.restaurant.name,
