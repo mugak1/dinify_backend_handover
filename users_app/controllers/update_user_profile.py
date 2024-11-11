@@ -159,9 +159,7 @@ def update_user_profile(
                 user_id=str(actor.id),
                 restaurant_id=restaurant_id
             )
-            print(f"\n{restaurant_id}: {roles}\n")
             restaurant_roles = [RESTAURANT_OWNER, RESTAURANT_MANAGER]
-            print(restaurant_roles)
             if len(roles) > 0:
                 if any(role in restaurant_roles for role in roles):
                     print('check')

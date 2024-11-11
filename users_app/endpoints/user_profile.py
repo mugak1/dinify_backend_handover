@@ -40,25 +40,25 @@ class V2UserProfileEndpoint(APIView):
 
     def put(self, request, action):
         if action == 'update-profile':
-            # try:
-            response = update_user_profile(
-                actor=request.user,
-                user_id=request.user.id,
-                country=request.data.get('country'),
-                first_name=request.data.get('first_name'),
-                last_name=request.data.get('last_name'),
-                other_names=request.data.get('other_names'),
-                email=request.data.get('email'),
-                phone_number=request.data.get('phone_number')
-            )
-            return Response(response, status=200)
-            # except Exception as error:
-            #     print(f"Error while updating profile: {error}")
-            #     response = {
-            #         'status': 400,
-            #         'message': 'Sorry, an error occurred.'
-            #     }
-            #     return Response(response, status=200)
+            try:
+                response = update_user_profile(
+                    actor=request.user,
+                    user_id=request.user.id,
+                    country=request.data.get('country'),
+                    first_name=request.data.get('first_name'),
+                    last_name=request.data.get('last_name'),
+                    other_names=request.data.get('other_names'),
+                    email=request.data.get('email'),
+                    phone_number=request.data.get('phone_number')
+                )
+                return Response(response, status=200)
+            except Exception as error:
+                print(f"Error while updating profile: {error}")
+                response = {
+                    'status': 400,
+                    'message': 'Sorry, an error occurred.'
+                }
+                return Response(response, status=200)
         else:
             response = {
                 'status': 400,
