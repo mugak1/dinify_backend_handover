@@ -35,3 +35,9 @@ class SerGetUserProfile(ModelSerializer):
             }
             for res_role in res_roles
         ]
+
+
+class SerPutUserProfile(ModelSerializer):
+    class Meta:
+        model = User
+        fields = ('__all__')

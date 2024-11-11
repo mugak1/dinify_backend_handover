@@ -20,3 +20,7 @@ def get_user_restaurant_roles(
         )['roles']
     except RestaurantEmployee.DoesNotExist:
         return []
+
+
+def is_dinify_admin(user: User) -> bool:
+    return any(role in dinify_roles for role in user.roles)
