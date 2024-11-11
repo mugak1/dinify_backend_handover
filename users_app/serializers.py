@@ -30,6 +30,7 @@ class SerGetUserProfile(ModelSerializer):
         )
         return [
             {
+                'restaurant_id': str(res_role.restaurant.id),
                 'restaurant': res_role.restaurant.name,
                 'roles': res_role.roles
             }
