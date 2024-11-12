@@ -23,7 +23,7 @@ def login(username: str, password: str) -> dict:
     # to use for authentication
     consider_email = User.objects.filter(email=username.lower()).exists()
     if consider_email:
-        username = User.objects.get(phone_number=username).username
+        username = User.objects.get(email=username).username
 
     # authenticate the user
     username = username.strip()
