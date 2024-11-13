@@ -25,6 +25,7 @@ class SerGetUserProfile(ModelSerializer):
 
     def get_restaurant_roles(self, user):
         res_roles = RestaurantEmployee.objects.filter(
+            restaurant__status__in=['active'],
             user=user,
             deleted=False
         )
