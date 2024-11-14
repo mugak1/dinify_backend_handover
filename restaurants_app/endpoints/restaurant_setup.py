@@ -294,15 +294,19 @@ class RestaurantSetupEndpoint(APIView):
                 
                 if request.GET.get('status') == 'all':
                     orm_filter['order_status__in'] = [
-                        OrderStatus_Pending,
+                        # OrderStatus_Pending,
                         OrderStatus_Preparing,
-                        OrderStatus_Served,
+                        # OrderStatus_Served,
                         OrderStatus_Cancelled,
                         OrderStatus_Refunded
                     ]
                     # orm_filter['payment_status'] = PaymentStatus_Pending
 
-
+        if config_detail == 'rest=urants':
+            orm_filter['status__in'] = [
+                'active',
+                'pending'
+            ]
 
         serializers = {
             'restaurants': SerializerPublicGetRestaurant,
