@@ -23,7 +23,8 @@ def build_messages(msg_data: dict) -> dict:
 
     if msg_data.get('msg_type') in [
         'password-change',
-        'forgot-password'
+        'forgot-password',
+        'otp'
     ]:
         return make_user_messages(msg_data, footer)
 

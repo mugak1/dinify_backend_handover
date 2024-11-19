@@ -155,7 +155,7 @@ class UsersAppTestFunctions(TestCase):
 
         def test_make_otp():
             """ test make_otp """
-            otp_manager.make_otp(user.id)
+            otp_manager.make_otp(user)
             user_otp = UserOtp.objects.get(user_id=user.id)
             self.assertTrue(user_otp)
 
