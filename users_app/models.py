@@ -86,6 +86,27 @@ class BaseModel(models.Model):
         abstract = True
 
 
+class UserOtp(models.Model):
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False
+    )
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    otp_hash = models.CharField(max_length=255)
+    time_created = models.DateTimeField(auto_now_add=True)
+    expiry_time = models.DateTimeField()
+
+    class Meta:
+        db_table = 'user_otps'
+        ordering = ['time_created']
+
+
 @receiver(pre_save, sender=BaseModel)
 def add_time_last_updated(sender, instance, **kwargs):
     instance.time_last_updated = datetime.datetime.now()
+
+
+@receiver(pre_save, sender=UserOtp)
+def set_expiry_time(sender, instance, **kwargs):
+    instance.expiry_time = datetime.datetime.now() + datetime.timedelta(minutes=5)

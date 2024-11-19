@@ -4,7 +4,9 @@ from users_app.controllers.self_register import self_register
 from users_app.controllers.login import login
 from users_app.controllers.change_password import change_password
 from users_app.controllers.reset_password import reset_password
-from users_app.models import User
+from users_app.models import User, UserOtp
+from users_app.controllers.otp_manager import OtpManager
+
 
 TEST_PHONE = '1234567890'
 TEST_EMAIL = 'test@user.com'
@@ -143,3 +145,24 @@ class UsersAppTestFunctions(TestCase):
 
         test_success()
         test_no_phone_number()
+
+    def test_otp_manager(self):
+        """
+        test otp_manager
+        """
+        user = User.objects.get(phone_number=TEST_PHONE)
+        otp_manager = OtpManager()
+
+        def test_make_otp():
+            """ test make_otp """
+            otp_manager.make_otp(user.id)
+            user_otp = UserOtp.objects.get(user_id=user.id)
+            self.assertTrue(user_otp)
+
+        def test_verify_otp():
+            """ test verify_otp """
+            self.assertTrue(otp_manager.verify_otp(user.id, '1234'))
+            self.assertFalse(otp_manager.verify_otp(user.id, '1111'))
+
+        test_make_otp()
+        test_verify_otp()
