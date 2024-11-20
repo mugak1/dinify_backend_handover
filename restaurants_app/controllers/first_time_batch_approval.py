@@ -12,7 +12,7 @@ from dinify_backend.configss.string_definitions import(
     RESTAURANT_OWNER,
     RESTAURANT_MANAGER
 )
-from dinify_backend.mongo_db import ACTON_LOGS
+from dinify_backend.mongo_db import ACTION_LOGS
 from users_app.models import User
 from users_app.controllers.permissions_check import (
     is_dinify_admin,
@@ -113,12 +113,13 @@ def first_time_batch_approval(
 
                 # user who submitted menu for approval should not approve
                 # except for dinify superuser and restaurant owner
-                action_logs = ACTON_LOGS.find({
+                filter = {
                     'affected_model': 'restaurant-menu-approval',
                     'affected_record': restaurant_id,
                     'action': approval_decision,
                     'result': 'success'
-                })
+                }
+                action_logs = ACTION_LOGS.find(filter)
 
                 submitter_id = None
                 for log in action_logs:
@@ -132,6 +133,11 @@ def first_time_batch_approval(
                             'status': 400,
                             'message': 'Sorry, you cannot approve a menu that you submitted.'
                         }
+                
+                return {
+                    'status': 200,
+                    'message': 'Approval Debu Complete'
+                }
 
                 restaurant.first_time_menu_approval = True
                 # bulk update the menu sections
