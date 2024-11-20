@@ -93,7 +93,9 @@ def first_time_batch_approval(
             # flag the restaurant detail to indicate that a first time memenu approval has been done
             restaurant.first_time_menu_approval_decision = approval_decision
 
+            print(f"the current approval decision is {restaurant.first_time_menu_approval_decision}")
             if approval_decision == 'submit':
+                print(f"the current approval decision is {restaurant.first_time_menu_approval_decision}")
                 if not restaurant.first_time_menu_approval_decision == 'pending':
                     return {
                         'status': 400,
