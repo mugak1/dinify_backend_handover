@@ -91,11 +91,9 @@ def first_time_batch_approval(
         message = 'The restaurant menu has been submitted.'
         if approval_decision in ['approve', 'submit']:
             # flag the restaurant detail to indicate that a first time memenu approval has been done
-            restaurant.first_time_menu_approval_decision = approval_decision
-
-            print(f"the current approval decision is {restaurant.first_time_menu_approval_decision}")
+            
             if approval_decision == 'submit':
-                print(f"the current approval decision is {restaurant.first_time_menu_approval_decision}")
+                # print(f"the current approval decision is {restaurant.first_time_menu_approval_decision}")
                 if not restaurant.first_time_menu_approval_decision == 'pending':
                     return {
                         'status': 400,
@@ -137,6 +135,7 @@ def first_time_batch_approval(
                         }
 
                 restaurant.first_time_menu_approval = True
+            restaurant.first_time_menu_approval_decision = approval_decision
             restaurant.save()
 
             # bulk update the menu sections
