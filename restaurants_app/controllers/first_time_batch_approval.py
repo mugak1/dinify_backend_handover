@@ -157,6 +157,7 @@ def first_time_batch_approval(
                 result='success',
                 user_id=auth.get('user_id'),
                 username=auth.get('username'),
+                submitted_data={'decision': approval_decision, 'reason': rejection_reason},
                 changes=None,
                 filter_information=None
             )
