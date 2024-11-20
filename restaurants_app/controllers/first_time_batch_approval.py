@@ -91,7 +91,6 @@ def first_time_batch_approval(
         message = 'The restaurant menu has been submitted.'
         if approval_decision in ['approve', 'submit']:
             # flag the restaurant detail to indicate that a first time memenu approval has been done
-            
             if approval_decision == 'submit':
                 # print(f"the current approval decision is {restaurant.first_time_menu_approval_decision}")
                 if not restaurant.first_time_menu_approval_decision == 'pending':
@@ -135,20 +134,20 @@ def first_time_batch_approval(
                         }
 
                 restaurant.first_time_menu_approval = True
+                # bulk update the menu sections
+                sections = MenuSection.objects.filter(restaurant=restaurant)
+                sections.update(approved=True, enabled=True)
+
+                # bulk update the section groups
+                groups = SectionGroup.objects.filter(section__restaurant=restaurant)
+                groups.update(approved=True, enabled=True)
+
+                # bulk update the menu items
+                items = MenuItem.objects.filter(section__restaurant=restaurant)
+                items.update(approved=True, enabled=True)
+
             restaurant.first_time_menu_approval_decision = approval_decision
             restaurant.save()
-
-            # bulk update the menu sections
-            sections = MenuSection.objects.filter(restaurant=restaurant)
-            sections.update(approved=True, enabled=True)
-
-            # bulk update the section groups
-            groups = SectionGroup.objects.filter(section__restaurant=restaurant)
-            groups.update(approved=True, enabled=True)
-
-            # bulk update the menu items
-            items = MenuItem.objects.filter(section__restaurant=restaurant)
-            items.update(approved=True, enabled=True)
 
             save_action(
                 affected_model='restaurant-menu-approval',
@@ -162,7 +161,6 @@ def first_time_batch_approval(
                 filter_information=None
             )
 
-            message
             response = {
                 'status': 200,
                 'message': message
