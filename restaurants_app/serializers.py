@@ -288,11 +288,15 @@ class SerializerGetFullMenu(ModelSerializer):
         )
 
     def get_groups(self, section):
-        groups = SectionGroup.objects.filter(
-            section=section,
-            approved=True,
-            enabled=True
-        )
+        filters = {
+            'section': section,
+            'approved': True,
+            'enabled': True
+        }
+        if self.context.get('ignore_approval') == 'true':
+            filters.pop('approved')
+            filters.pop('enabled')
+        groups = SectionGroup.objects.filter(**filters)
         return [
             {
                 'id': str(group.pk),
@@ -301,21 +305,29 @@ class SerializerGetFullMenu(ModelSerializer):
         ]
 
     def get_items(self, section):
-        items = MenuItem.objects.filter(
-            section=section,
-            approved=True,
-            enabled=True
-        )
+        filters = {
+            'section': section,
+            'approved': True,
+            'enabled': True
+        }
+        if self.context.get('ignore_approval') == 'true':
+            filters.pop('approved')
+            filters.pop('enabled')
+        items = MenuItem.objects.filter(**filters)
         return SerializerPublicGetMenuItem(
             items, many=True
         ).data
 
     def get_item_count(self, section):
-        return MenuItem.objects.filter(
-            section=section,
-            approved=True,
-            enabled=True
-        ).count()
+        filters = {
+            'section': section,
+            'approved': True,
+            'enabled': True
+        }
+        if self.context.get('ignore_approval') == 'true':
+            filters.pop('approved')
+            filters.pop('enabled')
+        return MenuItem.objects.filter(**filters).count()
 
 
 class SerializerAdminGetOrderReview(ModelSerializer):

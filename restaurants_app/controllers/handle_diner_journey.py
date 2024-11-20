@@ -42,8 +42,11 @@ def handle_show_menu(restaurant_id: str, ignore_approval: str) -> dict:
         # enabled=True
         **filters
     )
+
     menu_data = SerializerGetFullMenu(
-        sections, many=True
+        sections,
+        many=True,
+        context={'ignore_approval': ignore_approval}
     ).data
 
     return {
