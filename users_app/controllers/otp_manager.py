@@ -33,40 +33,49 @@ class OtpManager:
 
     def verify_otp(self, user_id, otp) -> dict:
         encrypted_otp = hashlib.sha256(otp.encode()).hexdigest()
-        try:
-            otps = UserOtp.objects.filter(
-                user_id=user_id,
-                otp_hash=encrypted_otp,
-                expiry_time__gte=datetime.now()
-            ).order_by('-time_created')
-            if otps.count() < 1:
-                return {
-                    'valid': False
+        time_now = datetime.now()
+        otps = UserOtp.objects.filter(
+            user_id=user_id,
+            otp_hash=encrypted_otp,
+            expiry_time__gte=time_now
+        ).order_by('-time_created')
+        if otps.count() < 1:
+            print('no otp record found')
+            return {
+                'status': 200,
+                'message': 'Invalid OTP',
+                'data': {
+                    'valid': False,
                 }
-            
-            verified_otp = otps.first()
+            }
 
-            # if the otp purpose is for login,
-            # make a token and return it
-            if verified_otp.purpose == 'login':
-                token = RefreshToken.for_user(otp.user)
-                # delete the otp right after verification
-                verified_otp.delete()
-                return {
+        verified_otp = otps.first()
+
+        # if the otp purpose is for login,
+        # make a token and return it
+        if verified_otp.purpose == 'login':
+            token = RefreshToken.for_user(verified_otp.user)
+            # delete the otp right after verification
+            verified_otp.delete()
+            return {
+                'status': 200,
+                'message': 'Valid OTP',
+                'data': {
                     'valid': True,
                     'token': str(token.access_token),
                     'refresh': str(token)
                 }
+            }
 
-            # delete the otp right after verification
-            verified_otp.delete()
-            return {
-                'valid': True
+        # delete the otp right after verification
+        verified_otp.delete()
+        return {
+            'status': 200,
+            'message': 'Valid OTP',
+            'data': {
+                'valid': True,
             }
-        except UserOtp.DoesNotExist:
-            return {
-                'valid': False
-            }
+        }
 
     def resend_otp(
         self,

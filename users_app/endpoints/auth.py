@@ -53,6 +53,16 @@ class UsersAuthenticationEndpoint(APIView):
                 identifier=identifier,
                 purpose=purpose
             )
+        elif action == 'verify-otp':
+            user = request.data.get('user', None)
+            if request.user is not None and request.user.is_authenticated:
+                user = str(request.user.id)
+
+            response = OtpManager().verify_otp(
+                user_id=user,
+                otp=request.data.get('otp')
+            )
+
         return Response(
             response,
             status=response['status']
