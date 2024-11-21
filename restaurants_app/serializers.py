@@ -271,7 +271,8 @@ class SerializerPublicGetTableDetails(ModelSerializer):
             'name': restaurant.name,
             'logo': logo,
             'cover_photo': cover_photo,
-            'branding_configuration': restaurant.branding_configuration
+            'branding_configuration': restaurant.branding_configuration,
+            'menu_approval_status': restaurant.first_time_menu_approval_decision
         }
 
 
