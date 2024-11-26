@@ -93,6 +93,7 @@ class UserOtp(models.Model):
         editable=False
     )
     user = models.ForeignKey(User, on_delete=models.CASCADE)
+    purpose = models.CharField(max_length=255, null=True, blank=True)
     otp_hash = models.CharField(max_length=255)
     time_created = models.DateTimeField(auto_now_add=True)
     expiry_time = models.DateTimeField()
