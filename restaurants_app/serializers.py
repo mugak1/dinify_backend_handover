@@ -169,7 +169,7 @@ class SerializerPublicGetMenuItem(ModelSerializer):
         fields = (
             'id', 'name', 'description', 'primary_price',
             'discounted_price', 'running_discount', 'image',
-            'available', 'allergens',
+            'available', 'allergens', 'discount_details',
             'has_options', 'options', 'group', 'extras', 'is_extra'
         )
 

@@ -76,6 +76,7 @@ class FinanceAppTestFunctions(TestCase):
 
             result = initiate_order_payment(
                 order=order,
+                tip_amount=0,
                 payment_mode=PaymentMode_MobileMoney,
                 msisdn='256706087495'
             )
