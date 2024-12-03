@@ -214,7 +214,19 @@ class UsersAppTestFunctions(TestCase):
                 otp='1234'
             )
             self.assertEqual(response.get('status'), 200)
+        
+        def test_no_otp_need():
+            """ when the otp is not needed """
+            # ask for otp
+            OtpManager().make_otp(user)
+            response = update_user_profile(
+                actor=user,
+                user_id=user.id,
+                first_name='John',
+            )
+            self.assertEqual(response.get('status'), 200)
 
         test_no_otp()
         test_invalid_otp()
         test_valid_otp()
+        test_no_otp_need()
