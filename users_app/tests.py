@@ -6,6 +6,7 @@ from users_app.controllers.change_password import change_password
 from users_app.controllers.reset_password import reset_password
 from users_app.models import User, UserOtp
 from users_app.controllers.otp_manager import OtpManager
+from users_app.controllers.update_user_profile import update_user_profile
 
 
 TEST_PHONE = '1234567890'
@@ -172,3 +173,48 @@ class UsersAppTestFunctions(TestCase):
 
         test_make_otp()
         test_verify_otp()
+
+    def test_update_user_profile(self):
+        """
+        test update_user_profile
+        """
+        user = User.objects.get(phone_number=TEST_PHONE)
+
+        def test_no_otp():
+            """ when the profile update is successful """
+            response = update_user_profile(
+                actor=user,
+                user_id=user.id,
+                phone_number='256712345678'
+            )
+            self.assertEqual(response.get('status'), 400)
+            self.assertEqual(response.get('message'), 'Please provide the OTP to update the phone number.')
+
+        def test_invalid_otp():
+            """ when the otp is invalid """
+            # ask for otp
+            OtpManager().make_otp(user)
+            response = update_user_profile(
+                actor=user,
+                user_id=user.id,
+                phone_number='256712345678',
+                otp='1235'
+            )
+            self.assertEqual(response.get('status'), 400)
+            self.assertEqual(response.get('message'), 'Invalid OTP.')
+        
+        def test_valid_otp():
+            """ when the otp is valid """
+            # ask for otp
+            OtpManager().make_otp(user)
+            response = update_user_profile(
+                actor=user,
+                user_id=user.id,
+                phone_number='256712345678',
+                otp='1234'
+            )
+            self.assertEqual(response.get('status'), 200)
+
+        test_no_otp()
+        test_invalid_otp()
+        test_valid_otp()

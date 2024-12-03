@@ -40,7 +40,6 @@ class OtpManager:
             expiry_time__gte=time_now
         ).order_by('-time_created')
         if otps.count() < 1:
-            print('no otp record found')
             return {
                 'status': 200,
                 'message': 'Invalid OTP',

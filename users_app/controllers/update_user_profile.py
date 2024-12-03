@@ -13,6 +13,7 @@ from dinify_backend.configss.string_definitions import (
     RESTAURANT_MANAGER
 )
 from misc_app.controllers.secretary import Secretary
+from users_app.controllers.otp_manager import OtpManager
 
 
 def self_update_user_profile(
@@ -140,6 +141,7 @@ def update_user_profile(
     other_names: Optional[str] = None,
     email: Optional[str] = None,
     phone_number: Optional[str] = None,
+    otp: Optional[str] = None
 ) -> dict:
     # check if the actor has rights to perform the action
     has_permission = False
@@ -153,7 +155,6 @@ def update_user_profile(
             active=True,
         )
         restaurant_ids = [str(res['restaurant']) for res in res_mapping]
-        print(restaurant_ids)
         for restaurant_id in restaurant_ids:
             roles = get_user_restaurant_roles(
                 user_id=str(actor.id),
@@ -166,11 +167,33 @@ def update_user_profile(
                     has_permission = True
                     break
 
-    if not has_permission:
-        return {
-            'status': 401,
-            'message': 'You do not have permission to perform this action.'
-        }
+    # if not has_permission:
+    #     return {
+    #         'status': 401,
+    #         'message': 'You do not have permission to perform this action.'
+    #     }
+
+    # check if the phone number has changed
+    user_profile = User.objects.get(id=user_id)
+    if phone_number is not None:
+        if user_profile.phone_number != phone_number:
+            # check if the otp has been provided
+            if otp is None:
+                return {
+                    'status': 400,
+                    'message': 'Please provide the OTP to update the phone number.'
+                }
+            # verify the otp
+            verified_otp = OtpManager().verify_otp(
+                user_id=str(actor.id),
+                otp=otp
+            )
+
+            if not verified_otp['data']['valid']:
+                return {
+                    'status': 400,
+                    'message': 'Invalid OTP.'
+                }
 
     put_data = {
         'id': user_id,
