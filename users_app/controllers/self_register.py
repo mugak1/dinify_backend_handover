@@ -6,6 +6,7 @@ from misc_app.controllers.check_required_information import check_required_infor
 from dinify_backend.configss.messages import MESSAGES
 from dinify_backend.configss.required_information import REQUIRED_INFORMATION
 from users_app.models import User
+from users_app.controllers.otp_manager import OtpManager
 
 
 def self_register(
@@ -36,11 +37,34 @@ def self_register(
         }
 
     # check that the email is not repeated
-    if User.objects.filter(email=data.get('email')).exists():
+    if data.get('email') is not None:
+        if User.objects.filter(email=data.get('email')).exists():
+            return {
+                'status': 400,
+                'message': MESSAGES.get('EMAIL_EXISTS')
+            }
+
+    # verify otp
+    # check if the otp has been provided
+    otp = data.get('otp')
+    if otp is None:
         return {
             'status': 400,
-            'message': MESSAGES.get('EMAIL_EXISTS')
+            'message': 'Please provide the OTP.'
         }
+
+    # verify the otp
+    verified_otp = OtpManager().verify_otp(
+        msisdn=data.get('phone_number'),
+        otp=otp
+    )
+
+    if not verified_otp['data']['valid']:
+        return {
+            'status': 400,
+            'message': 'Invalid OTP.'
+        }
+
 
     # create the user
     email = data.get('email')

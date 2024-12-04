@@ -2,43 +2,62 @@ from typing import Optional
 import random
 import hashlib
 from datetime import datetime, timedelta
-from warnings import filters
 from users_app.models import User, UserOtp
 from misc_app.controllers.notifications.notification import Notification
 from rest_framework_simplejwt.tokens import RefreshToken
 
 
 class OtpManager:
-    def make_otp(self, user: User, purpose: Optional[str] = None) -> True:
+    def make_otp(
+        self,
+        user: Optional[User] = None,
+        msisdn: Optional[str] = None,
+        purpose: Optional[str] = None,
+    ) -> True:
         otp = random.randint(1000, 9999)
         otp_str = str(otp)
         otp_str = '1234'
         encrypted_otp = hashlib.sha256(otp_str.encode()).hexdigest()
 
         # delete any old otps associated with the user
-        UserOtp.objects.filter(user=user).delete()
-
+        UserOtp.objects.filter(user=user, msisdn=msisdn).delete()
+        
         user_otp = UserOtp(
             user=user,
+            msisdn=msisdn,
             otp_hash=encrypted_otp,
             purpose=purpose
         )
         user_otp.save()
         Notification(msg_data={
             'msg_type': 'otp',
-            'first_name': user.first_name,
+            'first_name': user.first_name if user is not None else '',
             'otp': otp_str,
         }).create_notification()
         return True
 
-    def verify_otp(self, user_id, otp) -> dict:
+    def verify_otp(
+        self,
+        otp: str,
+        user_id: Optional[str] = None,
+        msisdn: Optional[str] = None
+    ) -> dict:
         encrypted_otp = hashlib.sha256(otp.encode()).hexdigest()
         time_now = datetime.now()
-        otps = UserOtp.objects.filter(
-            user_id=user_id,
-            otp_hash=encrypted_otp,
-            expiry_time__gte=time_now
-        ).order_by('-time_created')
+
+        if user_id is not None:
+            otps = UserOtp.objects.filter(
+                user_id=user_id,
+                otp_hash=encrypted_otp,
+                expiry_time__gte=time_now
+            ).order_by('-time_created')
+        else:
+            otps = UserOtp.objects.filter(
+                msisdn=msisdn,
+                otp_hash=encrypted_otp,
+                expiry_time__gte=time_now
+            ).order_by('-time_created')
+
         if otps.count() < 1:
             return {
                 'status': 200,
@@ -91,8 +110,10 @@ class OtpManager:
         try:
             if identification == 'id':
                 user = User.objects.get(pk=identifier)
-            else:
+            elif identification == 'phone':
                 user = User.objects.get(phone_number=identifier)
+            elif identification == 'msisdn':
+                pass
         except Exception as error:
             print(f"OTP Resend Error: {error}")
             return {
@@ -121,6 +142,7 @@ class OtpManager:
                     'message': 'Please provide your username and password again to get a login OTP'
                 }
 
+        # if purpose == 'first-time-payment':
         if self.make_otp(user=user, purpose=purpose):
             return {
                 'status': 200,

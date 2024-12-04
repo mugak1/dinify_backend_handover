@@ -157,22 +157,45 @@ class UsersAppTestFunctions(TestCase):
 
         def test_make_otp():
             """ test make_otp """
-            otp_manager.make_otp(user)
+            otp_manager.make_otp(user=user)
             user_otp = UserOtp.objects.get(user_id=user.id)
             self.assertTrue(user_otp)
 
         def test_verify_otp():
             """ test verify_otp """
-            self.assertTrue(otp_manager.verify_otp(user.id, '1234')['data']['valid'])
-            self.assertFalse(otp_manager.verify_otp(user.id, '1111')['data']['valid'])
+            self.assertTrue(otp_manager.verify_otp(user_id=user.id, otp='1234')['data']['valid'])
+            self.assertFalse(otp_manager.verify_otp(user_id=user.id, otp='1111')['data']['valid'])
 
         def test_resend_otp():
             """ test reset_otp """
-            result = otp_manager.resend_otp('msisdn', TEST_PHONE)
+            result = otp_manager.resend_otp(
+                identification='msisdn',
+                identifier=TEST_PHONE
+            )
             self.assertEqual(result.get('status'), 200)
+
+        def test_msisdn_otp_make():
+            """ test msisdn_otp """
+            result = otp_manager.make_otp(
+                msisdn=TEST_PHONE,
+                purpose='test'
+            )
+            self.assertTrue(result)
+
+        def test_msisdn_otp_verify():
+            """ test msisdn_otp """
+            result = otp_manager.verify_otp(
+                msisdn=TEST_PHONE,
+                otp='1234'
+            )
+            self.assertEqual(result.get('status'), 200
+        )
 
         test_make_otp()
         test_verify_otp()
+        test_resend_otp()
+        test_msisdn_otp_make()
+        test_msisdn_otp_verify()
 
     def test_update_user_profile(self):
         """
