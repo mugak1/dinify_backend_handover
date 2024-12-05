@@ -36,6 +36,7 @@ class MiscPublicEndpoint(APIView):
         # update the filter based on the config_detail
         if config_detail in ['orderreviews', 'orderitemreviews']:
             orm_filter['block_review'] = False
+            orm_filter['restaurant__expose_order_ratings'] = True
 
         if config_detail in ['restaurants']:
             orm_filter['status'] = 'active'

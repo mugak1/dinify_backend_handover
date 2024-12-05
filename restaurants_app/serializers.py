@@ -372,7 +372,7 @@ class SerializerPublicGetOrderReview(ModelSerializer):
 
     def get_customer(self, order):
         if order.customer is None:
-            return ''
+            return 'Anonymous'
         return f'{order.customer.first_name}'
 
 
