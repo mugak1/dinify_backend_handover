@@ -1,6 +1,7 @@
 """
 implementation to handle user login i.e. authentication
 """
+from typing import Optional
 from django.utils import timezone
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -22,7 +23,11 @@ from dinify_backend.configss.string_definitions import (
 )
 
 
-def login(username: str, password: str) -> dict:
+def login(
+    username: str,
+    password: str,
+    source: Optional[str] = 'restaurant'
+) -> dict:
     """
     handle the login of a user
     """
@@ -124,7 +129,7 @@ def login(username: str, password: str) -> dict:
             break
 
     # require_otp = True
-    if require_otp:
+    if require_otp and source != 'diner':
         otp = OtpManager().make_otp(user=auth_user, purpose='login')
         if otp:
             return {

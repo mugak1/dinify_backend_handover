@@ -26,8 +26,9 @@ class UsersAuthenticationEndpoint(APIView):
             response = self_register(request.data)
         elif action == "login":
             response = login(
-                request.data.get('username'),
-                request.data.get('password')
+                username=request.data.get('username'),
+                password=request.data.get('password'),
+                source=request.data.get('source', 'restaurant')
             )
         elif action == "reset-password":
             response = reset_password(
