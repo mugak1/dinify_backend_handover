@@ -163,15 +163,14 @@ def update_user_profile(
             restaurant_roles = [RESTAURANT_OWNER, RESTAURANT_MANAGER]
             if len(roles) > 0:
                 if any(role in restaurant_roles for role in roles):
-                    print('check')
                     has_permission = True
                     break
 
-    # if not has_permission:
-    #     return {
-    #         'status': 401,
-    #         'message': 'You do not have permission to perform this action.'
-    #     }
+    if not has_permission:
+        return {
+            'status': 401,
+            'message': 'You do not have permission to perform this action.'
+        }
 
     # check if the phone number has changed
     user_profile = User.objects.get(id=user_id)

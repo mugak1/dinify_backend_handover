@@ -63,6 +63,7 @@ def check_permission(
     record: str,
     id: str,
 ):
+    # return False
     has_permission = False
     if is_dinify_admin(user):
         has_permission = True
@@ -95,6 +96,55 @@ class RestaurantSetupEndpoint(APIView):
     """
     the endpoint for restaurant setups
     """
+    def handle_create_employee(self, request):
+        # TODO if the user is not a Dinify admin,.
+        # then set the owner value from the auth details
+        data = request.data
+        try:
+            data = data.dict()
+        except Exception as error:
+            print(f"Error: {error}")
+
+        # check if the actor has rights to perform the action
+        if not check_permission(
+            user=request.user,
+            record='employee',
+            id=data.get('restaurant')
+        ):
+            response = {
+                'status': 401,
+                'message': 'You do not have permission to perform this action.'
+            }
+            return Response(response, status=400)
+
+        # response = {
+        #     'status': 200,
+        #     'message': 'Ok'
+        # }
+        # return Response(response, status=200)
+
+        try:
+            response = create_employee(
+                first_name=data.get('first_name'),
+                last_name=data.get('last_name'),
+                email=data.get('email'),
+                phone_number=data.get('phone_number'),
+                restaurant=Restaurant.objects.get(id=data.get('restaurant')),
+                roles=data.get('roles'),
+                creator=request.user,
+                otp=data.get('otp')
+            )
+        except Exception as error:
+            print(f"Error while creating employee: {error}")
+            response = {
+                'status': 500,
+                'message': "An error occurred while creating the employee. Please check that you have provided all the details."
+            }
+        return Response(
+            response,
+            status=response['status']
+        )
+
     def post(self, request, config_detail):
         """
         handle the POST method
@@ -150,35 +200,7 @@ class RestaurantSetupEndpoint(APIView):
             return Response(response, status=response['status'])
 
         if config_detail == 'create-employee':
-            # TODO if the user is not a Dinify admin,.
-            # then set the owner value from the auth details
-            data = request.data
-            try:
-                data = data.dict()
-            except Exception as error:
-                print(f"Error: {error}")
-
-            try:
-                response = create_employee(
-                    first_name=data.get('first_name'),
-                    last_name=data.get('last_name'),
-                    email=data.get('email'),
-                    phone_number=data.get('phone_number'),
-                    restaurant=Restaurant.objects.get(id=data.get('restaurant')),
-                    roles=data.get('roles'),
-                    creator=request.user,
-                    otp=data.get('otp')
-                )
-            except Exception as error:
-                print(f"Error while creating employee: {error}")
-                response = {
-                    'status': 500,
-                    'message': "An error occurred while creating the employee. Please check that you have provided all the details."
-                }
-            return Response(
-                response,
-                status=response['status']
-            )
+            return self.handle_create_employee(request)
 
         serializers = {
             'employees': SerializerPutRestaurantEmployee,
