@@ -37,6 +37,9 @@ class MiscPublicEndpoint(APIView):
         if config_detail in ['orderreviews', 'orderitemreviews']:
             orm_filter['block_review'] = False
 
+        if config_detail in ['restaurants']:
+            orm_filter['status'] = 'active'
+
         serializers = {
             'restaurants': SerializerPublicGetRestaurant,
             'tables': SerializerPublicGetTable,
