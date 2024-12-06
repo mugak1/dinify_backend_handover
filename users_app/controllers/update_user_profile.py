@@ -128,10 +128,15 @@ def self_update_user_profile(
         user.phone_number = phone_number
     user.save()
 
-    return {
+    user = user.refresh_from_db()
+    response = {
         'status': 200,
-        'message': 'Your profile has been updated successfully.'
+        'message': 'Your profile has been updated successfully.',
+        'data': {
+            'profile': SerGetUserProfile(user, many=False).data
+        }
     }
+    return response
 
 
 def update_user_profile(
@@ -228,6 +233,7 @@ def update_user_profile(
     }
 
     secretary_response = Secretary(secretary_args).update()
+    secretary_response['data'] = {}
 
     user_object = User.objects.get(id=put_data['id'])
     secretary_response['data']['profile'] = SerGetUserProfile(user_object, many=False).data
