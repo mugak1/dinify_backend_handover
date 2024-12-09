@@ -227,3 +227,54 @@ class YoIntegration:
         )
         print(response)
         return True
+
+    def bank_disburse(
+        self,
+        arg_transaction_id: str,
+        arg_account_number: str,
+        arg_account_identifier: str,
+        arg_amount: int,
+        arg_transfer_type: str
+    ) -> bool:
+        auto_create = ET.Element('AutoCreate')
+        request = ET.SubElement(auto_create, 'Request')
+        api_username = ET.SubElement(request, 'APIUsername')
+        api_username.text = self.YO_USERNAME
+        api_password = ET.SubElement(request, 'APIPassword')
+        api_password.text = self.YO_PASSWORD
+        method = ET.SubElement(request, 'Method')
+        method.text = 'acwithdrawfundstobank'
+        amount = ET.SubElement(request, 'Amount')
+        amount.text = str(arg_amount)
+        currency_code = ET.SubElement(request, 'CurrencyCode')
+        currency_code.text = 'UGX'
+        bank_account_name = ET.SubElement(request, 'BankAccountName')
+        bank_account_name.text = 'ESAU  LWANGA'
+        bank_account_number = ET.SubElement(request, 'BankAccountNumber')
+        bank_account_number.text = arg_account_number
+        bank_account_identifier = ET.SubElement(request, 'BankAccountIdentifier')
+        bank_account_identifier.text = arg_account_identifier
+        transfer_transaction_type = ET.SubElement(request, 'TransferTransactionType')
+        transfer_transaction_type.text = arg_transfer_type
+        private_transaction_reference = ET.SubElement(request, 'PrivateTransactionReference')
+        private_transaction_reference.text = arg_transaction_id
+
+        post_data = ET.tostring(auto_create, xml_declaration=True, encoding='utf-8')
+        yo_request = requests.post(
+            API_URL,
+            data=post_data,
+            headers=REQUEST_HEADERS
+        )
+        response = self.interprete_response(
+            request_type='bank_disburse',
+            request_body={
+                'transaction_id': arg_transaction_id,
+                'account_number': arg_account_number,
+                'account_identifier': arg_account_identifier,
+                'amount': arg_amount,
+                'transfer_type': arg_transfer_type
+            },
+            yo_response=yo_request
+        )
+        print(response)
+        return True

@@ -29,7 +29,7 @@ class PaymentIntegrationsTestFunctions(TestCase):
 
     def test_yo(self):
         # momo_collect = YoIntegration().momo_collect(
-        #     transaction_amount=100,
+        #     transaction_amount=10000000,
         #     msisdn='256706087495',
         #     transaction_id=str(uuid.uuid4())
         # )
@@ -47,13 +47,22 @@ class PaymentIntegrationsTestFunctions(TestCase):
         # )
         # self.assertTrue(momo_disburse)
 
-        bank_create_account = YoIntegration().bank_create_verified_account(
-            arg_account_name='ESAU  LWANGA',
+        # bank_create_account = YoIntegration().bank_create_verified_account(
+        #     arg_account_name='ESAU  LWANGA',
+        #     arg_account_number='9030017868518',
+        #     arg_bank_name='STANBIC BANK UGANDA LTD',
+        #     arg_address_line1='KIRA',
+        #     arg_address_line2='KAMPALA',
+        #     arg_city='KAMPALA',
+        #     arg_country='UGANDA',
+        # )
+        # self.assertTrue(bank_create_account)
+
+        bank_disburse = YoIntegration().bank_disburse(
+            arg_transaction_id=str(uuid.uuid4()),
+            arg_amount=100000,
             arg_account_number='9030017868518',
-            arg_bank_name='Stanbic Bank Uganda Limited',
-            arg_address_line1='KIRA',
-            arg_address_line2='KAMPALA',
-            arg_city='KAMPALA',
-            arg_country='UGANDA',
+            arg_account_identifier='320722549d1751cf3f247855f937b982',
+            arg_transfer_type='RTGS'
         )
-        self.assertTrue(bank_create_account)
+        self.assertTrue(bank_disburse)
