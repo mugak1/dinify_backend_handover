@@ -21,7 +21,7 @@ def make_menu_messages(msg_data, footer) -> dict:
         email = f"""
         <p><span style="font-weight:400;">Hello {msg_data['restaurant_name']},</span></p>
         <p>&nbsp;</p>
-        <p><span style="font-weight:400;">{msg_data['user']} has added a new menu section, {msg_data['section_name']}.&nbsp;</span></p>
+        <p><span style="font-weight:400;">{msg_data['user']} has added a new menu section, {msg_data['item_name']}.&nbsp;</span></p>
         <p><span style="font-weight:400;">You can now add items to the section and customers will be able to order for the items accordingly.&nbsp;</span></p>{footer}
         """
         message = {
@@ -34,7 +34,7 @@ def make_menu_messages(msg_data, footer) -> dict:
         email = f"""
         <p><span style="font-weight:400;">Hello {msg_data['restaurant_name']},</span></p>
         <p>&nbsp;</p>
-        <p><span style="font-weight:400;">{msg_data['user']} has updated the details for the menu section, {msg_data['section_name']}.&nbsp;</span></p>
+        <p><span style="font-weight:400;">{msg_data['user']} has updated the details for the menu section, {msg_data['item_name']}.&nbsp;</span></p>
         {footer}
         """
         message = {
@@ -47,7 +47,7 @@ def make_menu_messages(msg_data, footer) -> dict:
         email = f"""
         <p><span style="font-weight:400;">Hello {msg_data['restaurant_name']},</span></p>
         <p>&nbsp;</p>
-        <p><span style="font-weight:400;">{msg_data['user']} has disabled the menu section, {msg_data['section_name']}.&nbsp;</span></p>        
+        <p><span style="font-weight:400;">{msg_data['user']} has disabled the menu section, {msg_data['item_name']}.&nbsp;</span></p>        
         {footer}
         """
         message = {
@@ -60,7 +60,7 @@ def make_menu_messages(msg_data, footer) -> dict:
         email = f"""
         <p><span style="font-weight:400;">Hello {msg_data['restaurant_name']},</span></p>
         <p>&nbsp;</p>
-        <p><span style="font-weight:400;">{msg_data['user']} has enabled the menu section, {msg_data['section_name']}.&nbsp;</span></p>
+        <p><span style="font-weight:400;">{msg_data['user']} has enabled the menu section, {msg_data['item_name']}.&nbsp;</span></p>
         {footer}
         """
         message = {
@@ -73,7 +73,7 @@ def make_menu_messages(msg_data, footer) -> dict:
         email = f"""
         <p><span style="font-weight:400;">Hello {msg_data['restaurant_name']},</span></p>
         <p>&nbsp;</p>
-        <p><span style="font-weight:400;">{msg_data['user']} has deleted the menu section, {msg_data['section_name']}.&nbsp;</span></p>
+        <p><span style="font-weight:400;">{msg_data['user']} has deleted the menu section, {msg_data['item_name']}.&nbsp;</span></p>
         {footer}
         """
         message = {

@@ -234,6 +234,14 @@ class RestaurantSetupEndpoint(APIView):
             'tables': 'An error occurred while adding the table'
         }
 
+        msg_types = {
+            'employees': 'new-restaurant-employee',
+            'menusections': 'new-menu-section',
+            'sectiongroups': 'new-menu-group',
+            'menuitems': 'new-menu-item',
+            'tables': 'new-table'
+        }
+
         post_data = request.data
 
         # check if the actor has rights to perform the action
@@ -288,7 +296,9 @@ class RestaurantSetupEndpoint(APIView):
             'user_id': auth['id'],
             'username': auth['username'],
             'success_message': success_message,
-            'error_message': error_message
+            'error_message': error_message,
+            'user': request.user,
+            'msg_type': msg_types.get(config_detail)
         }
         response = Secretary(secretary_args).create()
 

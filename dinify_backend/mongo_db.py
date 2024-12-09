@@ -14,3 +14,4 @@ COL_DPO_TOKENS = 'dpo_tokens'
 COL_DPO_TOKEN_VERIFICATION = 'dpo_token_verification'
 
 COL_PROFILE_UPDATE_APPROVALS = 'profile_update_approvals'
+COL_NOTIFICATIONS = 'notifications'

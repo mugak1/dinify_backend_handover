@@ -10,9 +10,33 @@ from dinify_backend.configs import (
 )
 from dinify_backend.configss.messages import MESSAGES
 from misc_app.controllers.check_required_information import check_required_information
+from misc_app.controllers.notifications.msg_builder_restaurant import make_restaurant_messages
 from misc_app.controllers.paginator import DinifyPaginator
 from misc_app.controllers.determine_changes import determine_changes
 from misc_app.controllers.save_action_log import save_action
+from restaurants_app.models import Restaurant, MenuItem
+from users_app.models import User
+from misc_app.controllers.notifications.notification import Notification
+
+
+def make_notification_for_new_entry(
+    restaurant_id: str,
+    user: User,
+    item_name: str,
+    msg_type: str
+):
+    """
+    make a notification
+    """
+    restaurant_name = Restaurant.objects.values('name').get(id=restaurant_id)['name']
+    msg_data = {
+        'msg_type': msg_type,
+        'restaurant_name': restaurant_name,
+        'restaurant_id': restaurant_id,
+        'user': f'{user.first_name} {user.last_name}',
+        'item_name': item_name,
+    }
+    Notification(msg_data).create_notification()
 
 
 @dataclass
@@ -34,6 +58,8 @@ class Secretary:
         self.username = self.args.get('username')
         self.data = self.args.get('data')
         self.required_information = self.args.get('required_information')
+        self.user = self.args.get('user')
+        self.msg_type = self.args.get('msg_type')
 
     def formulate_log_data(self) -> dict:
         """
@@ -122,6 +148,20 @@ class Secretary:
                     submitted_data=log_data,
                     changes=None
                 )
+
+                # TODO send a notification
+                restaurant_id = record.data.get('restaurant')
+                if self.msg_type in ['new-menu-section']:
+                    restaurant_id = record.data['restaurant']
+
+                make_notification_for_new_entry(
+                    restaurant_id=record.data['restaurant'],
+                    user=self.user,
+                    item_name=record.data['name'],
+                    msg_type=self.msg_type
+                )
+
+
                 return {
                     'status': 200,
                     'message': self.ok_message,
