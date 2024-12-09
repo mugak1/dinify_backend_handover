@@ -278,3 +278,29 @@ class YoIntegration:
         )
         print(response)
         return True
+
+    def bank_check_disbursement_status(self, arg_settlement_id: str) -> bool:
+        auto_create = ET.Element('AutoCreate')
+        request = ET.SubElement(auto_create, 'Request')
+        api_username = ET.SubElement(request, 'APIUsername')
+        api_username.text = self.YO_USERNAME
+        api_password = ET.SubElement(request, 'APIPassword')
+        api_password.text = self.YO_PASSWORD
+        method = ET.SubElement(request, 'Method')
+        method.text = 'accheckbanksettlementstatus'
+        settlement_transaction_identifier = ET.SubElement(request, 'SettlementTransactionIdentifier')
+        settlement_transaction_identifier.text = arg_settlement_id
+
+        post_data = ET.tostring(auto_create, xml_declaration=True, encoding='utf-8')
+        yo_request = requests.post(
+            API_URL,
+            data=post_data,
+            headers=REQUEST_HEADERS
+        )
+        response = self.interprete_response(
+            request_type='bank_check_disbursement_status',
+            request_body={'settlement_id': arg_settlement_id},
+            yo_response=yo_request
+        )
+        print(response)
+        return True

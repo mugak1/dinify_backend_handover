@@ -28,12 +28,12 @@ class PaymentIntegrationsTestFunctions(TestCase):
         self.assertEquals(pesapal_response['status'], 200)
 
     def test_yo(self):
-        # momo_collect = YoIntegration().momo_collect(
-        #     transaction_amount=10000000,
-        #     msisdn='256706087495',
-        #     transaction_id=str(uuid.uuid4())
-        # )
-        # self.assertTrue(momo_collect)
+        momo_collect = YoIntegration().momo_collect(
+            transaction_amount=100000,
+            msisdn='256776117403',
+            transaction_id=str(uuid.uuid4())
+        )
+        self.assertTrue(momo_collect)
 
         # momo_check_transaction = YoIntegration().momo_check_transaction(
         #     yo_transaction_reference='0BOvvK1loqGauhReTUfzH7MlVVmSALv6RpXtI0ZLYLIUTBdiXhOx0FIgmMlLTuxqc372b6adb2ee2084d56f73966afe38a0'
@@ -58,11 +58,17 @@ class PaymentIntegrationsTestFunctions(TestCase):
         # )
         # self.assertTrue(bank_create_account)
 
-        bank_disburse = YoIntegration().bank_disburse(
-            arg_transaction_id=str(uuid.uuid4()),
-            arg_amount=100000,
-            arg_account_number='9030017868518',
-            arg_account_identifier='320722549d1751cf3f247855f937b982',
-            arg_transfer_type='RTGS'
+        # bank_disburse = YoIntegration().bank_disburse(
+        #     arg_transaction_id=str(uuid.uuid4()),
+        #     arg_amount=100000,
+        #     arg_account_number='9030017868518',
+        #     arg_account_identifier='320722549d1751cf3f247855f937b982',
+        #     arg_transfer_type='RTGS'
+        # )
+        # self.assertTrue(bank_disburse)
+
+        bank_check_disbursement = YoIntegration().bank_check_disbursement_status(
+            # arg_settlement_id='d81f9c1be2e08964bf9f24b15f0e4900'
+            arg_settlement_id='0bb4aec1710521c12ee76289d9440817'
         )
-        self.assertTrue(bank_disburse)
+        self.assertTrue(bank_check_disbursement)
