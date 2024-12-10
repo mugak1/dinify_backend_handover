@@ -12,15 +12,12 @@ class Notification:
     def create_notification(self):
         message = build_messages(self.msg_data)
         recipients = determine_receipients(self.msg_data)
-        print(message)
-        print(f"\nrecipients:\n{recipients}")
 
         save_to_mongodb(
             collection=COL_NOTIFICATIONS,
             data={
                 'tos': recipients['tos'],
                 'ccs': recipients['ccs'],
-                'message': message,
                 'subject': message['subject'],
                 'email': message['email'],
                 'sms': message['sms'],

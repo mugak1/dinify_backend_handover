@@ -27,5 +27,5 @@ urlpatterns = [
     path('api/v2/orders/', include('orders_app.v2_urls')),
     path('api/v1/finances/', include('finance_app.urls')),
     path('api/v1/reports/', include('reports_app.urls')),
-
+    path('api/v1/notifications/', include('notifications_app.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

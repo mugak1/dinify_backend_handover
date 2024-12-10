@@ -83,7 +83,7 @@ def check_permission(
                 user_id=str(user.id),
                 restaurant_id=restaurant_id
             )
-            print(roles)
+            print(restaurant_id, user.id, roles)
             restaurant_roles = [RESTAURANT_OWNER, RESTAURANT_MANAGER]
             if len(roles) > 0:
                 if any(role in restaurant_roles for role in roles):
@@ -255,6 +255,11 @@ class RestaurantSetupEndpoint(APIView):
                 'message': 'You do not have permission to perform this action.'
             }
             return Response(response, status=400)
+        
+        try:
+            post_data = post_data.dict()
+        except Exception as error:
+            print(f"Error: {error}")
 
         # attempt to auto approve menu items if a first time approval has already been done
         if config_detail in ['menusections', 'sectiongroups', 'menuitems']:
@@ -269,7 +274,6 @@ class RestaurantSetupEndpoint(APIView):
 
             if restaurant_id is not None:
                 restaurant = Restaurant.objects.get(id=restaurant_id)
-
                 post_data['approved'] = restaurant.first_time_menu_approval
                 post_data['enabled'] = restaurant.first_time_menu_approval
 
@@ -279,11 +283,7 @@ class RestaurantSetupEndpoint(APIView):
             except Exception as error:
                 print(f"Error converting table number to string: {error}")
 
-        try:
-            post_data = post_data.dict()
-        except Exception as error:
-            print(f"Error: {error}")
-
+        
         serializer = serializers.get(config_detail)
         required_information = required_information.get(config_detail)
         success_message = success_messages.get(config_detail)
