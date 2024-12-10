@@ -18,6 +18,7 @@ class TransactionsEndpoint(APIView):
             transaction_platform=data.get('transaction_platform'),
             actor=request.user,
             amount=data.get('amount'),
-            otp=data.get('otp')
+            otp=data.get('otp'),
+            bank_account=data.get('bank_account'),
         )
         return Response(response, status=200)

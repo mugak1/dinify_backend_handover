@@ -14,6 +14,7 @@ def initiate_transaction(
     actor: User,
     amount: Optional[int] = None,
     otp: Optional[str] = None,
+    bank_account: Optional[str] = None
     
 ):
     if transaction_type in [

@@ -43,6 +43,8 @@ class Restaurant(BaseModel):
     flat_fee = models.FloatField(default=0.0)
     order_surcharge_min_amount = models.FloatField(default=0.0)
     order_surcharge_cap_amount = models.FloatField(default=0.0)
+    subscription_validity = models.BooleanField(default=True)
+    subscription_expiry_date = models.DateTimeField(null=True, blank=True)
 
     branding_configuration = models.JSONField(default=dict)
     country = models.CharField(max_length=5, default="UG")
