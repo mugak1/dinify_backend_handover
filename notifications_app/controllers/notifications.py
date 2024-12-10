@@ -1,4 +1,5 @@
 from dinify_backend.mongo_db import MONGO_DB, COL_NOTIFICATIONS
+from bson import ObjectId
 
 
 def get_notifications(
@@ -41,32 +42,13 @@ def get_notifications(
         return []
 
 
-# {
-#   "_id": {
-#     "$oid": "6757b7b626db88147975bf1f"
-#   },
-#   "tos": [
-#     "me@example.org"
-#   ],
-#   "ccs": [],
-#   "message": {
-#     "subject": "New Menu Section",
-#     "email": "\n        <p><span style=\"font-weight:400;\">Hello The Name Of The Restaurant,</span></p>\n        <p>&nbsp;</p>\n        <p><span style=\"font-weight:400;\">new last has added a new menu section, Breakfast9.&nbsp;</span></p>\n        <p><span style=\"font-weight:400;\">You can now add items to the section and customers will be able to order for the items accordingly.&nbsp;</span></p>\n    <p>&nbsp;</p>\n    <p><span style=\"font-weight:400;\">Sincerely,&nbsp;</span></p>\n    <p><span style=\"font-weight:400;\">Dinify</span></p>\n    <p><span style=\"font-weight:400;\">Various Links to Dinify Social Media Accounts</span></p>\n\n        ",
-#     "sms": null
-#   },
-#   "subject": "New Menu Section",
-#   "email": "\n        <p><span style=\"font-weight:400;\">Hello The Name Of The Restaurant,</span></p>\n        <p>&nbsp;</p>\n        <p><span style=\"font-weight:400;\">new last has added a new menu section, Breakfast9.&nbsp;</span></p>\n        <p><span style=\"font-weight:400;\">You can now add items to the section and customers will be able to order for the items accordingly.&nbsp;</span></p>\n    <p>&nbsp;</p>\n    <p><span style=\"font-weight:400;\">Sincerely,&nbsp;</span></p>\n    <p><span style=\"font-weight:400;\">Dinify</span></p>\n    <p><span style=\"font-weight:400;\">Various Links to Dinify Social Media Accounts</span></p>\n\n        ",
-#   "sms": null,
-#   "creation_timestamp": {
-#     "date": 10,
-#     "month": 12,
-#     "year": 2024,
-#     "hour": 3,
-#     "minute": 38,
-#     "day": "Tue",
-#     "timestamp": {
-#       "$date": "2024-12-10T03:38:30.493Z"
-#     },
-#     "epoch": 1733801910.493494
-#   }
-# }
+def flag_notification_as_read(notification_id: str):
+    try:
+        MONGO_DB[COL_NOTIFICATIONS].update_one(
+            filter={'_id': ObjectId(notification_id)},
+            update={'$set': {'read': True}}
+        )
+        return True
+    except Exception as error:
+        print(f"Error while flagging notification as read: {error}")
+        return False

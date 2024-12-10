@@ -1,6 +1,8 @@
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from notifications_app.controllers.notifications import get_notifications
+from notifications_app.controllers.notifications import (
+    get_notifications, flag_notification_as_read
+)
 
 
 class NotificationsEndpoint(APIView):
@@ -17,3 +19,11 @@ class NotificationsEndpoint(APIView):
             'data': notifications
         }
         return Response(response, status=200)
+
+    def put(self, request):
+        flagged = flag_notification_as_read(request.data['notification_id'])
+        response = {
+            'status': 200 if flagged else 400,
+            'message': "Successfully flagged the notification as read" if flagged else "Failed to flag the notification as read"  # noqa
+        }
+        return Response(response, status=response['status'])
