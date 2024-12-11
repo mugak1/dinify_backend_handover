@@ -168,3 +168,26 @@ class DinifyTransaction(BaseModel):
 
     class Meta:
         db_table = 'transactions'
+
+
+class BankAccountRecord(BaseModel):
+    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE, null=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True)  # considerations for user refunds
+    account_name = models.CharField(max_length=255)
+    account_number = models.CharField(max_length=255)
+    bank_name = models.CharField(max_length=255)
+    address_line1 = models.CharField(max_length=255)
+    address_line2 = models.CharField(max_length=255)
+    city = models.CharField(max_length=255)
+    country = models.CharField(max_length=255)
+    state = models.CharField(max_length=255, null=True, blank=True)
+    swift_code = models.CharField(max_length=255, null=True, blank=True)
+    sort_code = models.CharField(max_length=255, null=True, blank=True)
+    aba_number = models.CharField(max_length=255, null=True, blank=True)
+    routing_number = models.CharField(max_length=255, null=True, blank=True)
+
+    yo_reference = models.CharField(max_length=255, null=True, blank=True)
+
+    class Meta:
+        db_table = 'bank_accounts'
+        unique_together = ['restaurant', 'bank_name', 'account_number']
