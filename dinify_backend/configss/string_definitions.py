@@ -16,6 +16,7 @@ PaymentMode_Cash = 'cash'
 PaymentMode_MobileMoney = 'momo'
 PaymentMode_Card = 'card'
 PaymentMode_Ova = 'ova'
+PaymentMode_Bank = 'bank'
 
 PaymentForm_Split = 'split'
 PaymentForm_Full = 'full'

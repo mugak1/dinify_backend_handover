@@ -8,7 +8,6 @@ from dinify_backend.configss.string_definitions import (
     TransactionType_Subscription,
     PaymentMode_MobileMoney, PaymentMode_Card, PaymentMode_Ova,
 )
-
 from payment_integrations_app.controllers.yo_integrations import YoIntegration
 from payment_integrations_app.controllers.dpo import DpoIntegration
 
@@ -48,7 +47,7 @@ class SubscriptionPaymentTransaction:
 
             # check if the account has enough momo_balance
 
-            if account.momo_actual_balance < transaction_amount and account.card_actual_balance < transaction_amount:  # noqa
+            if account.momo_available_balance < transaction_amount and account.card_available_balance < transaction_amount:  # noqa
                 return {
                     'status': 400,
                     'message': 'Sorry, you have insufficient funds to make the payment'

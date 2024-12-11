@@ -19,6 +19,7 @@ from users_app.controllers.otp_manager import OtpManager
 
 from finance_app.controllers.tx_order_payment import OrderPaymentTransaction
 from finance_app.controllers.tx_subscription import SubscriptionPaymentTransaction
+from finance_app.controllers.tx_disbursement import DisbursementTransaction
 from finance_app.management.commands.seed_dinify_account import seed_dinify_account
 
 def seed_account():
@@ -63,6 +64,7 @@ class FinanceAppTestFunctions(TestCase):
         seed_menu_items()
         seed_tables()
         seed_order()
+        seed_dinify_account()
 
     def otest_order_payment(self):
         self.transaction_id = None
@@ -163,7 +165,6 @@ class FinanceAppTestFunctions(TestCase):
         self.assertIn('transaction_id', result['data'])
 
     def test_subscription_payment(self):
-        seed_dinify_account()
         restaurant = Restaurant.objects.get(name=TEST_RESTAURANT_NAME)
 
         # when the restaurant is charged per order
@@ -190,3 +191,18 @@ class FinanceAppTestFunctions(TestCase):
         )
         print(result)
         self.assertEqual(result['status'], 200)
+
+    def test_disbursement(self):
+        seed_dinify_account()
+        restaurant = Restaurant.objects.get(name=TEST_RESTAURANT_NAME)
+        user = User.objects.get(username=TEST_PHONE)
+
+        result = DisbursementTransaction().initiate(
+            restaurant_id=restaurant.id,
+            payment_mode=PaymentMode_MobileMoney,
+            user=user,
+            msisdn='256706087495',
+            amount=50000
+        )
+        print(result)
+        # self.assertEqual(result['status'], 200)

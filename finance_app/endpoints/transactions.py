@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from finance_app.controllers.initiate_transaction import initiate_transaction
 from finance_app.controllers.tx_subscription import SubscriptionPaymentTransaction
-
+from finance_app.controllers.tx_disbursement import DisbursementTransaction
 
 class TransactionsEndpoint(APIView):
     """
@@ -39,6 +39,18 @@ class TransactionsEndpoint(APIView):
                 payment_mode=data.get('payment_mode'),
                 user=request.user,
                 msisdn=data.get('msisdn'),
+                otp=data.get('otp'),
+            )
+            return Response(response, status=200)
+
+        if transaction_type == 'disbursement':
+            response = DisbursementTransaction().initiate(
+                user=request.user,
+                amount=data.get('amount'),
+                payment_mode=data.get('payment_mode'),
+                restaurant_id=data.get('restaurant_id'),
+                msisdn=data.get('msisdn'),
+                bank_account_id=data.get('bank_account_id'),
                 otp=data.get('otp'),
             )
             return Response(response, status=200)
