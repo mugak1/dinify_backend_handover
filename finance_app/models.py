@@ -9,7 +9,8 @@ from dinify_backend.configss.string_definitions import (
     AccountStatus_Active, AccountStatus_Inactive, AccountStatus_Blocked,
     TransactionType_OrderPayment, TransactionType_OrderRefund, TransactionType_OrderCharge, TransactionType_Disbursement, TransactionType_Subscription,  # noqa
     TransactionStatus_Success, TransactionStatus_Failed, TransactionStatus_Pending, TransactionStatus_Initiated,  # noqa
-    TransactionPlatform_Web, ProcessingStatus_Pending,
+    TransactionPlatform_Web, 
+    ProcessingStatus_Pending,
     PaymentForm_Full
 )
 
@@ -124,6 +125,7 @@ class DinifyTransaction(BaseModel):
     transaction_type = models.CharField(validators=[validate_transaction_type], max_length=255, db_index=True)  # noqa
     transaction_status = models.CharField(validators=[validate_transaction_status], max_length=255, db_index=True, default=TransactionStatus_Initiated)  # noqa
     transaction_platform = models.CharField(validators=[validate_transaction_platform], max_length=255, db_index=True)  # noqa
+    processing_status = models.CharField(default=ProcessingStatus_Pending, max_length=255, db_index=True)  # noqa
 
     transaction_amount = models.DecimalField(default=0.0, max_digits=50, decimal_places=2)
     tip_amount = models.DecimalField(default=0.0, max_digits=50, decimal_places=2)
