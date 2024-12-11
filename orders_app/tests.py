@@ -45,7 +45,9 @@ def seed_order():
     restaurant = Restaurant.objects.get(name=TEST_RESTAURANT_NAME)
     table = Table.objects.get(number=TEST_TABLE_NUMBER1)
     table3 = Table.objects.get(number=TEST_TABLE_NUMBER3)
+    table4 = Table.objects.get(number=TEST_TABLE_NUMBER4)
     user = User.objects.get(username=TEST_PHONE)
+    
     Order.objects.create(
         restaurant=restaurant,
         table=table,

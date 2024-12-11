@@ -132,11 +132,13 @@ class DinifyTransaction(BaseModel):
     transaction_collected_amount = models.DecimalField(default=0.0, max_digits=50, decimal_places=2)
     msisdn = models.CharField(max_length=255, null=True, blank=True)
     payment_form = models.CharField(max_length=20, default=PaymentForm_Full)
-    source_order_payment = models.ForeignKey(
+
+    # for orders and revenue collection
+    parent_transaction = models.ForeignKey(
         'self',
         on_delete=models.SET_NULL,
         null=True,
-        related_name='ref_source_order_payment'
+        related_name='ref_parent_transaction'
     )
 
     # aggregator details
@@ -159,14 +161,7 @@ class DinifyTransaction(BaseModel):
     processed = models.CharField(max_length=25, default=ProcessingStatus_Pending)  # i.e. accounts updated, revenue collected, etc.  # noqa
 
     # for restaurants where Dinify has surcharge
-    revenue_collected = models.BooleanField(default=False)  # i.e. revenue collected from the transaction  # noqa
-    revenue_initiation_transaction = models.ForeignKey(
-        'self',
-        on_delete=models.SET_NULL,
-        null=True,
-        related_name='ref_revenue_initiation_transaction'
-    )
-    revenue_collection_timestamp = models.DateTimeField(null=True, blank=True)
+    revenue_collected = models.BooleanField(default=False, db_index=True)  # i.e. revenue collected from the transaction  # noqa
 
     class Meta:
         db_table = 'transactions'

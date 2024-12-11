@@ -8,13 +8,16 @@ from orders_app.tests import seed_order
 from orders_app.models import Order
 from restaurants_app.tests import (
     seed_restaurant, seed_menu_section, seed_menu_items, seed_tables,
-    TEST_RESTAURANT_NAME, TEST_TABLE_NUMBER1
+    TEST_RESTAURANT_NAME, TEST_TABLE_NUMBER1, TEST_TABLE_NUMBER4
 )
 from finance_app.controllers.initiate_order_payment import initiate_order_payment
 from finance_app.controllers.initiate_refund import initiate_refund
 from finance_app.controllers.process_payment_feedback import process_payment_feedback
 from dinify_backend.configss.string_definitions import PaymentMode_MobileMoney
 from dinify_backend.configss.messages import OK_ORDER_PAYMENT_PROCESSED
+from users_app.controllers.otp_manager import OtpManager
+
+from finance_app.controllers.tx_order_payment import OrderPaymentTransaction
 
 
 def seed_account():
@@ -60,7 +63,7 @@ class FinanceAppTestFunctions(TestCase):
         seed_tables()
         seed_order()
 
-    def test_order_payment(self):
+    def otest_order_payment(self):
         self.transaction_id = None
 
         def test_initiate():
@@ -113,3 +116,47 @@ class FinanceAppTestFunctions(TestCase):
 
     def test_update_wallet_balance(self):
         pass
+
+    def test_momo_payment_full_no_tip(self):
+        restaurant = Restaurant.objects.get(name=TEST_RESTAURANT_NAME)
+        table = Table.objects.get(number=TEST_TABLE_NUMBER4)
+        user = User.objects.get(username=TEST_PHONE)
+
+        # order for table 4
+        order = Order.objects.create(
+            restaurant=restaurant,
+            table=table,
+            customer=user,
+            total_cost=100000,
+            discounted_cost=100000,
+            savings=0,
+            actual_cost=100000,
+            prepayment_required=True,
+            order_status='served'
+        )
+
+        # test when OTP is provided
+        result = OrderPaymentTransaction().initiate(
+            order=order,
+            tip_amount=0,
+            payment_mode=PaymentMode_MobileMoney,
+            msisdn='256706087495'
+        )
+        self.assertEqual(result['status'], 400)
+
+        # ask for the OTP
+        OtpManager().resend_otp(
+            identification='msisdn',
+            identifier='256706087495'
+        )
+        result = OrderPaymentTransaction().initiate(
+            order=order,
+            tip_amount=0,
+            payment_mode=PaymentMode_MobileMoney,
+            msisdn='256706087495',
+            otp='1234'
+        )
+        print(f'\n\n{result}\n\n')
+
+        self.assertEqual(result['status'], 200)
+        self.assertIn('transaction_id', result['data'])

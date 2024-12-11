@@ -1,5 +1,6 @@
 from typing import Optional
 from decimal import Decimal
+from misc_app.controllers.secretary import make_notification_for_new_entry
 from users_app.models import User
 from orders_app.models import Order
 from finance_app.models import DinifyAccount, DinifyTransaction
@@ -7,7 +8,8 @@ from misc_app.controllers.clean_amount import clean_amount
 from dinify_backend.configss.string_definitions import (
     AccountType_Restaurant, TransactionStatus_Initiated, TransactionType_OrderPayment,
     TransactionPlatform_Web, PaymentMode_Cash, PaymentMode_Card,
-    PaymentMode_MobileMoney, PaymentForm_Split, PaymentForm_Full
+    PaymentMode_MobileMoney, PaymentForm_Split, PaymentForm_Full,
+    ProcessingStatus_Pending, ProcessingStatus_Confirmed
 )
 from dinify_backend.configss.messages import (
     OK_ORDER_PAYMENT_INITIATED,
@@ -15,6 +17,7 @@ from dinify_backend.configss.messages import (
 )
 from payment_integrations_app.controllers.flutterwave import Flutterwave
 from payment_integrations_app.controllers.dpo import DpoIntegration
+from payment_integrations_app.controllers.yo_integrations import YoIntegration
 from users_app.models import User
 from users_app.controllers.otp_manager import OtpManager
 
@@ -62,6 +65,9 @@ def initiate_order_payment(
             print(f"Error checking for msisdn when initiating payment: {error}")
             check_otp = True
 
+    if manual_payment:
+        check_otp = True
+
     # print(manual_payment, not manual_payment, payment_mode, payment_mode is PaymentMode_MobileMoney)
 
     # check_otp = True
@@ -87,6 +93,10 @@ def initiate_order_payment(
     if payment_mode is PaymentMode_MobileMoney:
         amount_collectable = transaction_amount
 
+    processing_status = ProcessingStatus_Pending
+    if manual_payment:
+        processing_status = ProcessingStatus_Confirmed
+
     # make a transaction record for the payment
     order_payment = DinifyTransaction.objects.create(
         account=account,
@@ -95,6 +105,7 @@ def initiate_order_payment(
         transaction_type=TransactionType_OrderPayment,
         transaction_status=TransactionStatus_Initiated,
         transaction_platform=transaction_platform,
+        processing_status=processing_status,
         transaction_amount=transaction_amount,
         tip_amount=tip_amount,
         transaction_collected_amount=amount_collectable,
@@ -137,6 +148,30 @@ def initiate_order_payment(
         #             "redirect_url": flutterwave_response.get('meta').get('authorization').get('redirect')  # noqa
         #         }
         #     }
+        # YO integration
+        collection = YoIntegration().momo_collect(
+            transaction_amount=int(amount_collectable),
+            msisdn=msisdn,
+            transaction_id=str(order_payment.id)
+        )
+        if collection:
+            return {
+                'status': 200,
+                'message': OK_ORDER_PAYMENT_INITIATED,
+                'data': {
+                    "transaction_id": str(order_payment.id)
+                }
+            }
+        else:
+            return {
+                'status': 400,
+                'message': ERR_ORDER_PAYMENT_INITIATION,
+                'data': {
+                    "transaction_id": str(order_payment.id)
+                }
+            }
+
+    if payment_mode == PaymentMode_Card and not manual_payment:
         dpo_token = DpoIntegration(
             amount=int(amount_collectable),
             currency=account.account_currency,
@@ -165,7 +200,6 @@ def initiate_order_payment(
                 }
             }
 
-    message = OK_ORDER_PAYMENT_INITIATED
     if manual_payment:
         message = 'The transaction will be reflected shortly.'
     return {

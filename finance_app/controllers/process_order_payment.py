@@ -9,7 +9,8 @@ from dinify_backend.configss.string_definitions import (
     OrderItemStatus_Served,
     AccountType_User,
     TransactionType_Tip,
-    ProcessingStatus_Done
+    ProcessingStatus_Done,
+    ProcessingStatus_Confirmed
 )
 from misc_app.controllers.clean_amount import clean_amount
 from dinify_backend.configss.messages import OK_ORDER_PAYMENT_PROCESSED
@@ -68,7 +69,7 @@ def collect_tip(
         )
 
     if waiter_account is None:
-        raise Exception('No waiter accunt found')
+        raise Exception('No waiter account found')
 
     balance_update = update_wallet_balance(
         id=str(waiter_account.id),
@@ -83,13 +84,14 @@ def collect_tip(
         transaction_type=TransactionType_Tip,
         transaction_status=TransactionStatus_Success,
         transaction_platform=order_payment.transaction_platform,
+        processing_status=ProcessingStatus_Confirmed,
 
         transaction_amount=amount,
         tip_amount=amount,
         transaction_collected_amount=amount,
         msisdn=order_payment.msisdn,
         payment_form=order_payment.payment_form,
-        source_order_payment=order_payment,
+        parent_transaction=order_payment,
 
         aggregator='Dinify',
         payment_mode=order_payment.payment_mode,

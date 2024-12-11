@@ -276,6 +276,7 @@ class RestaurantSetupEndpoint(APIView):
                 restaurant = Restaurant.objects.get(id=restaurant_id)
                 post_data['approved'] = restaurant.first_time_menu_approval
                 post_data['enabled'] = restaurant.first_time_menu_approval
+            post_data['restaurant_id'] = restaurant_id
 
         if config_detail == 'tables':
             try:
@@ -283,7 +284,6 @@ class RestaurantSetupEndpoint(APIView):
             except Exception as error:
                 print(f"Error converting table number to string: {error}")
 
-        
         serializer = serializers.get(config_detail)
         required_information = required_information.get(config_detail)
         success_message = success_messages.get(config_detail)

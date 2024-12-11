@@ -67,10 +67,13 @@ OrderItemStatus_Served = 'served'
 ProcessingStatus_Pending = 'pending'
 ProcessingStatus_PendingRevenueAcknowledgement = 'pending_revenue_acknowledgement'
 ProcessingStatus_Done = 'done'
+ProcessingStatus_Confirmed = 'confirmed'
+ProcessingStatus_Failed = 'failed'
 
 
 # aggregators
 Aggregator_DPO = 'dpo'
+Aggregator_Yo = 'yo'
 
 
 DINIFY_ADMIN = 'dinify_admin'
