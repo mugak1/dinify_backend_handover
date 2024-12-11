@@ -34,9 +34,11 @@ class DisbursementTransaction:
             notes = "restaurant disbursement"
         else:  # consider that a user is withdrawing their tip collections
             account = DinifyAccount.objects.get(user=user)
+            msisdn = user.phone_number
 
         if payment_mode == PaymentMode_MobileMoney:
-            msisdn = restaurant.owner.phone_number
+            if restaurant is not None:
+                msisdn = restaurant.owner.phone_number
 
         if payment_mode == PaymentMode_Bank:
             if int(amount) < 50000:
