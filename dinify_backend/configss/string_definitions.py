@@ -15,6 +15,7 @@ AccountType_User = 'user'
 PaymentMode_Cash = 'cash'
 PaymentMode_MobileMoney = 'momo'
 PaymentMode_Card = 'card'
+PaymentMode_Ova = 'ova'
 
 PaymentForm_Split = 'split'
 PaymentForm_Full = 'full'

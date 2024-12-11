@@ -9,7 +9,7 @@ from dinify_backend.configss.string_definitions import (
     AccountStatus_Active, AccountStatus_Inactive, AccountStatus_Blocked,
     TransactionType_OrderPayment, TransactionType_OrderRefund, TransactionType_OrderCharge, TransactionType_Disbursement, TransactionType_Subscription,  # noqa
     TransactionStatus_Success, TransactionStatus_Failed, TransactionStatus_Pending, TransactionStatus_Initiated,  # noqa
-    TransactionPlatform_Web, 
+    TransactionPlatform_Web,
     ProcessingStatus_Pending,
     PaymentForm_Full
 )

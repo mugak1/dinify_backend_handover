@@ -18,7 +18,8 @@ from dinify_backend.configss.messages import OK_ORDER_PAYMENT_PROCESSED
 from users_app.controllers.otp_manager import OtpManager
 
 from finance_app.controllers.tx_order_payment import OrderPaymentTransaction
-
+from finance_app.controllers.tx_subscription import SubscriptionPaymentTransaction
+from finance_app.management.commands.seed_dinify_account import seed_dinify_account
 
 def seed_account():
     """
@@ -160,3 +161,32 @@ class FinanceAppTestFunctions(TestCase):
 
         self.assertEqual(result['status'], 200)
         self.assertIn('transaction_id', result['data'])
+
+    def test_subscription_payment(self):
+        seed_dinify_account()
+        restaurant = Restaurant.objects.get(name=TEST_RESTAURANT_NAME)
+
+        # when the restaurant is charged per order
+        result = SubscriptionPaymentTransaction().initiate(
+            restaurant_id=restaurant.id,
+            transaction_platform='web',
+            payment_mode=PaymentMode_MobileMoney,
+            user=None,
+            msisdn='256706087495'
+        )
+        print(result)
+
+        restaurant.preferred_subscription_method = 'monthly'
+        restaurant.flat_fee = 50000
+        restaurant.save()
+
+        # when the restaurant is charged monthly
+        result = SubscriptionPaymentTransaction().initiate(
+            restaurant_id=restaurant.id,
+            transaction_platform='web',
+            payment_mode=PaymentMode_MobileMoney,
+            user=None,
+            msisdn='256706087495'
+        )
+        print(result)
+        self.assertEqual(result['status'], 200)

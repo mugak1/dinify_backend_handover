@@ -45,7 +45,6 @@ def process_payment_feedback(
 
         # update the wallet balance
 
-
         if transaction_record.transaction_type == TransactionType_OrderPayment:
             result = process_order_payment(
                 transaction_record=transaction_record,
@@ -53,4 +52,3 @@ def process_payment_feedback(
             )
 
         return result
-
