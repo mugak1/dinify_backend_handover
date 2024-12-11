@@ -87,7 +87,7 @@ class SubscriptionPaymentTransaction:
             if collection:
                 return {
                     'status': 200,
-                    'message': 'The subscription payment has been initiated. Please confirm payment when promted',  # noqa
+                    'message': 'The subscription payment has been initiated. Please confirm payment when prompted',  # noqa
                     'data': {
                         "transaction_id": str(subscription_payment.id)
                     }
@@ -95,7 +95,7 @@ class SubscriptionPaymentTransaction:
             else:
                 return {
                     'status': 400,
-                    'message': 'Sorry, an error occurred while initiating the payment. Please try again later',
+                    'message': 'Sorry, an error occurred while initiating the payment. Please try again later',  # noqa
                     'data': {
                         "transaction_id": str(subscription_payment.id)
                     }
