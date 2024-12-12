@@ -230,5 +230,12 @@ class OrderPaymentTransaction:
             elif txs_record.processing_status == ProcessingStatus_Failed:
                 txs_record.transaction_status = ProcessingStatus_Failed
                 txs_record.processing_status = ProcessingStatus_Done
+                # TODO update account balances
+                balance_update = update_wallet_balance(
+                    id=str(txs_record.account.id),
+                    mode=txs_record.payment_mode,
+                    credit=0
+                )
+                txs_record.account_balances = balance_update
                 txs_record.save()
                 return False
