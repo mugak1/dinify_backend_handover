@@ -106,14 +106,12 @@ class SubscriptionPaymentTransaction:
                 }
 
         if payment_mode == PaymentMode_Card:
-            dpo_token = DpoIntegration(
+            dpo_token = DpoIntegration().create_token(
                 amount=int(transaction_amount),
                 currency=account.account_currency,
-                msisdn=msisdn,
                 transaction_reference=str(subscription_payment.id),
                 timestamp=str(subscription_payment.time_created),
-                dpo_transaction_token=None
-            ).create_token()
+            )
 
             if dpo_token is not None:
                 return {

@@ -151,14 +151,12 @@ class OrderPaymentTransaction:
                 }
 
         if payment_mode == PaymentMode_Card and not manual_payment:
-            dpo_token = DpoIntegration(
+            dpo_token = DpoIntegration().create_token(
                 amount=int(amount_collectable),
                 currency=account.account_currency,
-                msisdn=msisdn,
                 transaction_reference=str(order_payment.id),
                 timestamp=str(order_payment.time_created),
-                dpo_transaction_token=None
-            ).create_token()
+            )
 
             if dpo_token is not None:
                 return {
