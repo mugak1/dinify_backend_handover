@@ -1,6 +1,5 @@
-from urllib import response
 import requests
-import datetime
+from datetime import datetime
 import xml.etree.ElementTree as ET
 from decouple import config
 from finance_app.models import DinifyTransaction
@@ -23,14 +22,6 @@ from finance_app.controllers.process_payment_feedback import process_payment_fee
 
 @dataclass
 class DpoIntegration:
-
-    amount: int
-    currency: str
-    msisdn: str
-    transaction_reference: str
-    timestamp: str
-    dpo_transaction_token: str
-
     API_URL = 'https://secure.3gdirectpay.com/API/v6/'
     PAYMENT_URL = 'https://secure.3gdirectpay.com/payv3.php?ID='
     COMPANY_TOKEN = config('DPO_COMPANY_TOKEN')
@@ -52,7 +43,7 @@ class DpoIntegration:
         })
         return dpo_response_dict
 
-    def create_token(self):
+    def create_token(self, amount: int, currency: str, transaction_reference: str, timestamp: datetime):  # noqa
         api3g = ET.Element('API3G')
         request = ET.SubElement(api3g, 'Request')
         request.text = 'createToken'
@@ -61,13 +52,13 @@ class DpoIntegration:
         # the transaction details
         transaction = ET.SubElement(api3g, 'Transaction')
         payment_amount = ET.SubElement(transaction, 'PaymentAmount')
-        payment_amount.text = str(self.amount)
+        payment_amount.text = str(amount)
         payment_currency = ET.SubElement(transaction, 'PaymentCurrency')
-        payment_currency.text = self.currency
+        payment_currency.text = currency
         company_ref_unique = ET.SubElement(transaction, 'CompanyRefUnique')
         company_ref_unique.text = '1'  # confirm that we are not doing payments
         company_ref = ET.SubElement(transaction, 'CompanyRef')
-        company_ref.text = self.transaction_reference
+        company_ref.text = transaction_reference
         redirect_url = ET.SubElement(transaction, 'RedirectURL')
         redirect_url.text = self.REDIRECT_URL
         # the service details
@@ -78,8 +69,7 @@ class DpoIntegration:
         service_description = ET.SubElement(service, 'ServiceDescription')
         service_description.text = 'Dinify Order Payment'
         service_date = ET.SubElement(service, 'ServiceDate')
-        new_time = datetime.datetime.strptime(str(self.timestamp[:-13]), '%Y-%m-%d %H:%M:%S').strftime('%Y-%m-%d %H:%M')
-        # new_time = self.timestamp
+        new_time = datetime.strptime(str(timestamp[:-13]), '%Y-%m-%d %H:%M:%S').strftime('%Y-%m-%d %H:%M')
         service_date.text = new_time
 
         REQUEST_HEADERS = {
@@ -97,9 +87,9 @@ class DpoIntegration:
         response = self.interprete_response(
             request_type='create_token',
             request_body={
-                'amount': self.amount,
-                'currency': self.currency,
-                'transaction_reference': self.transaction_reference
+                'amount': amount,
+                'currency': currency,
+                'transaction_reference': transaction_reference
             },
             dpo_response=dpo_token_request
         )
@@ -108,6 +98,37 @@ class DpoIntegration:
         if response.get('Result') == '000':
             return f"{self.PAYMENT_URL}{response.get('TransToken')}"
         return None
+
+    def verify_token(self, transaction_reference: str, dpo_token: str):
+        api3g = ET.Element('API3G')
+        company_token = ET.SubElement(api3g, 'CompanyToken')
+        company_token.text = self.COMPANY_TOKEN
+        request = ET.SubElement(api3g, 'Request')
+        request.text = 'verifyToken'
+        transaction_token = ET.SubElement(api3g, 'TransactionToken')
+        transaction_token.text = dpo_token
+
+        REQUEST_HEADERS = {
+            'Content-Type': 'text/xml',
+            'Content-transfer-encoding': 'text'
+        }
+
+        post_data = ET.tostring(api3g, xml_declaration=True, encoding='utf-8')
+        dpo_response = requests.post(
+            self.API_URL,
+            data=post_data,
+            headers=REQUEST_HEADERS
+        )
+
+        self.interprete_response(
+            request_type='verify_token',
+            request_body={
+                'transaction_reference': transaction_reference,
+                'dpo_token': dpo_token
+            },
+            dpo_response=dpo_response
+        )
+        return True
 
     def create_token0(self):
         """
@@ -199,7 +220,7 @@ class DpoIntegration:
             return f'{self.PAYMENT_URL}{dpo_transaction_token.text}'
         return None
 
-    def verify_token(self):
+    def verify_token0(self):
         # <?xml version="1.0" encoding="utf-8"?>
         # <API3G>
         # <CompanyToken>57466282-EBD7-4ED5-B699-8659330A6996</CompanyToken>

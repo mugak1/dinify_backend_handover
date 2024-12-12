@@ -82,12 +82,17 @@ class PaymentIntegrationsTestFunctions(TestCase):
         self.assertTrue(send_sms)
 
     def test_dpo(self):
-        create_token = DpoIntegration(
-            amount=100000,
+        dpo_transaction_token = 'CF63B58B-C2C7-473F-A938-50FA956DB346'
+        create_token = DpoIntegration().create_token(
+            amount=50000,
             currency='UGX',
-            msisdn='256706087495',
             timestamp=str(timezone.now()),
-            transaction_reference=str(uuid.uuid4()),
-            dpo_transaction_token=None
-        ).create_token()
+            transaction_reference=str(uuid.uuid4())
+        )
         self.assertIsNotNone(create_token)
+
+        verify_token = DpoIntegration().verify_token(
+            transaction_reference=str(uuid.uuid4()),
+            dpo_token=dpo_transaction_token
+        )
+        self.assertIsNotNone(verify_token)
