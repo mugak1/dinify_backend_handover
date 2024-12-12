@@ -7,9 +7,7 @@ from dinify_backend.configss.string_definitions import (
     Aggregator_Yo,
     TransactionStatus_Pending,
     TransactionStatus_Initiated,
-    ProcessingStatus_Pending,
-    ProcessingStatus_Confirmed,
-    ProcessingStatus_Failed
+    ProcessingStatus_Pending
 )
 from payment_integrations_app.controllers.dpo import DpoIntegration
 from payment_integrations_app.controllers.yo_integrations import YoIntegration

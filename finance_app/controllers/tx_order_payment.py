@@ -28,6 +28,7 @@ from dinify_backend.configss.messages import (
     OK_ORDER_PAYMENT_INITIATED,
     ERR_ORDER_PAYMENT_INITIATION
 )
+from finance_app.controllers.update_wallet_balance import update_wallet_balance
 
 
 class OrderPaymentTransaction:
@@ -197,7 +198,12 @@ class OrderPaymentTransaction:
                 txs_record.processing_status = ProcessingStatus_Done
 
                 # TODO update account balances
-
+                balance_update = update_wallet_balance(
+                    id=str(txs_record.account.id),
+                    mode=txs_record.payment_mode,
+                    credit=txs_record.transaction_amount
+                )
+                txs_record.account_balances = balance_update
                 txs_record.save()
 
                 # TODO check if the cumulative amount paid is equal to the order amount

@@ -9,6 +9,7 @@ The backend application for dinify_project.
 - Determine customer who has made the order | `python manage.py determine-customers`
 - Verify DPO tokens | `python manage.py verify-dpo-tokens`
 - Processing Yo responses | `python manage.py process_yo_responses`
+- Check transaction status with aggregator | `python manage.py check_transaction_statuses`
 
 /home/venv/bin/python /home/dinify_backend/manage.py determine-customers
 /home/venv/bin/python /home/dinify_backend/manage.py verify-dpo-tokens

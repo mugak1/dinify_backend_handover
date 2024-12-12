@@ -1,9 +1,12 @@
 from django.test import TestCase
 from users_app.models import User
 from users_app.tests import TEST_PHONE, seed_user
-from finance_app.models import DinifyAccount
+from finance_app.models import DinifyAccount, DinifyTransaction
 from restaurants_app.models import Restaurant, Table
-from dinify_backend.configss.string_definitions import AccountType_Restaurant
+from dinify_backend.configss.string_definitions import (
+    AccountType_Restaurant,
+    ProcessingStatus_Confirmed
+)
 from orders_app.tests import seed_order
 from orders_app.models import Order
 from restaurants_app.tests import (
@@ -159,10 +162,22 @@ class FinanceAppTestFunctions(TestCase):
             msisdn='256706087495',
             otp='1234'
         )
-        print(f'\n\n{result}\n\n')
-
+        # print(f'\n\n{result}\n\n')
         self.assertEqual(result['status'], 200)
         self.assertIn('transaction_id', result['data'])
+
+        # simulate processing the transaction
+        tx = DinifyTransaction.objects.get(id=result['data']['transaction_id'])
+        tx.processing_status = ProcessingStatus_Confirmed
+        tx.save()
+        print(f"account balances: {tx.account.momo_actual_balance} | {tx.account.card_actual_balance} | {tx.account.cash_actual_balance}")
+
+        result = OrderPaymentTransaction().process(
+            transaction_id=result['data']['transaction_id'],
+        )
+        account = DinifyAccount.objects.get(restaurant=restaurant)
+        print(f"account balances: {account.momo_actual_balance} | {account.card_actual_balance} | {account.cash_actual_balance}")
+
 
     def test_subscription_payment(self):
         restaurant = Restaurant.objects.get(name=TEST_RESTAURANT_NAME)
