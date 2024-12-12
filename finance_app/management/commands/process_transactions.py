@@ -11,6 +11,7 @@ from dinify_backend.configss.string_definitions import (
     ProcessingStatus_Failed
 )
 from payment_integrations_app.controllers.dpo import DpoIntegration
+from finance_app.controllers.tx_order_payment import OrderPaymentTransaction
 
 
 class Command(BaseCommand):
@@ -22,9 +23,7 @@ class Command(BaseCommand):
         pending_transactions = DinifyTransaction.objects.values(
             'id',
             'transaction_type',
-            'processing_status',
         ).filter(
-            transaction_type=TransactionType_OrderPayment,
             transaction_status__in=[
                 TransactionStatus_Pending,
                 TransactionStatus_Initiated
@@ -36,17 +35,5 @@ class Command(BaseCommand):
         )
 
         for txs in pending_transactions:
-            if txs.transaction_type == TransactionType_OrderPayment:
-                
-
-
-
-            dpo_token = txs.aggregator_misc_details['transaction_token']
-            DpoIntegration(
-                amount=None,
-                currency=None,
-                msisdn=None,
-                transaction_reference=str(txs.id),
-                timestamp=None,
-                dpo_transaction_token=dpo_token
-            ).verify_token()
+            if txs['transaction_type'] == TransactionType_OrderPayment:
+                OrderPaymentTransaction().process(transaction_id=txs['id'])
