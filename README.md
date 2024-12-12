@@ -6,8 +6,9 @@ The backend application for dinify_project.
 ## code organisation
 
 ## Background tasks
-- Determine customer who has made the order...`python manage.py determine-customers`
-- Verify DPO tokens...`python manage.py verify-dpo-tokens`
+- Determine customer who has made the order | `python manage.py determine-customers`
+- Verify DPO tokens | `python manage.py verify-dpo-tokens`
+- Processing Yo responses | `python manage.py process_yo_responses`
 
 /home/venv/bin/python /home/dinify_backend/manage.py determine-customers
 /home/venv/bin/python /home/dinify_backend/manage.py verify-dpo-tokens
