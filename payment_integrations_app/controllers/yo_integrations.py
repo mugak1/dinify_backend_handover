@@ -330,7 +330,8 @@ class YoIntegration:
     def process_yo_response(self, response_id):
         yo_response = MONGO_DB[COL_YO_RESPONSES].find_one({'_id': ObjectId(response_id)})
         # skip if there is no response_dict
-        # print(f"\nProcessing Yo Response: {response_id} : {yo_response.get('response_dict')}\n")
+        print(f"\nProcessing Yo Response: {response_id} : {yo_response.get('response_dict')}\n")
+
         if yo_response.get('response_dict') is None:
             flag_doc_as_processed(collection_name=COL_YO_RESPONSES, doc_id=response_id)
             return
@@ -359,6 +360,8 @@ class YoIntegration:
             request_body = yo_response.get('request_body')
             response_dict = yo_response.get('response_dict')
             aggregator_reference = request_body.get('transaction_id')
+
+            print(f"\nreponse_dict: {response_dict}\n")
 
             with transaction.atomic():
                 txs_record = None

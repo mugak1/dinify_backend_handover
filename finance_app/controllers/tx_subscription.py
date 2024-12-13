@@ -1,7 +1,7 @@
 from typing import Optional
 from datetime import timedelta
 from django.db import transaction
-from psycopg import Transaction
+from decimal import Decimal
 from restaurants_app.models import Restaurant
 from users_app.models import User
 from finance_app.models import DinifyAccount, DinifyTransaction
@@ -178,7 +178,7 @@ class SubscriptionPaymentTransaction:
                 balance_update = update_wallet_balance(
                     id=str(txs_record.account.id),
                     mode=txs_record.payment_mode,
-                    credit=0
+                    credit=Decimal(0.00)
                 )
                 txs_record.account_balances = balance_update
                 txs_record.transaction_status = TransactionStatus_Success
