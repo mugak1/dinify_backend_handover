@@ -266,7 +266,7 @@ class YoIntegration:
         currency_code = ET.SubElement(request, 'CurrencyCode')
         currency_code.text = 'UGX'
         bank_account_name = ET.SubElement(request, 'BankAccountName')
-        bank_account_name.text = 'ESAU  LWANGA'
+        bank_account_name.text = 'ESAU LWANGA'
         bank_account_number = ET.SubElement(request, 'BankAccountNumber')
         bank_account_number.text = arg_account_number
         bank_account_identifier = ET.SubElement(request, 'BankAccountIdentifier')
@@ -375,6 +375,7 @@ class YoIntegration:
                     return
 
                 aggregator_status = response_dict.get('TransactionStatus')
+                print(f"\nAggregator Status: {aggregator_status}\n")
                 if aggregator_status is None:
                     flag_doc_as_processed(collection_name=COL_YO_RESPONSES, doc_id=response_id)
                     return
@@ -386,6 +387,7 @@ class YoIntegration:
                     txs_record.processing_status = ProcessingStatus_Confirmed
                     txs_record.aggregator_status = aggregator_status
                     txs_record.save()
+                    print('transaction updated')
                 else:
                     return
 
