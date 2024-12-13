@@ -364,7 +364,7 @@ class YoIntegration:
             print('processing transaction status check...')
             request_body = yo_response.get('request_body')
             response_dict = yo_response.get('response_dict')
-            aggregator_reference = request_body.get('transaction_id')
+            aggregator_reference = request_body.get('yo_transaction_reference')
             with transaction.atomic():
                 txs_record = None
                 try:
