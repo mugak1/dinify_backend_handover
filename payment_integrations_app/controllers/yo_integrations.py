@@ -88,7 +88,7 @@ class YoIntegration:
             request_body={
                 'amount': transaction_amount,
                 'msisdn': msisdn,
-                'transaction_id': transaction_id
+                'transaction_id': str(transaction_id)
             },
             yo_response=yo_payment_request
         )
@@ -155,7 +155,7 @@ class YoIntegration:
             request_body={
                 'amount': transaction_amount,
                 'msisdn': msisdn,
-                'transaction_id': transaction_id
+                'transaction_id': str(transaction_id)
             },
             yo_response=yo_payment_request
         )
@@ -164,6 +164,7 @@ class YoIntegration:
 
     def bank_create_verified_account(
         self,
+        arg_account_id: str,
         arg_account_name: str,
         arg_account_number: str,
         arg_bank_name: str,
@@ -225,6 +226,7 @@ class YoIntegration:
         response = self.interprete_response(
             request_type='bank_create_verified_account',
             request_body={
+                'account_id': arg_account_id,
                 'account_name': arg_account_name,
                 'account_number': arg_account_number,
                 'bank_name': arg_bank_name,

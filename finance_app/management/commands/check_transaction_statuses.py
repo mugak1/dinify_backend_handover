@@ -52,11 +52,13 @@ class Command(BaseCommand):
             if txs['transaction_type'] in [TransactionType_OrderPayment, TransactionType_Subscription]:  # noqa
                 if aggregator == 'dpo':
                     DpoIntegration().verify_token(
-                        transaction_reference=txs['id'],
+                        transaction_reference=str(txs['id']),
                         dpo_token=txs['aggregator_reference']
                     )
                 elif aggregator == 'yo':
-                    YoIntegration().momo_check_transaction(yo_transaction_reference=txs['aggregator_reference'])  # noqa
+                    YoIntegration().momo_check_transaction(
+                        yo_transaction_reference=txs['aggregator_reference']
+                    )
                 else:
                     continue
             else:

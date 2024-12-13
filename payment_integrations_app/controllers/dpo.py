@@ -94,7 +94,7 @@ class DpoIntegration:
             request_body={
                 'amount': amount,
                 'currency': currency,
-                'transaction_reference': transaction_reference
+                'transaction_reference': str(transaction_reference)
             },
             dpo_response=dpo_token_request
         )
@@ -128,7 +128,7 @@ class DpoIntegration:
         self.interprete_response(
             request_type='verify_token',
             request_body={
-                'transaction_reference': transaction_reference,
+                'transaction_reference': str(transaction_reference),
                 'dpo_token': dpo_token
             },
             dpo_response=dpo_response
