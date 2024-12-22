@@ -42,7 +42,7 @@ class BankAccountRecordsEndpoint(APIView):
 
         if 'restaurant' in request.query_params:
             filter['restaurant'] = request.query_params['restaurant']
-        
+
         secretary_args = {
             'request': request,
             'serializer': SerializerPutBankAccountRecord,

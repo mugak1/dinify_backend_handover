@@ -12,7 +12,7 @@ from misc_app.controllers.decode_auth_token import decode_jwt_token
 from misc_app.controllers.define_filter_params import define_filter_params
 from misc_app.controllers.secretary import Secretary
 from restaurants_app.serializers import (
-    SerializerPutRestaurant, SerializerPublicGetRestaurant,
+    SerializerPutRestaurant, SerializerPublicGetRestaurant, SerializerGetRestaurantDetail,
     SerializerPutRestaurantEmployee, SerializerGetRestaurantEmployee,
 
     SerializerPutMenuSection, SerializerPublicGetMenuSection,
@@ -378,7 +378,7 @@ class RestaurantSetupEndpoint(APIView):
                 if request.GET.get('status') == 'closed':
                     orm_filter['order_status'] = OrderStatus_Served
                     orm_filter['payment_status'] = PaymentStatus_Paid
-                
+
                 if request.GET.get('status') == 'all':
                     orm_filter['order_status__in'] = [
                         # OrderStatus_Pending,
@@ -604,7 +604,7 @@ class RestaurantSetupEndpoint(APIView):
     def get_detail(self, request):
         try:
             serializers = {
-                'restaurants': SerializerPutRestaurant,
+                'restaurants': SerializerGetRestaurantDetail,
                 'employees': SerializerGetRestaurantEmployee,
                 'menusections': SerializerPutMenuSection,
                 'menuitems': SerializerPutMenuItem,
