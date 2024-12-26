@@ -23,6 +23,7 @@ EDIT_INFORMATION = [
     {'key': 'resolution_notes', 'label': 'RESOLUTION NOTES', 'type': 'char', 'min_length': 5, 'text_presentation': None},  # noqa
 ]
 
+
 class ServiceTicketsEndpoint(APIView):
     def post(self, request):
         data = request.data
@@ -72,14 +73,13 @@ class ServiceTicketsEndpoint(APIView):
         secretary_args = {
             'serializer': SerializerPutServiceTicket,
             'data': data,
-            'edit_information': EDIT_INFORMATION,
+            'edit_considerations': EDIT_INFORMATION,
             'user_id': str(request.user.pk),
             'username': str(request.user.username),
             'success_message': 'The ticket has been updated successfully',
-            'error_message': 'Sorry, an error occurred while updating the ticket. Please try again later.',
+            'error_message': 'Sorry, an error occurred while updating the ticket. Please try again later.',  # noqa
             'user': request.user,
             'msg_type': 'service-ticket',
         }
         response = Secretary(secretary_args).update()
         return Response(response, status=response['status'])
-
