@@ -1,6 +1,6 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from crm_app.serializers import SerializerPutServiceTicket
+from crm_app.serializers import SerializerPutServiceTicket, SerializerGetServiceTicket
 from misc_app.controllers.secretary import Secretary
 from misc_app.controllers.define_filter_params import define_filter_params
 
@@ -51,7 +51,7 @@ class ServiceTicketsEndpoint(APIView):
         )
         secretary_args = {
             'request': request,
-            'serializer': SerializerPutServiceTicket,
+            'serializer': SerializerGetServiceTicket,
             'filter': orm_filter,
             'paginate': True,
             'user_id': request.user.id,
