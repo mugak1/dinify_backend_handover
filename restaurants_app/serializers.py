@@ -390,7 +390,7 @@ class SerializerPublicGetOrderReview(ModelSerializer):
 
     class Meta:
         model = Order
-        fields = ('rating', 'review', 'customer')
+        fields = ('rating', 'review', 'customer', 'time_created', 'order_number')
 
     def get_customer(self, order):
         if order.customer is None:
