@@ -17,6 +17,9 @@ from misc_app.controllers.save_action_log import save_action
 from restaurants_app.models import Restaurant, MenuItem
 from users_app.models import User
 from misc_app.controllers.notifications.notification import Notification
+from restaurants_app.serializers import SerializerAdminGetOrderReview
+
+from restaurants_app.controllers.get_review_summary import get_review_summary
 
 
 def make_notification_for_new_entry(
@@ -216,20 +219,30 @@ class Secretary:
             filter_information=self.args.get('filter')
         )
 
+        # include the summary of the reviews
+        if self.serializer == SerializerAdminGetOrderReview:
+            reviews_summary = get_review_summary(
+                restaurant_id=self.args.get('filter').get('restaurant')
+            )
+
         if not self.args.get('paginate'):
+            data = {
+                'records': self.serializer(
+                    records,
+                    many=True
+                ).data,
+                'pagination': {
+                    'paginated': False,
+                    'total_records': len(records),
+                }
+            }
+            if self.serializer == SerializerAdminGetOrderReview:
+                data['summary'] = reviews_summary
+
             return {
                 'status': 200,
                 'message': self.args.get('success_message'),
-                'data': {
-                    'records': self.serializer(
-                        records,
-                        many=True
-                    ).data,
-                    'pagination': {
-                        'paginated': False,
-                        'total_records': len(records),
-                    }
-                }
+                'data': data
             }
 
         # paginate the records
@@ -244,13 +257,16 @@ class Secretary:
         ).data
 
         # return response
+        data = {
+            'records': serialized_records,
+            'pagination': pagination_response.get('pagination')
+        }
+        if self.serializer == SerializerAdminGetOrderReview:
+            data['summary'] = reviews_summary
         return {
             'status': 200,
             'message': self.ok_message,
-            'data': {
-                'records': serialized_records,
-                'pagination': pagination_response.get('pagination')
-            }
+            'data': data
         }
 
     def update(self):
