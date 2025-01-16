@@ -16,6 +16,10 @@ class SerializerGetRestaurantTransactionListing(ModelSerializer):
     amount_in = SerializerMethodField()
     amount_out = SerializerMethodField()
 
+    transaction_type = SerializerMethodField()
+    transaction_status = SerializerMethodField()
+    transaction_platform = SerializerMethodField()
+
     class Meta:
         model = DinifyTransaction
         fields = (
@@ -40,8 +44,22 @@ class SerializerGetRestaurantTransactionListing(ModelSerializer):
             return record.transaction_amount
         return 0
 
+    def get_transaction_type(self, record):
+        return record.transaction_type.replace('_', ' ').title()
+
+    def get_transaction_status(self, record):
+        return record.transaction_status.replace('_', ' ').title()
+
+    def get_transaction_platform(self, record):
+        if record.transaction_platform == 'momo':
+            return 'MoMo'
+        return record.transaction_platform.replace('_', ' ').title()
+
 
 class SerializerGetDinifyTransactionListing(ModelSerializer):
+    transaction_type = SerializerMethodField()
+    transaction_status = SerializerMethodField()
+    transaction_platform = SerializerMethodField()
 
     class Meta:
         model = DinifyTransaction
@@ -53,6 +71,19 @@ class SerializerGetDinifyTransactionListing(ModelSerializer):
             'payment_mode', 'aggregator', 'aggregator_reference',
             'account_balances'
         )
+    
+
+    def get_transaction_type(self, record):
+        return record.transaction_type.replace('_', ' ').title()
+
+    def get_transaction_status(self, record):
+        return record.transaction_status.replace('_', ' ').title()
+
+    def get_transaction_platform(self, record):
+        if record.transaction_platform == 'momo':
+            return 'MoMo'
+        return record.transaction_platform.replace('_', ' ').title()
+
 
 
 class SerializerPutBankAccountRecord(ModelSerializer):
