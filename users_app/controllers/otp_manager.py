@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from users_app.models import User, UserOtp
 from misc_app.controllers.notifications.notification import Notification
 from rest_framework_simplejwt.tokens import RefreshToken
+from payment_integrations_app.controllers.yo_integrations import YoIntegration
 
 
 class OtpManager:
@@ -34,6 +35,14 @@ class OtpManager:
             'first_name': user.first_name if user is not None else '',
             'otp': otp_str,
         }).create_notification()
+
+        try:
+            otp_message = f"Your Dinify OTP is {otp_str}."
+            if msisdn is None:
+                msisdn = user.phone_number
+            YoIntegration().send_sms(to=msisdn, message=otp_message)
+        except Exception as error:
+            print(f"OTP SMS Error: {error}")
         return True
 
     def verify_otp(
