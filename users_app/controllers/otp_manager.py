@@ -30,13 +30,14 @@ class OtpManager:
             purpose=purpose
         )
         user_otp.save()
-        Notification(msg_data={
-            'msg_type': 'otp',
-            'first_name': user.first_name if user is not None else '',
-            'otp': otp_str,
-        }).create_notification()
+        # Notification(msg_data={
+        #     'msg_type': 'otp',
+        #     'first_name': user.first_name if user is not None else '',
+        #     'otp': otp_str,
+        # }).create_notification()
 
         try:
+            print("sending otp")
             otp_message = f"Your Dinify OTP is {otp_str}."
             if msisdn is None:
                 msisdn = user.phone_number

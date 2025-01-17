@@ -331,6 +331,7 @@ class YoIntegration:
         return True
 
     def send_sms(self, message: str, to: str):
+        print(f"\nSending SMS...\n{to} => {message}\n")
         yo_request = f"http://smgw1.yo.co.ug:9100/sendsms?ybsacctno={self.YO_SMS_ACCOUNT_NO}&password={self.YO_SMS_PASSWORD}&origin=Dinify&sms_content={message}&destinations={to}&nostore=0"  # noqa
         requests.get(yo_request)
         return True
