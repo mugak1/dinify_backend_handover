@@ -37,7 +37,7 @@ class OtpManager:
         # }).create_notification()
 
         try:
-            print("sending otp")
+            # print("sending otp")
             otp_message = f"Your Dinify OTP is {otp_str}."
             if msisdn is None:
                 msisdn = user.phone_number
