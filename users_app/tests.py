@@ -24,7 +24,8 @@ def seed_user():
         phone_number=TEST_PHONE,
         username=TEST_PHONE,
         country='Uganda',
-        password='password'
+        password='password',
+        roles=['dinify_admin']
     )
 
 

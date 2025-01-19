@@ -10,6 +10,7 @@ from restaurants_app.controllers.create_restaurant import (
 )
 from restaurants_app.controllers.create_employee import create_employee
 from restaurants_app.models import Restaurant, RestaurantEmployee, MenuSection, MenuItem, Table
+from users_app.controllers.otp_manager import OtpManager
 
 
 TEST_RESTAURANT_NAME = 'Seed Test Restaurant'
@@ -193,6 +194,7 @@ class RestaurantAppTestFunctions(TestCase):
                 roles=[ROLES.get('RESTAURANT_KITCHEN')],
                 creator=restaurant.owner
             )
+            print(f'employee result: {result}')
             self.assertEqual(result['status'], 200)
 
         test_missing_info()
@@ -200,7 +202,10 @@ class RestaurantAppTestFunctions(TestCase):
         test_create_employee()
 
     def test_admin_register_restaurant(self):
-        user_id = str(User.objects.get(username=TEST_PHONE).pk)
+        user = User.objects.get(username=TEST_PHONE)
+        user_id = str(user.pk)
+        # get the otp for the user
+        # OtpManager().make_otp(user=user)
         auth_info = {
             'user_id': user_id,
             'first_name': 'First',
@@ -216,10 +221,9 @@ class RestaurantAppTestFunctions(TestCase):
             'email': 'sample@org.org',
             'phone_number': '256777777777',
             'country': 'UG',
+            # 'otp': '1234'
         }
 
         result = admin_register_restaurant(data, auth_info)
         print(f'admin result: {result}')
         self.assertEqual(result['status'], 200)
-
-

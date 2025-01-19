@@ -12,7 +12,8 @@ from users_app.controllers.otp_manager import OtpManager
 def self_register(
     data: dict,
     return_user_id: Optional[bool] = False,
-    send_credential_email: Optional[bool] = False
+    send_credential_email: Optional[bool] = False,
+    skip_otp: Optional[bool] = False
 ) -> dict:
     """
     Handle user self registration
@@ -46,25 +47,25 @@ def self_register(
 
     # verify otp
     # check if the otp has been provided
-    otp = data.get('otp')
-    if otp is None:
-        return {
-            'status': 400,
-            'message': 'Please provide the OTP.'
-        }
+    if not skip_otp:
+        otp = data.get('otp')
+        if otp is None:
+            return {
+                'status': 400,
+                'message': 'Please provide the OTP.'
+            }
 
-    # verify the otp
-    verified_otp = OtpManager().verify_otp(
-        msisdn=data.get('phone_number'),
-        otp=otp
-    )
+        # verify the otp
+        verified_otp = OtpManager().verify_otp(
+            msisdn=data.get('phone_number'),
+            otp=otp
+        )
 
-    if not verified_otp['data']['valid']:
-        return {
-            'status': 400,
-            'message': 'Invalid OTP.'
-        }
-
+        if not verified_otp['data']['valid']:
+            return {
+                'status': 400,
+                'message': 'Invalid OTP.'
+            }
 
     # create the user
     email = data.get('email')

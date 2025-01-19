@@ -11,7 +11,10 @@ class Notification:
 
     def create_notification(self):
         message = build_messages(self.msg_data)
-        recipients = determine_receipients(self.msg_data)
+        recipients = determine_receipients(
+            message_type=self.msg_data.get('msg_type'),
+            restaurant_id=self.msg_data.get('restaurant_id')
+        )
 
         save_to_mongodb(
             collection=COL_NOTIFICATIONS,
