@@ -11,19 +11,25 @@ class UserLookupEndpoint(APIView):
             contact = request.GET.get('contact')
 
             if '@' in contact:
-                user = User.objects.values('id', 'phone_number', 'email').get(
-                    email=contact
-                )
+                user = User.objects.values(
+                    'id', 'first_name', 'last_name',
+                    'phone_number', 'email'
+                ).get(email=contact)
             else:
                 # TODO internationalise the phone number
-                user = User.objects.values('id', 'phone_number', 'email').get(
-                    phone_number=contact
-                )
+                user = User.objects.values(
+                    'id', 'first_name', 'last_name',
+                    'phone_number', 'email'
+                ).get(phone_number=contact)
             response = {
                 'status': 200,
                 'message': 'User found',
                 'data': {
-                    'id': str(user.get('id'))
+                    'id': str(user.get('id')),
+                    'first_name': user.get('first_name'),
+                    'last_name': user.get('last_name'),
+                    'phone_number': user.get('phone_number'),
+                    'email': user.get('email')
                 }
             }
             return Response(response, status=200)

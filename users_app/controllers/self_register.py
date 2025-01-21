@@ -36,7 +36,8 @@ def self_register(
         return {
             'status': 400,
             'message': MESSAGES.get('PHONE_NUMBER_EXISTS'),
-            'user_id': existing_phone.first().id
+            'user_id': existing_phone.first().id,
+            'user_profile': existing_phone.first()
         }
 
     # check that the email is not repeated
@@ -87,6 +88,7 @@ def self_register(
         return {
             'status': 200,
             'user_id': user.id,
+            'user_profile': user
         }
 
     # TODO send welcome email

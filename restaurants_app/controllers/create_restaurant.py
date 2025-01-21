@@ -167,6 +167,8 @@ def admin_register_restaurant(data: dict, auth_info: dict) -> dict:
         record_data['created_by'] = auth_info['user_id']
 
         record = SerializerPutRestaurant(data=record_data)
+        user_profile = user_creation_result['user_profile']
+
     if record.is_valid():
         with transaction.atomic():
             record.save()
@@ -196,7 +198,7 @@ def admin_register_restaurant(data: dict, auth_info: dict) -> dict:
                     # create the notification for the restaurant
                     Notification(msg_data={
                         'msg_type': 'admin-new-restaurant',
-                        'first_name': data['first_name'],
+                        'first_name': user_profile.first_name,
                         'restaurant_name': data['name'],
                         'restaurant_id': record.data['id']
                     }).create_notification()
