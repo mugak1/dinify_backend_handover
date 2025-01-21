@@ -137,6 +137,7 @@ def login(
                 'message': 'Please enter the OTP',
                 'data': {
                     'require_otp': True,
+                    'prompt_password_change': auth_user.prompt_password_change,
                     'profile': SerGetUserProfile(auth_user).data
                 }
             }
@@ -146,6 +147,7 @@ def login(
         'message': MESSAGES.get('OK_LOGIN'),
         'data': {
             'require_otp': False,
+            'prompt_password_change': auth_user.prompt_password_change,
             'token': str(token.access_token),
             'refresh': str(token),
             'profile': SerGetUserProfile(auth_user).data
