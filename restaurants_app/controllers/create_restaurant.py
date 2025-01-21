@@ -171,14 +171,6 @@ def admin_register_restaurant(data: dict, auth_info: dict) -> dict:
         with transaction.atomic():
             record.save()
 
-            # create the notification for the restaurant
-            Notification(msg_data={
-                'msg_type': 'admin-new-restaurant',
-                'first_name': data['first_name'],
-                'restaurant_name': data['name'],
-                'recipient_email': data['email']
-            }).create_notification()
-
             # create the restaurant account
             account_data = {
                 'account_type': AccountType_Restaurant,
@@ -200,6 +192,14 @@ def admin_register_restaurant(data: dict, auth_info: dict) -> dict:
                 employee_record = SerializerPutRestaurantEmployee(data=employee)
                 if employee_record.is_valid():
                     employee_record.save()
+
+                    # create the notification for the restaurant
+                    Notification(msg_data={
+                        'msg_type': 'admin-new-restaurant',
+                        'first_name': data['first_name'],
+                        'restaurant_name': data['name'],
+                        'restaurant_id': record.data['id']
+                    }).create_notification()
 
                     return {
                         'status': 200,
