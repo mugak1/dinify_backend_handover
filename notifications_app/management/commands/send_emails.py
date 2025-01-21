@@ -20,6 +20,6 @@ class Command(BaseCommand):
             Messenger().send_email(
                 to=x['tos'],
                 cc=x['ccs'],
-                subject=x['message']['subject'],
-                message=x['message']['email']
+                subject=x['subject'],
+                message=x['email']
             )
