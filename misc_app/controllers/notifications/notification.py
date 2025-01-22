@@ -13,7 +13,8 @@ class Notification:
         message = build_messages(self.msg_data)
         recipients = determine_receipients(
             message_type=self.msg_data.get('msg_type'),
-            restaurant_id=self.msg_data.get('restaurant_id')
+            restaurant_id=self.msg_data.get('restaurant_id'),
+            user_id=self.msg_data.get('user_id')
         )
 
         save_to_mongodb(
@@ -24,5 +25,6 @@ class Notification:
                 'subject': message['subject'],
                 'email': message['email'],
                 'sms': message['sms'],
+                'msisdn': recipients['msisdn'],
             }
         )

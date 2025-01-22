@@ -57,7 +57,7 @@ def reset_password(username):
         'msg_type': 'forgot-password',
         'first_name': user.first_name,
         'password': password,
-        'to': user.email
+        'user_id': str(user.id)
     }).create_notification()
 
     return {

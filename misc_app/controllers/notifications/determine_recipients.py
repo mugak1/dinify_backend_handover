@@ -5,9 +5,14 @@ from restaurants_app.models import RestaurantEmployee
 from users_app.models import User
 
 
-def determine_receipients(message_type: str, restaurant_id: str,):
+def determine_receipients(
+    message_type: str,
+    restaurant_id: str,
+    user_id: str
+):
     tos = []
     ccs = []
+    msisdn = None
 
     if restaurant_id is not None:
         if message_type in [
@@ -24,7 +29,16 @@ def determine_receipients(message_type: str, restaurant_id: str,):
         dinify_admins = User.objects.filter(roles__contains=[DINIFY_ADMIN])
         ccs += [admin.email for admin in dinify_admins]
 
+    if message_type in [
+        'forgot-password',
+        'password-change',
+    ]:
+        user = User.objects.values('phone_number', 'email').get(id=user_id)
+        tos = user['email']
+        msisdn = user['phone_number']
+
     return {
         'tos': tos,
-        'ccs': ccs
+        'ccs': ccs,
+        'msisdn': msisdn
     }

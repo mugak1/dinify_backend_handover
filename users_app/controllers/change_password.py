@@ -71,7 +71,7 @@ def change_password(user_id, old_password, new_password):
     Notification(msg_data={
         'msg_type': 'password-change',
         'first_name': user.first_name,
-        'to': user.email
+        'user_id': str(user.id),
     }).create_notification()
 
     return {
