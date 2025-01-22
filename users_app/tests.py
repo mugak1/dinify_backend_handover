@@ -55,7 +55,7 @@ class UsersAppTestFunctions(TestCase):
 
         def test_success():
             """ when the registration is successful """
-            response = self_register(data)
+            response = self_register(data, skip_otp=True)
             self.assertEqual(response.get('status'), 200)
             self.assertEqual(
                 response.get('message'),
