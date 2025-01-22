@@ -130,15 +130,20 @@ def login(
 
     # require_otp = True
     if require_otp and source != 'diner':
-        otp = OtpManager().make_otp(user=auth_user, purpose='login')
         data = {
             'require_otp': True,
             'prompt_password_change': auth_user.prompt_password_change,
             'profile': SerGetUserProfile(auth_user).data
         }
+
+        otp = False
         if auth_user.prompt_password_change:
             data['token'] = str(token.access_token)
             data['refresh'] = str(token)
+            otp = True
+        else:
+            otp = OtpManager().make_otp(user=auth_user, purpose='login')
+
         if otp:
             return {
                 'status': 200,
