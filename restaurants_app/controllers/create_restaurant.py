@@ -152,7 +152,7 @@ def admin_register_restaurant(data: dict, auth_info: dict) -> dict:
         user_creation_result = self_register(
             data=data,
             return_user_id=True,
-            send_credential_email=True,
+            send_credentials=True,
             skip_otp=True
         )
 

@@ -51,7 +51,7 @@ def create_employee(
                 'password': password
             },
             return_user_id=True,
-            send_credential_email=True,
+            send_credentials=True,
             skip_otp=True
         )
 

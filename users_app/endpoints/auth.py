@@ -23,7 +23,7 @@ class UsersAuthenticationEndpoint(APIView):
         response = {'status': 500, 'message': "Invalid request"}
 
         if action == 'register':
-            response = self_register(request.data)
+            response = self_register(data=request.data)
         elif action == "login":
             response = login(
                 username=request.data.get('username'),

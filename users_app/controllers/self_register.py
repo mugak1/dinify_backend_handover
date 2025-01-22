@@ -7,13 +7,14 @@ from dinify_backend.configss.messages import MESSAGES
 from dinify_backend.configss.required_information import REQUIRED_INFORMATION
 from users_app.models import User
 from users_app.controllers.otp_manager import OtpManager
+from misc_app.controllers.notifications.notification import Notification
 
 
 def self_register(
     data: dict,
     return_user_id: Optional[bool] = False,
-    send_credential_email: Optional[bool] = False,
-    skip_otp: Optional[bool] = False
+    send_credentials: Optional[bool] = False,
+    skip_otp: Optional[bool] = False,
 ) -> dict:
     """
     Handle user self registration
@@ -92,8 +93,21 @@ def self_register(
         }
 
     # TODO send welcome email
+    Notification(msg_data={
+        'msg_type': 'new-user',
+        'first_name': data.get('first_name').strip().title(),
+        'user_id': str(user.id)
+    }).create_notification()
 
     # TODO send credentials email
+    if send_credentials:
+        Notification(msg_data={
+            'msg_type': 'new-user-credentials',
+            'first_name': data.get('first_name').strip().title(),
+            'username': data.get('phone_number'),
+            'password': data.get('password'),
+            'user_id': str(user.id)
+        }).create_notification()
 
     return {
         'status': 200,

@@ -55,7 +55,7 @@ class UsersAppTestFunctions(TestCase):
 
         def test_success():
             """ when the registration is successful """
-            response = self_register(data, skip_otp=True)
+            response = self_register(data, skip_otp=True, send_credentials=True)
             self.assertEqual(response.get('status'), 200)
             self.assertEqual(
                 response.get('message'),
@@ -63,7 +63,7 @@ class UsersAppTestFunctions(TestCase):
             )
 
         def test_duplicate_phone_number():
-            response = self_register(data)
+            response = self_register(data, send_credentials=True)
             self.assertEqual(response.get('status'), 400)
             self.assertEqual(
                 response.get('message'),

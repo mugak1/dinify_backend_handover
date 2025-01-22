@@ -24,7 +24,9 @@ def build_messages(msg_data: dict) -> dict:
     if msg_data.get('msg_type') in [
         'password-change',
         'forgot-password',
-        'otp'
+        'otp',
+        'new-user',
+        'new-user-credentials'
     ]:
         return make_user_messages(msg_data, footer)
 
