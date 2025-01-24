@@ -85,13 +85,6 @@ def self_register(
         password=data.get('password')
     )
 
-    if return_user_id:
-        return {
-            'status': 200,
-            'user_id': user.id,
-            'user_profile': user
-        }
-
     # TODO send welcome email
     Notification(msg_data={
         'msg_type': 'new-user',
@@ -108,6 +101,13 @@ def self_register(
             'password': data.get('password'),
             'user_id': str(user.id)
         }).create_notification()
+
+    if return_user_id:
+        return {
+            'status': 200,
+            'user_id': user.id,
+            'user_profile': user
+        }
 
     return {
         'status': 200,
