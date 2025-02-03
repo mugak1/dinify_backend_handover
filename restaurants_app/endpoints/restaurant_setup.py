@@ -509,7 +509,6 @@ class RestaurantSetupEndpoint(APIView):
 
         put_data = request.data
 
-
         # check if the actor has rights to perform the action
         if not check_permission(
             user=request.user,
