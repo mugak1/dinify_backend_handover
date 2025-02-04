@@ -189,8 +189,7 @@ class UsersAppTestFunctions(TestCase):
                 msisdn=TEST_PHONE,
                 otp='1234'
             )
-            self.assertEqual(result.get('status'), 200
-        )
+            self.assertEqual(result.get('status'), 200)
 
         test_make_otp()
         test_verify_otp()
