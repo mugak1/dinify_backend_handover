@@ -51,15 +51,15 @@ class OtpManager:
                     'akampamugambe23@gmail.com'
                 ]
 
-                Messenger().send_email(
-                    to=recipients,
-                    cc=[],
-                    subject='Dinify OTP',
-                    message=otp_message
-                )
+                # Messenger().send_email(
+                #     to=recipients,
+                #     cc=[],
+                #     subject='Dinify OTP',
+                #     message=otp_message
+                # )
 
         except Exception as error:
-            print(f"OTP SMS Error: {error}")
+            print(f"OTP Error: {error}")
         return True
 
     def verify_otp(
