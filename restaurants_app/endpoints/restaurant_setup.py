@@ -590,6 +590,10 @@ class RestaurantSetupEndpoint(APIView):
             }
             return Response(response, status=400)
 
+        data = request.data
+        if config_detail == 'employees':
+            data['active'] = False
+
         serializer = {
             'restaurant': SerializerPutRestaurant,
             'employees': SerializerPutRestaurantEmployee,
@@ -601,7 +605,7 @@ class RestaurantSetupEndpoint(APIView):
 
         secretary_args = {
             'serializer': serializer[config_detail],
-            'data': request.data,
+            'data': data,
             'user_id': auth['id'],
             'username': auth['username'],
         }
