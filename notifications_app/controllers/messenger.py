@@ -1,6 +1,8 @@
 from dinify_backend import settings
 from django.core.mail import EmailMessage
-from payment_integrations_app.controllers.yo_integrations import YoIntegration
+# from payment_integrations_app.controllers.yo_integrations import YoIntegration
+import requests
+from decouple import config
 
 
 class Messenger():
@@ -23,8 +25,16 @@ class Messenger():
         message.content_subtype = 'html'
         message.send(fail_silently=False)
 
-    def send_sms(self, msisdn, message):
-        YoIntegration().send_sms(
-            to=msisdn,
-            message=message
-        )
+    # def send_sms0(self, msisdn, message):
+    #     YoIntegration().send_sms(
+    #         to=msisdn,
+    #         message=message
+    #     )
+
+    def send_sms(self, message: str, msisdn: str):
+        # TODO investigate cause of circular import 
+        print('here in messenger')
+        if config('ENV') in ['prod', 'test']:
+            yo_request = f"http://smgw1.yo.co.ug:9100/sendsms?ybsacctno={self.YO_SMS_ACCOUNT_NO}&password={self.YO_SMS_PASSWORD}&origin=Dinify&sms_content={message}&destinations={msisdn}&nostore=0"  # noqa
+            requests.get(yo_request)
+        return True
