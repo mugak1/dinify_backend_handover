@@ -21,7 +21,8 @@ class Command(BaseCommand):
             # if the subject is user credentials, check if the user has aany restaurant
             # if the user is attached to a restaurant, check if it is active
             if x['subject'] == 'Dinify Credentials!':
-                owner = x['tos'][0]
+                # owner = x['tos'][0]
+                owner = x['tos']
                 # print(x['tos'])
                 # print(type(x['tos']))
                 # continue
