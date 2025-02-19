@@ -36,12 +36,12 @@ class Command(BaseCommand):
             )
 
             # if the x['sms'] is not None, send the sms
-            print(f"The sms is {x['sms']}")
-            if x['sms'] is not None:
-                Messenger().send_sms(
-                    msisdn=x['msisdn'],
-                    message=x['sms']
-                )
+            # print(f"The sms is {x['sms']}")
+            # if x['sms'] is not None:
+            #     Messenger().send_sms(
+            #         msisdn=x['msisdn'],
+            #         message=x['sms']
+            #     )
 
             # update the sent attribute to True
             MONGO_DB[COL_NOTIFICATIONS].update_one(

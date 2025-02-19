@@ -7,6 +7,7 @@ from users_app.models import User
 from finance_app.models import DinifyAccount, DinifyTransaction
 from dinify_backend.configss.string_definitions import (
     AccountType_DinifyRevenue, ProcessingStatus_Confirmed, ProcessingStatus_Failed,
+    ProcessingStatus_Pending,
     ProcessingStatus_Done, TransactionStatus_Success,
     AccountType_Restaurant,
     TransactionType_Subscription,
@@ -69,8 +70,10 @@ class SubscriptionPaymentTransaction:
         # TODO if payment via ova, check for any pending disbursements
 
         # TODO require OTP if the number used is new to the platform
-
         # make a transaction record for the payment
+        processing_status = ProcessingStatus_Pending
+        if payment_mode in [PaymentMode_Ova]:
+            processing_status = ProcessingStatus_Confirmed
         subscription_payment = DinifyTransaction.objects.create(
             account=account,
             restaurant=restaurant,
@@ -80,6 +83,7 @@ class SubscriptionPaymentTransaction:
             msisdn=msisdn,
             payment_mode=payment_mode,
             created_by=user,
+            processing_status=processing_status
         )
 
         if payment_mode == PaymentMode_MobileMoney:
@@ -146,6 +150,7 @@ class SubscriptionPaymentTransaction:
             restaurant = Restaurant.objects.select_for_update().get(id=txs_record.restaurant.id)
 
             if txs_record.processing_status == ProcessingStatus_Confirmed:
+                print(txs_record.payment_mode)
                 if txs_record.payment_mode in [PaymentMode_MobileMoney, PaymentMode_Card]:
                     # TODO update account balances
                     balance_update = update_wallet_balance(
@@ -156,6 +161,7 @@ class SubscriptionPaymentTransaction:
                     txs_record.account_balances = balance_update
                     txs_record.transaction_status = TransactionStatus_Success
                     txs_record.processing_status = ProcessingStatus_Done
+                    txs_record.amount_in = txs_record.transaction_amount
                     txs_record.save()
 
                     # extend the restaurant subscription_expiry_date
@@ -171,6 +177,59 @@ class SubscriptionPaymentTransaction:
                     restaurant.subscription_validity = True
                     restaurant.subscription_expiry_date = new_expiry_date
                     restaurant.save()
+
+                elif txs_record.payment_mode in [PaymentMode_Ova]:
+                    # debit the restaurant account
+                    balance_update = update_wallet_balance(
+                        id=str(txs_record.account.id),  # restaurant account
+                        mode=txs_record.payment_mode,
+                        debit=txs_record.transaction_amount
+                    )
+                    txs_record.account_balances = balance_update
+                    txs_record.transaction_status = TransactionStatus_Success
+                    txs_record.processing_status = ProcessingStatus_Done
+                    txs_record.amount_out = txs_record.transaction_amount
+                    txs_record.save()
+
+                    # record a credit on the dinify account revenue
+                    dinify_account = DinifyAccount.objects.get(account_type=AccountType_DinifyRevenue)
+
+                    dinify_balance_update = update_wallet_balance(
+                        id=str(dinify_account.id),
+                        mode=txs_record.payment_mode,
+                        credit=txs_record.transaction_amount
+                    )
+
+                    # make a transaction record for the payment
+                    DinifyTransaction.objects.create(
+                        account=dinify_account,
+                        restaurant=txs_record.restaurant,
+                        transaction_type=TransactionType_Subscription,
+                        transaction_platform=txs_record.transaction_platform,
+                        transaction_amount=txs_record.transaction_amount,
+                        msisdn=txs_record.msisdn,
+                        payment_mode=txs_record.payment_mode,
+                        created_by=txs_record.created_by,
+                        account_balances=dinify_balance_update,
+                        transaction_status=TransactionStatus_Success,
+                        processing_status=ProcessingStatus_Done,
+                        amount_in=txs_record.transaction_amount
+                    )
+                    # update the billing/subscription details of the restaurant
+                    # extend the restaurant subscription_expiry_date
+                    days = 30
+                    if restaurant.preferred_subscription_method == 'yearly':
+                        days = 365
+
+                    current_expiry = restaurant.subscription_expiry_date
+                    if current_expiry is None:
+                        current_expiry = txs_record.time_created
+
+                    new_expiry_date = current_expiry + timedelta(days=days)
+                    restaurant.subscription_validity = True
+                    restaurant.subscription_expiry_date = new_expiry_date
+                    restaurant.save()
+
                 else:
                     print("Payment mode  not supported yet")
             elif txs_record.processing_status == ProcessingStatus_Failed:

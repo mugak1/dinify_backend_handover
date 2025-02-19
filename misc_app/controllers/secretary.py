@@ -457,12 +457,11 @@ class Secretary:
             }
 
         # flag the record as deleted
-        update_information = {
-            'deleted': True,
-            'time_deleted': timezone.now(),
-            'deletion_reason': deletion_reason,
-            'deleted_by': self.args.get('user_id')
-        }
+        update_information = self.data
+        update_information['deleted'] = True
+        update_information['time_deleted'] = timezone.now()
+        update_information['deletion_reason'] = deletion_reason
+        update_information['deleted_by'] = self.args.get('user_id')
         record = serializer(
             record,
             data=update_information,

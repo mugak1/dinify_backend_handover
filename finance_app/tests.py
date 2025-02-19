@@ -6,6 +6,7 @@ from finance_app.models import DinifyAccount, DinifyTransaction
 from restaurants_app.models import Restaurant, Table
 from dinify_backend.configss.string_definitions import (
     AccountType_Restaurant,
+    AccountType_DinifyRevenue,
     ProcessingStatus_Confirmed
 )
 from orders_app.tests import seed_order
@@ -17,7 +18,7 @@ from restaurants_app.tests import (
 from finance_app.controllers.initiate_order_payment import initiate_order_payment
 from finance_app.controllers.initiate_refund import initiate_refund
 from finance_app.controllers.process_payment_feedback import process_payment_feedback
-from dinify_backend.configss.string_definitions import PaymentMode_MobileMoney
+from dinify_backend.configss.string_definitions import PaymentMode_MobileMoney, PaymentMode_Ova
 from dinify_backend.configss.messages import OK_ORDER_PAYMENT_PROCESSED
 from users_app.controllers.otp_manager import OtpManager
 
@@ -25,6 +26,7 @@ from finance_app.controllers.tx_order_payment import OrderPaymentTransaction
 from finance_app.controllers.tx_subscription import SubscriptionPaymentTransaction
 from finance_app.controllers.tx_disbursement import DisbursementTransaction
 from finance_app.management.commands.seed_dinify_account import seed_dinify_account
+
 
 def seed_account():
     """
@@ -229,6 +231,39 @@ class FinanceAppTestFunctions(TestCase):
         print(f"expiry date: {restaurant.subscription_expiry_date}")
         self.assertEqual(restaurant.subscription_expiry_date.date(), expected_expiry_date.date())
         self.assertEqual(restaurant.subscription_validity, True)
+
+        # credit the restaurant account by 1M for testing purposes
+        account = DinifyAccount.objects.get(restaurant=restaurant)
+        account.momo_actual_balance = 1000000
+        account.momo_available_balance = 1000000
+        account.save()
+
+        account.refresh_from_db()
+
+        # TESTING OVA PAYMENT
+        result = SubscriptionPaymentTransaction().initiate(
+            restaurant_id=restaurant.id,
+            transaction_platform='web',
+            payment_mode=PaymentMode_Ova,
+            user=None,
+            msisdn='256706087495'
+        )
+        self.assertEqual(result['status'], 200)
+
+        txs = DinifyTransaction.objects.get(id=result['data']['transaction_id'])
+        txs.processing_status = ProcessingStatus_Confirmed
+        txs.save()
+        restaurant.refresh_from_db()
+        print(restaurant.subscription_expiry_date)
+
+        result = SubscriptionPaymentTransaction().process(
+            transaction_id=result['data']['transaction_id']
+        )
+        restaurant.refresh_from_db()
+        expected_expiry_date = restaurant.subscription_expiry_date + timedelta(days=30)
+        # check if the dinify revenue account has a subscription transaction
+        account = DinifyAccount.objects.get(account_type=AccountType_DinifyRevenue)
+        self.assertEqual(account.momo_actual_balance, 50000)
 
     def otest_disbursement(self):
         seed_dinify_account()
