@@ -22,6 +22,9 @@ class Command(BaseCommand):
             # if the user is attached to a restaurant, check if it is active
             if x['subject'] == 'Dinify Credentials!':
                 owner = x['tos'][0]
+                print(x['tos'])
+                print(type(x['tos']))
+                continue
                 print(owner)
                 user_restaurants = Restaurant.objects.filter(owner__email=owner).order_by('time_created')  # noqa
                 print(user_restaurants)
