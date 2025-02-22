@@ -21,7 +21,6 @@ from misc_app.controllers.notifications.notification import Notification
 from restaurants_app.serializers import SerializerAdminGetOrderReview
 from restaurants_app.serializers import SerializerPutRestaurant
 from restaurants_app.controllers.get_review_summary import get_review_summary
-from misc_app.controllers.notifications.notification import Notification
 
 
 def make_notification_for_new_entry(
