@@ -3,6 +3,7 @@ models for the restaurant app
 """
 from django.db import models
 from users_app.models import BaseModel, User
+from dinify_backend.configss.string_definitions import RestaurantStatus_Pending
 
 
 # Create your models here.
@@ -22,7 +23,7 @@ class Restaurant(BaseModel):
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
     logo = models.ImageField(null=True, upload_to='restaurant_logos/')
     cover_photo = models.ImageField(null=True, upload_to='restaurant_cover_photos/')
-    status = models.CharField(max_length=255, default='pending')
+    status = models.CharField(max_length=255, default=RestaurantStatus_Pending)
 
     # dynamic configurations
     # if the orders should be prepaid before submission

@@ -5,6 +5,7 @@ RestaurantStatus_Pending = 'pending'
 RestaurantStatus_Active = 'active'
 RestaurantStatus_Inactive = 'inactive'
 RestaurantStatus_Blocked = 'blocked'
+RestaurantStatus_Rejected = 'rejected'
 
 # account types
 AccountType_Restaurant = 'restaurant'

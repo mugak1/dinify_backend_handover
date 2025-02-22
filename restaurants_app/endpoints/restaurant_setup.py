@@ -58,12 +58,8 @@ from users_app.models import User
 from restaurants_app.controllers.subscriptions import RestaurantSubscription
 
 
-
 def check_permission(
-    user: User,
-    record: str,
-    id: str,
-):
+    user: User, record: str, id: str):
     # return False
     has_permission = False
     if is_dinify_admin(user):
@@ -531,7 +527,6 @@ class RestaurantSetupEndpoint(APIView):
 
         if config_detail == 'subscription-details':
             return RestaurantSubscription().update(request)
-
 
         # if editing a menu item,
         # convert the options and extras_applicable to a list
