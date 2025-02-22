@@ -33,7 +33,6 @@ class Notification:
         try:
             # if the sms is not None, send it inline
             if message_data['sms'] is not None:
-                print('sending sms...')
                 Messenger().send_sms(
                     msisdn=message_data['msisdn'],
                     message=message_data['sms']
