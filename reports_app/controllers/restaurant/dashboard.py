@@ -135,9 +135,10 @@ def summarize_orders(restaurant_id: str):
         restaurant=restaurant_id
     )
     num_orders = orders.count()
-    # this_month_orders = orders.filter(
-    #     time_created__month=datetime.now().month
-    # ).count()
+    this_month_orders = orders.filter(
+        time_created__month=datetime.now().month,
+        time_created__year=datetime.now().year
+    ).count()
     # last_month_orders = orders.filter(
     #     time_created__month=datetime.now().month - 1
     # ).count()
@@ -181,7 +182,7 @@ def summarize_orders(restaurant_id: str):
 
     return {
         'num_orders': num_orders,
-        # 'this_month_orders': this_month_orders,
+        'this_month_orders': this_month_orders,
         # 'last_month_orders': last_month_orders,
         'month_growth': 'up',  # if this_month_orders > last_month_orders else 'down'
         'order_count_overview': {
@@ -202,7 +203,8 @@ def summarize_orders(restaurant_id: str):
         },
         'diners': {
             'total': diners,
-            'monthly': monthly_diners
+            'monthly': monthly_diners,
+            'monthly_growth': 'up'
         }
     }
 
