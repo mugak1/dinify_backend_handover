@@ -171,7 +171,13 @@ def summarize_orders(restaurant_id: str):
     top_customers_by_revenue = orders.values('customer').annotate(
         total_spent=Sum('actual_cost')
     ).order_by('-total_spent')[:3]
-    top_customers_by_orders = orders.values('customer').annotate(
+    top_customers_by_orders = orders.values(
+        'customer__first_name',
+        'customer__last_name',
+        'customer__username'
+    ).exclude(
+        customer__isnull=True
+    ).annotate(
         total_orders=Count('id')
     ).order_by('-total_orders')[:3]
     # === end dummy content
