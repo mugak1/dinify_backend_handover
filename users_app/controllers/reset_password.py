@@ -1,6 +1,7 @@
 """
 implementation to reset a user's password
 """
+from decouple import config
 from users_app.models import User
 from dinify_backend.configs import ACTION_LOG_STATUSES
 from dinify_backend.configss.messages import MESSAGES
@@ -13,7 +14,14 @@ def reset_password(username):
     reset a user's password
     """
     # check if the user exists
-    if not User.objects.filter(username=username).exists():
+    # determine if to consider the phone or email
+    user = None
+    try:
+        if '@' in username:
+            user = User.objects.get(email=username)
+        else:
+            user = User.objects.get(phone_number=username)
+    except User.DoesNotExist:
         save_action(
             affected_model='User',
             affected_record=None,
@@ -31,9 +39,15 @@ def reset_password(username):
             'message': MESSAGES.get('NO_PHONE_NUMBER')
         }
 
-    user = User.objects.get(username=username)
+    if user is None:
+        return {
+            'status': 400,
+            'message': 'No user found.'
+        }
+
     password = User.objects.make_random_password()
-    password = 'password'  # for testing purposes since emails are not sent out
+    if config('ENV') in ['dev']:
+        password = '1234'  # for testing purposes since emails are not sent out
     user.set_password(password)
     user.prompt_password_change = True
     user.save()
