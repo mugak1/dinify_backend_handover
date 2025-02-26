@@ -26,7 +26,7 @@ class Command(BaseCommand):
                 if user_restaurants.count() > 0:
                     restaurant = user_restaurants.first()
                     if restaurant.status != 'active':
-                        print('Restaurant is not active yet')
+                        print('Restaurant is not yet active')
                         continue
 
             Messenger().send_email(

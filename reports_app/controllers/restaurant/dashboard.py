@@ -135,9 +135,10 @@ def summarize_orders(restaurant_id: str):
         restaurant=restaurant_id
     )
     num_orders = orders.count()
-    # this_month_orders = orders.filter(
-    #     time_created__month=datetime.now().month
-    # ).count()
+    this_month_orders = orders.filter(
+        time_created__month=datetime.now().month,
+        time_created__year=datetime.now().year
+    ).count()
     # last_month_orders = orders.filter(
     #     time_created__month=datetime.now().month - 1
     # ).count()
@@ -160,18 +161,27 @@ def summarize_orders(restaurant_id: str):
         order__in=[order.id for order in active_orders]
     ).distinct().count()
 
+    # orders | closed_orders
     order_items = OrderItem.objects.filter(
-        order__in=[order.id for order in closed_orders]
+        order__in=[order.id for order in orders]
     )
     most_popular_items = order_items.values('item__name').annotate(
         total_quantity=Sum('quantity')
     ).order_by('-total_quantity')[:3]
-    top_customers_by_revenue = closed_orders.values('customer').annotate(
+    top_customers_by_revenue = orders.values('customer').annotate(
         total_spent=Sum('actual_cost')
     ).order_by('-total_spent')[:3]
-    top_customers_by_orders = closed_orders.values('customer').annotate(
+    top_customers_by_orders = orders.values(
+        'customer__first_name',
+        'customer__last_name',
+        'customer__username'
+    ).exclude(
+        customer__isnull=True
+    ).annotate(
         total_orders=Count('id')
     ).order_by('-total_orders')[:3]
+    # === end dummy content
+
 
     diners = closed_orders.values('customer').distinct().count()
     monthly_diners = closed_orders.filter(
@@ -181,7 +191,7 @@ def summarize_orders(restaurant_id: str):
 
     return {
         'num_orders': num_orders,
-        # 'this_month_orders': this_month_orders,
+        'this_month_orders': this_month_orders,
         # 'last_month_orders': last_month_orders,
         'month_growth': 'up',  # if this_month_orders > last_month_orders else 'down'
         'order_count_overview': {
@@ -202,7 +212,8 @@ def summarize_orders(restaurant_id: str):
         },
         'diners': {
             'total': diners,
-            'monthly': monthly_diners
+            'monthly': monthly_diners,
+            'monthly_growth': 'up'
         }
     }
 
