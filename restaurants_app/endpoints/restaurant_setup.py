@@ -287,13 +287,13 @@ class RestaurantSetupEndpoint(APIView):
             response = create_tables_in_section(
                 restuarant_id=post_data.get('restaurant'),
                 section_name=post_data.get('room_name'),
-                no_tables=int(post_data.get('number')),
+                no_tables=int(post_data.get('number', 0)),
                 user=request.user,
                 smoking_zone=post_data.get('smoking_zone', False),
                 outdoor_seating=post_data.get('outdoor_seating'),
                 consideration=post_data.get('consideration', 'count'),
-                range_from=int(post_data.get('start'), 0),
-                range_to=int(post_data.get('end'), 0)
+                range_from=int(post_data.get('start', 0)),
+                range_to=int(post_data.get('end', 0))
             )
             return Response(response, status=response['status'])
 
