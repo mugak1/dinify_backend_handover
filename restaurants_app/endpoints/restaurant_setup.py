@@ -290,10 +290,12 @@ class RestaurantSetupEndpoint(APIView):
                 no_tables=int(post_data.get('number')),
                 user=request.user,
                 smoking_zone=post_data.get('smoking_zone', False),
-                outdoor_seating=post_data.get('outdoor_seating')
+                outdoor_seating=post_data.get('outdoor_seating'),
+                consideration=post_data.get('consideration', 'count'),
+                range_from=int(post_data.get('start'), 0),
+                range_to=int(post_data.get('end'), 0)
             )
             return Response(response, status=response['status'])
-
 
         serializer = serializers.get(config_detail)
         required_information = required_information.get(config_detail)
