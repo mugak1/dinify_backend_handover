@@ -147,13 +147,17 @@ class SerializerPublicGetMenuSection(ModelSerializer):
         model = MenuSection
         fields = (
             'id', 'name', 'description', 'section_banner_image',
-            'available', 'item_count', 'has_groups', 'groups'
+            'available', 'item_count', 'has_groups', 'groups',
+            'listing_position'
         )
 
     def get_item_count(self, menu_section):
         return MenuItem.objects.filter(
             section=menu_section,
-            section_group__deleted=False
+            section_group__deleted=False,
+            section_group__available=True,
+            available=True,
+            deleted=False
         ).count()
 
     def get_has_groups(self, menu_section):
@@ -162,7 +166,8 @@ class SerializerPublicGetMenuSection(ModelSerializer):
     def get_groups(self, menu_section):
         groups = SectionGroup.objects.filter(
             section=menu_section,
-            deleted=False
+            deleted=False,
+            available=True
         )
         return [
             {
@@ -184,12 +189,15 @@ class SerializerPublicGetSectionGroup(ModelSerializer):
 
     class Meta:
         model = SectionGroup
-        fields = ('id', 'name', 'item_count')
+        fields = ('id', 'name', 'item_count',)
 
     def get_item_count(self, group):
         return MenuItem.objects.filter(
             section_group=group,
-            section_group__deleted=False
+            section_group__deleted=False,
+            section_group__available=True,
+            deleted=False,
+            available=True
         ).count()
 
 
