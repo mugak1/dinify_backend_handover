@@ -155,7 +155,9 @@ class SerializerPublicGetMenuSection(ModelSerializer):
         return MenuItem.objects.filter(
             section=menu_section,
             section_group__deleted=False,
-            section_group__available=True
+            section_group__available=True,
+            available=True,
+            deleted=False
         ).count()
 
     def get_has_groups(self, menu_section):
