@@ -1,5 +1,6 @@
 """
-endpoints for restaurant configurations
+endpoints for restaurant configurations.
+Refactoring needed to make it more maintainable.
 """
 import ast
 from rest_framework.response import Response
@@ -20,7 +21,9 @@ from restaurants_app.serializers import (
     SerializerPutTable, SerializerPublicGetTable,
 
     SerializerPutSectionGroup, SerializerPublicGetSectionGroup,
-    SerializerAdminGetOrderReview, SerializerAdminGetOrderItemReview
+    SerializerAdminGetOrderReview, SerializerAdminGetOrderItemReview,
+
+    SerializerPutDiningArea, SerializerGetDiningArea
 )
 from orders_app.serializers import SerializerListGetOrder
 from restaurants_app.models import Restaurant, MenuSection, SectionGroup, MenuItem
@@ -28,9 +31,10 @@ from restaurants_app.controllers.tables import create_tables_in_section
 from dinify_backend.configss.required_information import (
     REQUIRED_INFORMATION,
     RI_RESTAURANT_EMPLOYEES,
-    RI_SECTION_GROUP
+    RI_SECTION_GROUP,
+    RI_DINING_AREA
 )
-from dinify_backend.configss.edit_information import EDIT_INFORMATION, EI_SECTION_GROUP
+from dinify_backend.configss.edit_information import EDIT_INFORMATION, EI_DINING_AREA, EI_SECTION_GROUP
 from dinify_backend.configss.messages import (
     OK_GET_RECORD_DETAIL, ERR_GENERAL,
     ERR_UNSPECIFIED_RECORD_DETAILS,
@@ -54,7 +58,7 @@ from users_app.controllers.permissions_check import (
     get_user_restaurant_roles
 )
 
-from restaurants_app.models import RestaurantEmployee
+from restaurants_app.models import RestaurantEmployee, DiningArea
 from users_app.models import User
 from restaurants_app.controllers.subscriptions import RestaurantSubscription
 
@@ -205,7 +209,8 @@ class RestaurantSetupEndpoint(APIView):
             'menusections': SerializerPutMenuSection,
             'sectiongroups': SerializerPutSectionGroup,
             'menuitems': SerializerPutMenuItem,
-            'tables': SerializerPutTable
+            'tables': SerializerPutTable,
+            'diningareas': SerializerPutDiningArea
         }
 
         required_information = {
@@ -213,7 +218,8 @@ class RestaurantSetupEndpoint(APIView):
             'menusections': REQUIRED_INFORMATION.get('menu_section'),
             'sectiongroups': RI_SECTION_GROUP,
             'menuitems': REQUIRED_INFORMATION.get('menu_item'),
-            'tables': REQUIRED_INFORMATION.get('table')
+            'tables': REQUIRED_INFORMATION.get('table'),
+            'diningareas': RI_DINING_AREA
         }
 
         success_messages = {
@@ -221,7 +227,8 @@ class RestaurantSetupEndpoint(APIView):
             'menusections': 'The menu section has been added successfully.',
             'sectiongroups': OK_ADDED_SECTION_GROUP,
             'menuitems': 'The menu item has been added successfully.',
-            'tables': 'The table has been added successfully'
+            'tables': 'The table has been added successfully',
+            'diningareas': 'The dining area has been added successfully'
         }
 
         error_messages = {
@@ -229,7 +236,8 @@ class RestaurantSetupEndpoint(APIView):
             'menusections': 'An error occurred while adding the menu section.',
             'sectiongroups': ERR_ADDED_SECTION_GROUP,
             'menuitems': 'An error occurred while adding the menu item.',
-            'tables': 'An error occurred while adding the table'
+            'tables': 'An error occurred while adding the table',
+            'diningareas': 'An error occurred while adding the dining area'
         }
 
         msg_types = {
@@ -237,7 +245,8 @@ class RestaurantSetupEndpoint(APIView):
             'menusections': 'new-menu-section',
             'sectiongroups': 'new-menu-group',
             'menuitems': 'new-menu-item',
-            'tables': 'new-table'
+            'tables': 'new-table',
+            'diningareas': 'new-dining-area'
         }
 
         post_data = request.data
@@ -283,6 +292,10 @@ class RestaurantSetupEndpoint(APIView):
                 print(f"Error converting table number to string: {error}")
 
         if config_detail == 'section-tables':
+            dining_area = None
+            if post_data.get('dining_area') is not None:
+                dining_area = DiningArea.objects.get(id=post_data.get('dining_area'))
+
             response = create_tables_in_section(
                 restuarant_id=post_data.get('restaurant'),
                 section_name=post_data.get('room_name'),
@@ -292,7 +305,8 @@ class RestaurantSetupEndpoint(APIView):
                 outdoor_seating=post_data.get('outdoor_seating'),
                 consideration=post_data.get('consideration', 'count'),
                 range_from=int(post_data.get('start', 0)),
-                range_to=int(post_data.get('end', 0))
+                range_to=int(post_data.get('end', 0)),
+                dining_area=dining_area
             )
             return Response(response, status=response['status'])
 
@@ -431,7 +445,8 @@ class RestaurantSetupEndpoint(APIView):
             'tables': SerializerPublicGetTable,
             'orders': SerializerListGetOrder,
             'orderreviews': SerializerAdminGetOrderReview,
-            'orderitemreviews': SerializerAdminGetOrderItemReview
+            'orderitemreviews': SerializerAdminGetOrderItemReview,
+            'diningareas': SerializerGetDiningArea
         }
 
         success_messages = {
@@ -443,7 +458,8 @@ class RestaurantSetupEndpoint(APIView):
             'tables': 'Successfully retrieved the tables',
             'orders': 'Successfully retrived the orders',
             'orderreviews': 'Successfully retrieved the order reviews',
-            'orderitemreviews': 'Successfully retrieved the order item reviews'
+            'orderitemreviews': 'Successfully retrieved the order item reviews',
+            'diningareas': 'Successfully retrieved the dining areas'
         }
 
         error_messages = {
@@ -455,7 +471,8 @@ class RestaurantSetupEndpoint(APIView):
             'tables': 'Error while retrieving the tables',
             'orders': 'Error while retrieving the orders',
             'orderreviews': 'Error while retrieving the order reviews',
-            'orderitemreviews': 'Error while retrieving the order item reviews'
+            'orderitemreviews': 'Error while retrieving the order item reviews',
+            'diningareas': 'Error while retrieving the dining areas'
         }
 
         serializer = serializers.get(config_detail)
@@ -505,7 +522,8 @@ class RestaurantSetupEndpoint(APIView):
             'menusections': EDIT_INFORMATION.get('menu_section'),
             'sectiongroups': EI_SECTION_GROUP,
             'menuitems': EDIT_INFORMATION.get('menu_item'),
-            'tables': EDIT_INFORMATION.get('table')
+            'tables': EDIT_INFORMATION.get('table'),
+            'diningareas': EI_DINING_AREA
         }
 
         success_messages = {
@@ -515,6 +533,7 @@ class RestaurantSetupEndpoint(APIView):
             'sectiongroups': OK_UPDATED_SECTION_GROUP,
             'menuitems': 'The details of the menu item have been updated successfully.',
             'tables': 'The details of the table have been updated successfully.',
+            'diningareas': 'The details of the dining area have been updated successfully.'
         }
 
         error_messages = {
@@ -524,6 +543,7 @@ class RestaurantSetupEndpoint(APIView):
             'sectiongroups': ERR_UPDATED_SECTION_GROUP,
             'menuitems': 'An error occurred while updating the details of the menu item.',
             'tables': 'An error occurred while updating the details of the table.',
+            'diningareas': 'An error occurred while updating the details of the dining area.'
         }
 
         # TODO check if the user has permissions to edit the details
@@ -631,7 +651,8 @@ class RestaurantSetupEndpoint(APIView):
             'menusections': SerializerPutMenuSection,
             'sectiongroups': SerializerPutSectionGroup,
             'menuitems': SerializerPutMenuItem,
-            'tables': SerializerPutTable
+            'tables': SerializerPutTable,
+            'diningareas': SerializerPutDiningArea
         }
 
         secretary_args = {

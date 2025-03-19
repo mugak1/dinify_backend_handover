@@ -1,5 +1,5 @@
 from typing import Optional
-from restaurants_app.models import Restaurant, Table
+from restaurants_app.models import Restaurant, Table, DiningArea
 from users_app.models import User
 from django.db import transaction
 
@@ -13,7 +13,8 @@ def create_tables_in_section(
     user: User,
     consideration: Optional[str] = 'count',
     range_from: Optional[int] = None,
-    range_to: Optional[int] = None
+    range_to: Optional[int] = None,
+    dining_area: Optional[DiningArea] = None
 ) -> dict:
     tables = []
     restaurant = Restaurant.objects.get(id=restuarant_id)
@@ -30,7 +31,8 @@ def create_tables_in_section(
                     room_name=section_name,
                     created_by=user,
                     smoking_zone=smoking_zone,
-                    outdoor_seating=outdoor_seating
+                    outdoor_seating=outdoor_seating,
+                    dining_area=dining_area
                 )
                 tables.append(table)
 
@@ -43,7 +45,8 @@ def create_tables_in_section(
                     room_name=section_name,
                     created_by=user,
                     smoking_zone=smoking_zone,
-                    outdoor_seating=outdoor_seating
+                    outdoor_seating=outdoor_seating,
+                    dining_area=dining_area
                 )
                 tables.append(table)
 

@@ -50,6 +50,7 @@ EDIT_INFORMATION = {
         {'key': 'room_name', 'label': 'room name', 'type': 'char', 'min_length': 5, 'text_presentation': str.title},  # noqa
         {'key': 'prepayment_required', 'label': 'prepayment required', 'type': 'bool', 'min_length': 5, 'text_presentation': None},  # noqa
         {'key': 'smoking_zone', 'label': 'smoking zone', 'type': 'bool', 'min_length': 5, 'text_presentation': None},  # noqa
+        {'key': 'outdoor_seating', 'label': 'outdoor seating', 'type': 'bool', 'min_length': 5, 'text_presentation': None},  # noqa
         {'key': 'available', 'label': 'available', 'type': 'bool', 'min_length': 5, 'text_presentation': None},  # noqa
         {'key': 'reserved', 'label': 'reserved', 'type': 'bool', 'min_length': 5, 'text_presentation': None},  # noqa
     ]
@@ -60,4 +61,11 @@ EI_SECTION_GROUP = [
     {'key': 'name', 'label': 'name', 'type': 'char', 'min_length': 3, 'text_presentation': str.title},  # noqa
     {'key': 'description', 'label': 'description', 'type': 'char', 'min_length': 3, 'text_presentation': None},  # noqa
     {'key': 'available', 'label': 'available', 'type': 'bool', 'min_length': 5, 'text_presentation': None},  # noqa
+]
+
+EI_DINING_AREA = [
+    {'key': 'name', 'label': 'name', 'type': 'char', 'min_length': 3, 'text_presentation': str.title},  # noqa
+    {'key': 'description', 'label': 'description', 'type': 'char', 'min_length': 3, 'text_presentation': None},  # noqa
+    {'key': 'smoking_zone', 'label': 'smoking zone', 'type': 'bool', 'min_length': 5, 'text_presentation': None},  # noqa
+    {'key': 'outdoor_seating', 'label': 'outdoor seating', 'type': 'bool', 'min_length': 5, 'text_presentation': None},  # noqa  
 ]

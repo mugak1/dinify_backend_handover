@@ -5,7 +5,7 @@ from rest_framework.serializers import ModelSerializer, SerializerMethodField
 from orders_app.models import Order, OrderItem
 from restaurants_app.models import (
     Restaurant, RestaurantEmployee, MenuSection, MenuItem, Table,
-    SectionGroup
+    SectionGroup, DiningArea
 )
 from dinify_backend.configss.string_definitions import (
     OrderItemStatus_Initiated,
@@ -444,3 +444,16 @@ class SerializerPublicGetOrderItemReview(ModelSerializer):
         if order.customer is None:
             return ''
         return f'{order.customer.first_name}'
+
+
+class SerializerPutDiningArea(ModelSerializer):
+    class Meta:
+        model = DiningArea
+        fields = '__all__'
+
+
+class SerializerGetDiningArea(ModelSerializer):
+    no_tables = SerializerMethodField()
+    class Meta:
+        model = DiningArea
+        fields = '__all__'

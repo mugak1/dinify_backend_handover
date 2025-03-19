@@ -191,17 +191,40 @@ class MenuItem(BaseModel):
         unique_together = ['name', 'section']
 
 
+class DiningArea(BaseModel):
+    """
+    the dining areas at the restaurant
+    """
+    name = models.CharField(max_length=255)
+    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE)
+    description = models.TextField(null=True, blank=True)
+    smoking_zone = models.BooleanField(default=False)
+    outdoor_seating = models.BooleanField(default=False)
+
+    class Meta:
+        """
+        the metadata for the DiningArea model
+        """
+        db_table = 'dining_areas'
+        ordering = ['name']
+        unique_together = ['name', 'restaurant']
+
+
 class Table(BaseModel):
     """
     the tables at the restaurant
     """
     number = models.IntegerField()
-    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE)
-
-    room_name = models.CharField(max_length=255, null=True, blank=True)
     prepayment_required = models.BooleanField(default=False)
+
+    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE)
+    dining_area = models.ForeignKey(DiningArea, on_delete=models.SET_NULL, null=True, blank=True)
+
+    # === deprecated
+    room_name = models.CharField(max_length=255, null=True, blank=True)
     smoking_zone = models.BooleanField(default=False)
     outdoor_seating = models.BooleanField(default=False)
+    # === end deprecated
 
     # if the table is available for use or not
     available = models.BooleanField(default=True)

@@ -37,3 +37,8 @@ RI_SECTION_GROUP = [
     {'key': 'name', 'label': 'name', 'type': 'char', 'min_length': 3, 'text_presentation': str.title},  # noqa
     {'key': 'section', 'label': 'section', 'type': 'char', 'min_length': 3, 'text_presentation': None}  # noqa
 ]
+
+RI_DINING_AREA = [
+    {'key': 'name', 'label': 'name', 'type': 'char', 'min_length': 3, 'text_presentation': str.title},  # noqa
+    {'key': 'restaurant', 'label': 'Restaurant', 'type': 'char', 'min_length': 5, 'text_presentation': None},  # noqa
+]
