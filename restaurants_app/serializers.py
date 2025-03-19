@@ -262,9 +262,20 @@ class SerializerPublicGetTable(ModelSerializer):
     """
     serializer for getting tables
     """
+    dining_area = SerializerMethodField()
+
     class Meta:
         model = Table
         fields = '__all__'
+    
+    def get_dining_area(self, table):
+        if table.dining_area is None:
+            return None
+        return {
+            'name': table.dining_area.name,
+            'smoking_zone': table.dining_area.smoking_zone,
+            'outdoor_seating': table.dining_area.outdoor_seating
+        }
 
 
 class SerializerPublicGetTableDetails(ModelSerializer):
@@ -273,13 +284,24 @@ class SerializerPublicGetTableDetails(ModelSerializer):
     """
     current_order = SerializerMethodField()
     restaurant = SerializerMethodField()
+    dining_area = SerializerMethodField()
 
     class Meta:
         model = Table
         fields = (
             'id', 'number', 'room_name', 'prepayment_required',
-            'available', 'current_order', 'restaurant', 'reserved'
+            'available', 'current_order', 'restaurant', 'reserved',
+            'dining_area'
         )
+
+    def get_dining_area(self, table):
+        if table.dining_area is None:
+            return None
+        return {
+            'name': table.dining_area.name,
+            'smoking_zone': table.dining_area.smoking_zone,
+            'outdoor_seating': table.dining_area.outdoor_seating
+        }
 
     def get_current_order(self, table):
         orders = Order.objects.values('id').filter(
