@@ -78,6 +78,13 @@ SERVICE_TICKET_FILTERS = {
     'resolution_notes': 'resolution_notes__icontains',
 }
 
+DINING_AREA_FILTERS = {
+    'name': 'name__icontains',
+    'outdoor_seating': 'outdoor_seating',
+    'smoking_zone': 'smoking_zone',
+    'restaurant': 'restaurant'
+}
+
 FILTER_DEFINITIONS = {
     'restaurants': RESTAURANT_FILTERS,
     'employees': EMPLOYEE_FILTERS,
@@ -88,7 +95,8 @@ FILTER_DEFINITIONS = {
     'orders': ORDER_FILTERS,
     'orderreviews': ORDERREVIEWS_FILTERS,
     'orderitemreviews': ORDERITEMREVIEWS_FILTERS,
-    'servicetickets': SERVICE_TICKET_FILTERS
+    'servicetickets': SERVICE_TICKET_FILTERS,
+    'diningareas': DINING_AREA_FILTERS
 }
 
 

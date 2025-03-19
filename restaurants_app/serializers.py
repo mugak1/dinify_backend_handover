@@ -454,6 +454,14 @@ class SerializerPutDiningArea(ModelSerializer):
 
 class SerializerGetDiningArea(ModelSerializer):
     no_tables = SerializerMethodField()
+
     class Meta:
         model = DiningArea
-        fields = '__all__'
+        fields = (
+            'id', 'name', 'description',
+            'smoking_zone', 'outdoor_seating',
+            'no_tables'
+        )
+
+    def get_no_tables(self, dining_area):
+        return Table.objects.filter(dining_area=dining_area).count()
