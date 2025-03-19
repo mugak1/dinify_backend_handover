@@ -513,7 +513,8 @@ class RestaurantSetupEndpoint(APIView):
             'menusections': SerializerPutMenuSection,
             'sectiongroups': SerializerPutSectionGroup,
             'menuitems': SerializerPutMenuItem,
-            'tables': SerializerPutTable
+            'tables': SerializerPutTable,
+            'diningareas': SerializerPutDiningArea
         }
 
         edit_information = {
