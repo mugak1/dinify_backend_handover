@@ -482,14 +482,25 @@ class SerializerPutDiningArea(ModelSerializer):
 
 class SerializerGetDiningArea(ModelSerializer):
     no_tables = SerializerMethodField()
+    tables = SerializerMethodField()
 
     class Meta:
         model = DiningArea
         fields = (
             'id', 'name', 'description',
             'smoking_zone', 'outdoor_seating',
-            'no_tables'
+            'no_tables', 'tables'
         )
 
     def get_no_tables(self, dining_area):
         return Table.objects.filter(dining_area=dining_area).count()
+    
+    def get_tables(self, dining_area):
+        tables = Table.objects.filter(dining_area=dining_area)
+        return [
+            {
+                'number': table.number,
+                'available': table.available,
+                'reserved': table.reserved
+            } for table in tables
+        ]
