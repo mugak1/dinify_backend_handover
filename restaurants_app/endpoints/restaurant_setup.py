@@ -446,8 +446,8 @@ class RestaurantSetupEndpoint(APIView):
         if config_detail == 'menuitems':
             orm_filter['section_group__deleted'] = False
             # orm_filter['section_group__available'] = True
-            if 'available' not in request.GET:
-                orm_filter['available'] = True
+            # if 'available' not in request.GET:
+            #     orm_filter['available'] = True
 
         if config_detail == 'sectiongroups':
             if 'available' not in request.GET:
