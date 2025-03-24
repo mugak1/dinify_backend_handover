@@ -497,6 +497,7 @@ class SerializerGetDiningArea(ModelSerializer):
         tables = Table.objects.filter(dining_area=dining_area)
         return [
             {
+                'id': str(table.pk),
                 'number': table.number,
                 'available': table.available,
                 'reserved': table.reserved
