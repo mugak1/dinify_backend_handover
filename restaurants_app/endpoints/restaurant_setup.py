@@ -60,7 +60,7 @@ from users_app.controllers.permissions_check import (
     get_user_restaurant_roles
 )
 
-from restaurants_app.models import RestaurantEmployee, DiningArea
+from restaurants_app.models import RestaurantEmployee, DiningArea, Table
 from users_app.models import User
 from restaurants_app.controllers.subscriptions import RestaurantSubscription
 
@@ -205,6 +205,18 @@ class RestaurantSetupEndpoint(APIView):
 
         if config_detail == 'create-employee':
             return self.handle_create_employee(request)
+
+        if config_detail == 'tables':
+            tables_count = Table.objects.filter(
+                restaurant=request.data.get('restaurant'),
+                number=request.data.get('number')
+            ).count()
+            if tables_count > 0:
+                response = {
+                    'status': 400,
+                    'message': f"Table number {request.data.get('number')} is already in use."
+                }
+                return Response(response, status=400)
 
         serializers = {
             'employees': SerializerPutRestaurantEmployee,
