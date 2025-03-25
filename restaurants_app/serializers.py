@@ -166,7 +166,7 @@ class SerializerPublicGetMenuSection(ModelSerializer):
         groups = SectionGroup.objects.filter(
             section=menu_section,
             deleted=False,
-            available=True
+            # available=True
         )
         return [
             {
