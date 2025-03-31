@@ -7,7 +7,8 @@ from django.db import transaction
 def confirm_availability_of_table_numbers(restaurant_id: str, range_from: int, range_to: int):
     current_table_nos = Table.objects.values('number').filter(
         restaurant=restaurant_id,
-        number__gte=range_from, number__lte=range_to
+        number__gte=range_from, number__lte=range_to,
+        deleted=False
     )
     for x in current_table_nos:
         print(f" table number {x['number']} ")

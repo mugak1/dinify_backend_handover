@@ -36,4 +36,3 @@ class Command(BaseCommand):
                 rec.save()
 
                 # TODO save action to mongodb as a log
-
