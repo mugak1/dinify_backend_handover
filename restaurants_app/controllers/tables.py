@@ -5,12 +5,11 @@ from django.db import transaction
 
 
 def confirm_availability_of_table_numbers(restaurant_id: str, range_from: int, range_to: int):
-    existing_table_numbers = set(
-        Table.objects.filter(
-            restaurant=restaurant_id,
-            number__gte=range_from, number__lte=range_to
-        ).count()
+    current_table_nos = Table.objects.values('number').filter(
+        restaurant=restaurant_id,
+        number__gte=range_from, number__lte=range_to
     )
+    existing_table_numbers = [int(x['number']) for x in current_table_nos]
     for number in range(range_from, range_to + 1):
         if number in existing_table_numbers:
             return {
