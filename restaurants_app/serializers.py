@@ -273,6 +273,7 @@ class SerializerPublicGetTable(ModelSerializer):
             return None
         return {
             'name': table.dining_area.name,
+            'available': table.dining_area.available,
             'smoking_zone': table.dining_area.smoking_zone,
             'outdoor_seating': table.dining_area.outdoor_seating
         }
@@ -299,6 +300,7 @@ class SerializerPublicGetTableDetails(ModelSerializer):
             return None
         return {
             'name': table.dining_area.name,
+            'available': table.dining_area.available,
             'smoking_zone': table.dining_area.smoking_zone,
             'outdoor_seating': table.dining_area.outdoor_seating
         }
@@ -489,7 +491,7 @@ class SerializerGetDiningArea(ModelSerializer):
         fields = (
             'id', 'name', 'description',
             'smoking_zone', 'outdoor_seating',
-            'no_tables', 'tables'
+            'no_tables', 'tables', 'available'
         )
 
     def get_no_tables(self, dining_area):

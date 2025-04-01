@@ -198,6 +198,7 @@ class DiningArea(BaseModel):
     name = models.CharField(max_length=255)
     restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE)
     description = models.TextField(null=True, blank=True)
+    available = models.BooleanField(default=True)
     smoking_zone = models.BooleanField(default=False)
     outdoor_seating = models.BooleanField(default=False)
 
