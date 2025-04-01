@@ -96,7 +96,8 @@ def get_tables_by_area(restaurant_id: str):
     # include tables that are associated with any area
     tables = Table.objects.filter(
         deleted=False,
-        dining_area=None
+        dining_area=None,
+        restaurant=restaurant_id,
     ).values('id', 'number', 'available', 'reserved')
     tables_listing.append({
         'dining_area': {

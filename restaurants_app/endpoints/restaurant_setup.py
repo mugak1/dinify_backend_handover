@@ -472,7 +472,7 @@ class RestaurantSetupEndpoint(APIView):
         if config_detail == 'tables':
             if request.GET.get('grouping') is not None:
                 response = get_tables_by_area(
-                    restaurant_id=request.GET.get('restaurant_id')
+                    restaurant_id=request.GET.get('restaurant')
                 )
                 return Response(response, status=response['status'])
 
