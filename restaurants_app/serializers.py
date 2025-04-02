@@ -388,8 +388,8 @@ class SerializerGetFullMenu(ModelSerializer):
             'section': section,
             'approved': True,
             'enabled': True,
-            'section_group__deleted': False,
-            'section_group__available': True,
+            # 'section_group__deleted': False,
+            # 'section_group__available': True,
             'deleted': False,
             'available': True
         }
@@ -406,12 +406,12 @@ class SerializerGetFullMenu(ModelSerializer):
             'section': section,
             'approved': True,
             'enabled': True,
-            'section_group__deleted': False,
-            'section_group__available': True,
+            # 'section_group__deleted': False,
+            # 'section_group__available': True,
             'deleted': False,
             'available': True
         }
-        if self.context.get('ignore_approval') == 'true':
+        if self.context.get('ignore_approval') in ['true', True]:
             filters.pop('approved')
             filters.pop('enabled')
         return MenuItem.objects.filter(**filters).count()
