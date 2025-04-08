@@ -5,7 +5,7 @@ The backend application for dinify_project.
 - Knowledge of Python, Django, and REST APIs is required.
 - If you know django, then you know what to do.
 
-# code organisation | overview of directories
+# Code organisation | overview of directories
 The directory organisation builds on top of django's default directory structure. The overall structure is as follows:
 ```
 xxx_app
