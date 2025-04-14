@@ -17,7 +17,7 @@ class Command(BaseCommand):
             #     table.save()
             # print(str(dining_area.pk))
         print(f"deleting tables under dining area: {dining_area.pk}")
-        Table.objected.filter(
+        Table.objects.filter(
             dining_area=dining_area,
         ).update(deleted=True)
 
