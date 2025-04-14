@@ -31,7 +31,7 @@ class Command(BaseCommand):
 
             # if the model is dining area, delete the table under it
             delete_dining_areas = False
-            if model == DiningArea:
+            if model['model'] == DiningArea:
                 delete_dining_areas = True
 
             for rec in records_pending_vacuum:
