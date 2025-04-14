@@ -15,9 +15,12 @@ class Command(BaseCommand):
             # for table in tables:
             #     table.deleted = True
             #     table.save()
+            print(str(dining_area.pk))
             Table.objected.filter(
                 dining_area=dining_area,
             ).update(deleted=True)
+
+            #  bulk update tables
 
 
     def handle(self, *args, **options):
