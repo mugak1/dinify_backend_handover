@@ -16,6 +16,7 @@ def create_dining_area(
     user: User,
     create_tables: bool = False,
     consideration: Optional[str] = 'count',
+    description: Optional[str] = None,
     no_tables: Optional[int] = None,
     range_from: Optional[int] = None,
     range_to: Optional[int] = None
@@ -63,6 +64,7 @@ def create_dining_area(
             restaurant=restaurant,
             smoking_zone=smoking_zone,
             outdoor_seating=outdoor_seating,
+            description=description,
             created_by=user
         )
         dining_area.save()

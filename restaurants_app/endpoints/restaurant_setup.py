@@ -336,6 +336,7 @@ class RestaurantSetupEndpoint(APIView):
                 user=request.user,
                 create_tables=post_data.get('create_tables', False),
                 consideration=post_data.get('consideration', 'count'),
+                description=post_data.get('description', None),
                 no_tables=post_data.get('no_tables', 0),
                 range_from=int(post_data.get('start', 0)),
                 range_to=int(post_data.get('end', 0))
