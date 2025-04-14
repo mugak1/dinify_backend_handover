@@ -8,19 +8,8 @@ class Command(BaseCommand):
     help = "Alters the 'renameable fields' of deleted records and sets a flag of vacuum on them."
 
     def delete_tables_under_dining_areas(self, dining_area):
-        # find deleted dining areas and delete the respective tables under them
-        # deleted_dining_areas = DiningArea.objects.filter(deleted=True)
-        # for dining_area in deleted_dining_areas:
-            # tables = Table.objects.filter(dining_area=dining_area)
-            # for table in tables:
-            #     table.deleted = True
-            #     table.save()
-            # print(str(dining_area.pk))
         print(f"deleting tables under dining area: {dining_area.pk}")
-        Table.objects.filter(
-            dining_area=dining_area,
-        ).update(deleted=True)
-
+        Table.objects.filter(dining_area=dining_area).update(deleted=True)
 
     def handle(self, *args, **options):
         for model in VACUUM_MODELS:
@@ -29,6 +18,7 @@ class Command(BaseCommand):
                 vacuumed=False
             )
 
+            # soft cascade deletes
             # if the model is dining area, delete the table under it
             delete_dining_areas = False
             if model['model'] == DiningArea:
