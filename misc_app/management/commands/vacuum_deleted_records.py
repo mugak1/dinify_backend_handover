@@ -3,8 +3,9 @@ from .vacuum_configuration import VACUUM_MODELS
 from restaurants_app.models import DiningArea, Table, MenuSection, SectionGroup, MenuItem
 
 
-class Command(BaseCommand):
-    help = "Alters the 'renameable fields' of deleted records and sets a flag of vacuum on them."
+class ConVacuumDeletedRecords:
+    def __init__(self):
+        pass
 
     def soft_cascade_under_dining_areas(self, dining_area):
         Table.objects.filter(dining_area=dining_area, deleted=False).update(deleted=True)
@@ -16,7 +17,7 @@ class Command(BaseCommand):
     def soft_cascade_under_groups(self, group):
         MenuItem.objects.filter(section_group=group, deleted=False).update(deleted=True)
 
-    def handle(self, *args, **options):
+    def vacuum(self):
         for model in VACUUM_MODELS:
             records_pending_vacuum = model['model'].objects.filter(
                 deleted=True,
@@ -66,3 +67,10 @@ class Command(BaseCommand):
                 rec.save()
 
                 # TODO save action to mongodb as a log
+
+
+class Command(BaseCommand):
+    help = "Alters the 'renameable fields' of deleted records and sets a flag of vacuum on them."
+
+    def handle(self, *args, **options):
+        ConVacuumDeletedRecords().vacuum()
