@@ -1,15 +1,20 @@
 from django.core.management.base import BaseCommand
-from django.core.management import CommandError
 from .vacuum_configuration import VACUUM_MODELS
-from restaurants_app.models import DiningArea, Table
+from restaurants_app.models import DiningArea, Table, MenuSection, SectionGroup, MenuItem
 
 
 class Command(BaseCommand):
     help = "Alters the 'renameable fields' of deleted records and sets a flag of vacuum on them."
 
-    def delete_tables_under_dining_areas(self, dining_area):
-        print(f"deleting tables under dining area: {dining_area.pk}")
-        Table.objects.filter(dining_area=dining_area).update(deleted=True)
+    def soft_cascade_under_dining_areas(self, dining_area):
+        Table.objects.filter(dining_area=dining_area, deleted=False).update(deleted=True)
+
+    def soft_cascade_under_sections(self, section):
+        SectionGroup.objects.filter(section=section, deleted=False).update(deleted=True)
+        MenuItem.objects.filter(section=section, deleted=False).update(deleted=True)
+
+    def delete_items_under_groups(self, group):
+        MenuItem.objects.filter(section_group=group, deleted=False).update(deleted=True)
 
     def handle(self, *args, **options):
         for model in VACUUM_MODELS:
@@ -20,13 +25,24 @@ class Command(BaseCommand):
 
             # soft cascade deletes
             # if the model is dining area, delete the table under it
-            delete_dining_areas = False
+            run_soft_cascade_dining_areas = False
+            run_soft_cascade_sections = False
+            run_soft_cascade_groups = False
+
             if model['model'] == DiningArea:
-                delete_dining_areas = True
+                run_soft_cascade_dining_areas = True
+            elif model['model'] == MenuSection:
+                run_soft_cascade_sections = True
+            elif model['model'] == SectionGroup:
+                run_soft_cascade_groups = True
 
             for rec in records_pending_vacuum:
-                if delete_dining_areas:
-                    self.delete_tables_under_dining_areas(dining_area=rec)
+                if run_soft_cascade_dining_areas:
+                    self.soft_cascade_under_dining_areas(dining_area=rec)
+                elif run_soft_cascade_sections:
+                    self.soft_cascade_under_sections(section=rec)
+                elif run_soft_cascade_groups:
+                    self.soft_cascade_under_groups(group=rec)
 
                 filters = {
                     'deleted': True,
