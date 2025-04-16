@@ -13,7 +13,7 @@ class Command(BaseCommand):
         SectionGroup.objects.filter(section=section, deleted=False).update(deleted=True)
         MenuItem.objects.filter(section=section, deleted=False).update(deleted=True)
 
-    def delete_items_under_groups(self, group):
+    def soft_cascade_under_groups(self, group):
         MenuItem.objects.filter(section_group=group, deleted=False).update(deleted=True)
 
     def handle(self, *args, **options):
