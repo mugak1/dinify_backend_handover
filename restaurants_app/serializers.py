@@ -16,7 +16,7 @@ from dinify_backend.configss.string_definitions import (
 )
 from finance_app.serializers import SerializerPutAccount
 from finance_app.models import DinifyAccount
-from restaurants_app.controllers.tables import get_table_availability
+# from restaurants_app.controllers.tables import get_table_availability
 
 
 class SerializerGetRestaurantDetail(ModelSerializer):
@@ -372,7 +372,11 @@ class SerializerPublicGetTableDetails(ModelSerializer):
         }
 
     def get_available(self, table):
-        return get_table_availability(table_id=str(table.pk))
+        # return get_table_availability(table_id=str(table.pk))
+        return {
+            'available': True,
+            'message': 'Table is available'
+        }
 
 
 class SerializerGetFullMenu(ModelSerializer):
