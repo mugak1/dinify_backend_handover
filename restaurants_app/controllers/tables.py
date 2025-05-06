@@ -83,18 +83,33 @@ def get_tables_by_area(restaurant_id: str):
     dining_areas = DiningArea.objects.filter(
         restaurant=restaurant_id,
         deleted=False
-    ).values('id', 'name', 'available', 'description')
+    ).values('id', 'name', 'description')
 
     # get the tables in each area
     for area in dining_areas:
-        tables = Table.objects.filter(
+        # tables = Table.objects.filter(
+        #     deleted=False,
+        #     dining_area=area['id']
+        # ).values('id', 'number', 'reserved')
+        tables = Table.objects.filter(deleted=False, dining_area=area['id'])
+
+        table_records = Table.objects.filter(
             deleted=False,
             dining_area=area['id']
-        ).values('id', 'number', 'available', 'reserved')
+        )
+        tables_listing = [
+            {
+                'id': str(table.pk),
+                'number': table.number,
+                'available': get_table_availability(table_id=str(table.pk)),
+                'reserved': table.reserved,
+                'enabled': table.enabled,
+            } for table in table_records
+        ]
 
         tables_listing.append({
             'dining_area': area,
-            'tables': list(tables)
+            'tables': tables_listing
         })
 
     # include tables that are associated with any area
