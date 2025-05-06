@@ -230,7 +230,7 @@ class Table(BaseModel):
     # === end deprecated
 
     # if the table is available for use or not
-    available = models.BooleanField(default=True)
+    # available = models.BooleanField(default=True)
     reserved = models.BooleanField(default=False)
     enabled = models.BooleanField(default=False)
 

@@ -1,5 +1,6 @@
 from typing import Optional
 from restaurants_app.models import Restaurant, Table, DiningArea
+from orders_app.controllers.initiate_order import any_present_ongoing_order
 from users_app.models import User
 from django.db import transaction
 
@@ -114,4 +115,30 @@ def get_tables_by_area(restaurant_id: str):
         'status': 200,
         'message': 'Tables by dining area',
         'data': tables_listing
+    }
+
+
+def get_table_availability(table_id: str) -> dict:
+    table_record = Table.objects.get(id=table_id)
+    if not table_record.enabled:
+        return {
+            'available': False,
+            'message': 'Table is disabled'
+        }
+    if table_record.reserved:
+        return {
+            'available': False,
+            'message': 'Table is reserved'
+        }
+    # check for ongoing orders
+    present_order = any_present_ongoing_order(table=table_record)
+    if present_order['present']:
+        return {
+            'available': False,
+            'message': 'Table has an ongoing order'
+        }
+
+    return {
+        'available': True,
+        'message': 'Table is available'
     }
