@@ -482,7 +482,7 @@ class RestaurantSetupEndpoint(APIView):
                 response = get_tables_by_area(
                     restaurant_id=request.GET.get('restaurant')
                 )
-                return Response(response, status=response['status'])
+                return Response(response, status=200)
 
         serializers = {
             'restaurants': SerializerPublicGetRestaurant,

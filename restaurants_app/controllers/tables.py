@@ -1,8 +1,8 @@
 from typing import Optional
 from restaurants_app.models import Restaurant, Table, DiningArea
-# from orders_app.controllers.initiate_order import any_present_ongoing_order
 from users_app.models import User
 from django.db import transaction
+from orders_app.controllers.initiate_order import any_present_ongoing_order
 
 
 def confirm_availability_of_table_numbers(restaurant_id: str, range_from: int, range_to: int):
@@ -83,49 +83,67 @@ def get_tables_by_area(restaurant_id: str):
     dining_areas = DiningArea.objects.filter(
         restaurant=restaurant_id,
         deleted=False
-    ).values('id', 'name', 'description')
+    ).values('id', 'name', 'available', 'description')
 
     # get the tables in each area
     for area in dining_areas:
         # tables = Table.objects.filter(
         #     deleted=False,
         #     dining_area=area['id']
-        # ).values('id', 'number', 'reserved')
-        tables = Table.objects.filter(deleted=False, dining_area=area['id'])
-
-        table_records = Table.objects.filter(
+        # ).values('id', 'number', 'enabled', 'reserved')
+        area_tables = Table.objects.filter(
             deleted=False,
             dining_area=area['id']
         )
-        # tables_listing = [
-        #     {
-        #         'id': str(table.pk),
-        #         'number': table.number,
-        #         # 'available': get_table_availability(table_id=str(table.pk)),
-        #         'reserved': table.reserved,
-        #         'enabled': table.enabled,
-        #     } for table in table_records
-        # ]
-        tables_listing = []
+
+        area_table_listing = [{
+            'id': table.id,
+            'number': table.number,
+            'enabled': table.enabled,
+            'reserved': table.reserved,
+            'available': get_table_availability(table_id=str(table.id))
+        } for table in area_tables]
 
         tables_listing.append({
             'dining_area': area,
-            'tables': tables_listing
+            'tables': area_table_listing
         })
 
     # include tables that are associated with any area
-    tables = Table.objects.filter(
+    # tables = Table.objects.filter(
+    #     deleted=False,
+    #     dining_area=None,
+    #     restaurant=restaurant_id,
+    # ).values('id', 'number', 'enabled', 'reserved')
+    
+
+    # if tables.count() > 0:
+    #     tables_listing.append({
+    #         'dining_area': {
+    #             'id': None,
+    #             'name': 'Not Assigned'
+    #         },
+    #         'tables': list(tables)
+    #     })
+
+    unassigned_tables = Table.objects.filter(
         deleted=False,
         dining_area=None,
         restaurant=restaurant_id,
-    ).values('id', 'number', 'reserved')
-    if tables.count() > 0:
+    )
+    if unassigned_tables.count() > 0:
         tables_listing.append({
             'dining_area': {
                 'id': None,
                 'name': 'Not Assigned'
             },
-            'tables': list(tables)
+            'tables': [{
+                'id': table.id,
+                'number': table.number,
+                'enabled': table.enabled,
+                'reserved': table.reserved,
+                'available': get_table_availability(table_id=str(table.id))
+            } for table in unassigned_tables]
         })
     return {
         'status': 200,
@@ -147,13 +165,12 @@ def get_table_availability(table_id: str) -> dict:
             'message': 'Table is reserved'
         }
     # check for ongoing orders
-    # present_order = any_present_ongoing_order(table=table_record)
-    # if present_order['present']:
-    #     return {
-    #         'available': False,
-    #         'message': 'Table has an ongoing order'
-    #     }
-
+    present_order = any_present_ongoing_order(table=table_record)
+    if present_order['present']:
+        return {
+            'available': False,
+            'message': 'Table has an ongoing order'
+        }
     return {
         'available': True,
         'message': 'Table is available'

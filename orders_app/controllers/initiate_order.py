@@ -1,4 +1,3 @@
-import datetime
 from django.db import transaction
 from restaurants_app.models import Restaurant, MenuItem, Table
 from django.core.exceptions import ObjectDoesNotExist
