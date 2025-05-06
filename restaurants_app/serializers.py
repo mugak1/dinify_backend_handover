@@ -524,7 +524,7 @@ class SerializerGetDiningArea(ModelSerializer):
             {
                 'id': str(table.pk),
                 'number': table.number,
-                'available': get_table_availability(table_id=str(table.pk)),
+                # 'available': get_table_availability(table_id=str(table.pk)),
                 'reserved': table.reserved,
                 'enabled': table.enabled,
             } for table in tables
