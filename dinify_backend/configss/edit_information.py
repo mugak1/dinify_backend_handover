@@ -43,6 +43,7 @@ EDIT_INFORMATION = {
         {'key': 'options', 'label': 'options', 'type': 'char', 'min_length': 5, 'text_presentation': None},  # noqa
         {'key': 'extras_applicable', 'label': 'extras_applicable', 'type': 'list', 'min_length': 5, 'text_presentation': None},  # noqa
         {'key': 'is_extra', 'label': 'is extra', 'type': 'bool', 'min_length': 5, 'text_presentation': None},  # noqa
+        {'key': 'has_extras', 'label': 'has extras', 'type': 'bool', 'min_length': 5, 'text_presentation': None},  # noqa
         {'key': 'allergens', 'label': 'allergens', 'type': 'list', 'min_length': 0, 'text_presentation': None},  # noqa
     ],
     'table': [
@@ -54,6 +55,7 @@ EDIT_INFORMATION = {
         {'key': 'outdoor_seating', 'label': 'outdoor seating', 'type': 'bool', 'min_length': 5, 'text_presentation': None},  # noqa
         {'key': 'available', 'label': 'available', 'type': 'bool', 'min_length': 5, 'text_presentation': None},  # noqa
         {'key': 'reserved', 'label': 'reserved', 'type': 'bool', 'min_length': 5, 'text_presentation': None},  # noqa
+        {'key': 'enabled', 'label': 'enabled', 'type': 'bool', 'min_length': 5, 'text_presentation': None},  # noqa
     ]
 }
 

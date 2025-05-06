@@ -176,6 +176,7 @@ class MenuItem(BaseModel):
     #   choices: [Spicy, Not spicy, Extra spicy],
     #   cost: 0
     # }, {...}, {...}]
+    has_extras = models.BooleanField(default=False)
     extras_applicable = models.JSONField(default=list)
 
     # for approvals and enabling items
@@ -231,6 +232,7 @@ class Table(BaseModel):
     # if the table is available for use or not
     available = models.BooleanField(default=True)
     reserved = models.BooleanField(default=False)
+    enabled = models.BooleanField(default=False)
 
     class Meta:
         """

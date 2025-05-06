@@ -227,7 +227,7 @@ class SerializerPublicGetMenuItem(ModelSerializer):
             'discounted_price', 'running_discount', 'image',
             'available', 'allergens', 'discount_details',
             'has_options', 'options', 'group', 'extras', 'is_extra',
-            'discount_percentage'
+            'discount_percentage', 'has_extras'
         )
 
     def get_has_options(self, menu_item):
@@ -308,7 +308,7 @@ class SerializerPublicGetTableDetails(ModelSerializer):
         fields = (
             'id', 'number', 'room_name', 'prepayment_required',
             'available', 'current_order', 'restaurant', 'reserved',
-            'dining_area'
+            'dining_area', 'enabled'
         )
 
     def get_dining_area(self, table):

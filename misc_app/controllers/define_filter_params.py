@@ -27,7 +27,8 @@ MENU_ITEM_FILTERS = {
     'name': 'name__icontains',
     'running_discount': 'running_discount',
     'description': 'description__icontains',
-    'is_extra': 'is_extra'
+    'is_extra': 'is_extra',
+    'has_extras': 'has_extras',
 }
 
 TABLE_FILTERS = {

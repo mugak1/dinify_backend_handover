@@ -469,6 +469,7 @@ class Secretary:
         )
 
         if record.is_valid():
+            print("\n\n\nRecord deleted\n\n\n")
             record.save()
             save_action(
                 affected_model=self.model_name,
