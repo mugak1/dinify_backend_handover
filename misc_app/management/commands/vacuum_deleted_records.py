@@ -23,6 +23,7 @@ class ConVacuumDeletedRecords:
                 deleted=True,
                 vacuumed=False
             )
+            print(f"{model['model'].__name__}: {records_pending_vacuum.count()}")
 
             # soft cascade deletes
             # if the model is dining area, delete the table under it
