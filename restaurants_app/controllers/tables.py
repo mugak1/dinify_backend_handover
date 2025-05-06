@@ -117,7 +117,7 @@ def get_tables_by_area(restaurant_id: str):
         deleted=False,
         dining_area=None,
         restaurant=restaurant_id,
-    ).values('id', 'number', 'available', 'reserved')
+    ).values('id', 'number', 'reserved')
     if tables.count() > 0:
         tables_listing.append({
             'dining_area': {
