@@ -464,6 +464,8 @@ class RestaurantSetupEndpoint(APIView):
 
         if 'deleted' not in request.GET:
             orm_filter['deleted'] = False
+        print(f"The ORM filter is: {orm_filter}")
+        print(f"The GET params are: {request.GET}")
 
         if config_detail == 'menuitems':
             # orm_filter['section_group__deleted'] = False
