@@ -140,12 +140,13 @@ def admin_register_restaurant(data: dict, auth_info: dict) -> dict:
 
     # check if the user has a restaurant with the same name
     duplicate_name = Restaurant.objects.filter(
-        name=data['name'].strip().lower()
+        name__iexact=data['name'].strip(),
+        location__iexact=data['location'].strip().lower()
     )
     if duplicate_name:
         return {
             'status': 400,
-            'message': MESSAGES.get('DUPLICATE_RESTAURANT_NAME')
+            'message': "A restaurant record with the same name and location already exists."
         }
 
     # create the user
