@@ -13,7 +13,7 @@ def check_non_unique_conflicts(
     filters = {}
     for key in unique_combination:
         if values.get(key) is not None:
-            filters[key] = values.get(key)
+            filters[f"{key}__iexact"] = values.get(key)
 
     if len(filters) < len(unique_combination):
         return {
