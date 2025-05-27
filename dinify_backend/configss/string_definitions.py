@@ -88,3 +88,9 @@ RESTAURANT_KITCHEN = 'kitchen'
 RESTAURANT_WAITER = 'waiter'
 RESTAURANT_FINANCE = 'finance'
 DINER = 'diner'
+
+
+SysConfig_EodStartTime = 'eod_start_time'
+SysConfig_EodEndTime = 'eod_end_time'
+SysConfig_EodLastDate = 'eod_last_date'
+SysConfig_EodCurrentStatus = 'eod_current_status'

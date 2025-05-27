@@ -69,3 +69,5 @@ OK_RETRIEVED_FULL_MENU = 'Successfully retrieved the restaurant menu.'
 ERR_UPDATING_ITEM_STATUS_UNSUPPORTED_STATUS = 'The provided status is not supported.'
 ERR_ORDER_ITEM_NOT_AVAILABLE = 'This order item is unavailable.'
 OK_UPDATED_ITEM_STATUS = 'The item status has been updated successfully.'
+
+EOD_IN_PROGRESS = 'The restaurant is currently processing the end of day tasks. Please wait for about 2 minutes.'  # noqa

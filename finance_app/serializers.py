@@ -11,6 +11,12 @@ class SerializerPutAccount(ModelSerializer):
         fields = '__all__'
 
 
+class SerializerPutDinifyTransaction(ModelSerializer):
+    class Meta:
+        model = DinifyTransaction
+        fields = '__all__'
+
+
 class SerializerGetRestaurantTransactionListing(ModelSerializer):
     order_number = SerializerMethodField()
     amount_in = SerializerMethodField()

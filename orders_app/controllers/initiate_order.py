@@ -46,6 +46,11 @@ def initiate_order(data):
                 'status': 400,
                 'message': MESSAGES.get('BLOCKED_RESTAURANT')
             }
+        if restaurant.eod_restaurant_status in [1, 2]:
+            return {
+                'status': 400,
+                'message': MESSAGES.get('EOD_IN_PROGRESS')
+            }
     except ObjectDoesNotExist:
         return {
             'status': 400,

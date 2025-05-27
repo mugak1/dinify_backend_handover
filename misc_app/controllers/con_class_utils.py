@@ -1,7 +1,6 @@
 from typing import Optional
 from misc_app.controllers.utils.check_non_unique_conflicts import check_non_unique_conflicts
 
-
 class ConMiscUtils:
     """
     This class contains utility functions for the misc app
