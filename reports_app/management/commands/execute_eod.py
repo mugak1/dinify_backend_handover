@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from django.utils import timezone
 from django.core.management.base import BaseCommand
 from misc_app.models import SysActivityConfig
@@ -7,11 +7,13 @@ from dinify_backend.configss.string_definitions import (
     SysConfig_EodStartTime,
     SysConfig_EodEndTime,
     SysConfig_EodLastDate,
-    SysConfig_EodCurrentStatus
+    SysConfig_EodCurrentStatus,
+    SysConfig_BusinessDate
 )
 
 
 from reports_app.controllers.eod.confirm_daily_orders import run_restaurant_eod
+
 
 class Command(BaseCommand):
     help = """
@@ -21,7 +23,8 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         # update the last eod start time
         start_time = timezone.now()
-        eod_date = start_time.date() - timedelta(days=1)
+        start_date = start_time.date()
+        eod_date = start_date - timedelta(days=1)
         self.stdout.write(self.style.WARNING(f"Starting EOD Execution |  {eod_date}..."))
 
         SysActivityConfig.objects.update_or_create(
@@ -35,12 +38,40 @@ class Command(BaseCommand):
         )
 
         self.stdout.write(self.style.WARNING("Blocking new orders..."))
-        
-        
+
         #  for each restaurant, set the eod status to 1
-        Restaurant.objects.all().update(eod_restaurant_status=1)
+        # 1. block incoming orders
+
 
         #  for each restaurant, take a snapshot of the values as at the moment
+        # 2. Confirm daily orders
+        Restaurant.objects.all().update(eod_restaurant_status=1)
+        
+        # return
+        SysActivityConfig.objects.update_or_create(
+            config_name=SysConfig_EodCurrentStatus,
+            defaults={'config_integer_value': 2}
+        )
+        # 3a. Set new system business date at restaurant level
         run_restaurant_eod(eod_date)
+
+        # 3b. Set new system business date at system level
+        # system is typically open for orders at this stage
+        SysActivityConfig.objects.update_or_create(
+            config_name=SysConfig_BusinessDate,
+            defaults={'config_date_value': start_date}
+        )
+
+        # 4. organising records by EOD status
+
+        # 5. reconcile payments and confirm accounts balances
+
+        # 6. generate daily reports
+
+        # 7. generate periodical reports
+
+        # 8. send out notifications
+
+        # 9. archive records
 
         self.stdout.write(self.style.SUCCESS("Completed EOD!"))

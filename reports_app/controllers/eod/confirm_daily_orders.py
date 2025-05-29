@@ -26,7 +26,7 @@ def snapshot_daily_orders(restaurant_id: str, eod_date: date) -> dict:
             order__in=[order.id for order in restaurant_orders],
         )
 
-        # not used to avod nullable outer joins error
+        # not used to avoid nullable outer joins error
         # restaurant_transactions = DinifyTransaction.objects.select_for_update().filter(
         #     (Q(restaurant=restaurant) | Q(order__restaurant=restaurant)),
         #     eod_record_date=None,
@@ -49,8 +49,8 @@ def snapshot_daily_orders(restaurant_id: str, eod_date: date) -> dict:
         )
 
         #  bulk update the restaurant records with the eod date
-        for x in restaurant_orders:
-            x.eod_record_date = eod_date
+        # for x in restaurant_orders:
+        #     x.eod_record_date = eod_date
         for x in restaurant_order_items:
             x.eod_record_date = eod_date
         for x in restaurant_transactions:
@@ -86,9 +86,12 @@ def snapshot_daily_orders(restaurant_id: str, eod_date: date) -> dict:
                 archive_collection='archive_accounts'
             )
 
-        Order.objects.bulk_update(
-            restaurant_orders,
-            fields=['eod_record_date']
+        # Order.objects.bulk_update(
+        #     restaurant_orders,
+        #     fields=['eod_record_date']
+        # )
+        restaurant_orders.update(
+            eod_record_date=eod_date
         )
         OrderItem.objects.bulk_update(
             restaurant_order_items,
