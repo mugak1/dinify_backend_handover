@@ -1,7 +1,7 @@
 import logging
 from django.db import transaction
 from django.db.models import Q
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 from restaurants_app.models import Restaurant
 from orders_app.models import Order, OrderItem
 from finance_app.models import DinifyAccount, DinifyTransaction
@@ -14,6 +14,7 @@ import concurrent.futures
 
 
 def snapshot_daily_orders(restaurant_id: str, eod_date: date) -> dict:
+    start_time = datetime.now()
     with transaction.atomic():
         restaurant = Restaurant.objects.select_for_update().get(id=restaurant_id)
         logging.info(f"Taking snapshot for {restaurant.name}: {restaurant_id}.")
@@ -52,9 +53,17 @@ def snapshot_daily_orders(restaurant_id: str, eod_date: date) -> dict:
         for x in restaurant_transactions:
             x.eod_record_date = eod_date
 
+        restaurant_orders.update(eod_record_date=eod_date)
+        restaurant_order_items.update(eod_record_date=eod_date)
+        DinifyTransaction.objects.bulk_update(
+            restaurant_transactions,
+            fields=['eod_record_date']
+        )
+
         # save each order to the archive i.e. mongo
         for order in restaurant_orders:
             data = SerializerPutOrder(order).data
+            data['eod_record_date'] = str(eod_date)
             archive_record(
                 record_data=data,
                 archive_collection='archive_orders'
@@ -62,6 +71,7 @@ def snapshot_daily_orders(restaurant_id: str, eod_date: date) -> dict:
         # save each order item to the archive
         for order_item in restaurant_order_items:
             data = SerializerPutOrderItem(order_item).data
+            data['eod_record_date'] = str(eod_date)
             archive_record(
                 record_data=data,
                 archive_collection='archive_order_items'
@@ -69,6 +79,7 @@ def snapshot_daily_orders(restaurant_id: str, eod_date: date) -> dict:
         # save each transaction to the archive
         for tx in restaurant_transactions:
             data = SerializerPutDinifyTransaction(tx).data
+            data['eod_record_date'] = str(eod_date)
             archive_record(
                 record_data=data,
                 archive_collection='archive_transactions'
@@ -82,18 +93,12 @@ def snapshot_daily_orders(restaurant_id: str, eod_date: date) -> dict:
                 archive_collection='archive_accounts'
             )
 
-        restaurant_orders.update(eod_record_date=eod_date)
-        restaurant_order_items.update(eod_record_date=eod_date)
-        DinifyTransaction.objects.bulk_update(
-            restaurant_transactions,
-            fields=['eod_record_date']
-        )
-
         # set new system date for the restaurant to allow new orders
         restaurant.system_date = eod_date + timedelta(days=1)
         restaurant.eod_restaurant_status = 4
         restaurant.save()
 
+        end_time = datetime.now()
         result = {
             'date': str(eod_date),
             'stage': 'snapshot_daily_orders',
@@ -103,15 +108,18 @@ def snapshot_daily_orders(restaurant_id: str, eod_date: date) -> dict:
             'count_order_items': restaurant_order_items.count(),
             'count_transactions': restaurant_transactions.count(),
             'count_accounts': restaurant_accounts.count(),
+            'start_time': start_time.isoformat(),
+            'end_time': end_time.isoformat(),
+            'duration_seconds': (end_time - start_time).total_seconds(),
         }
 
         save_to_mongodb(
             data=result,
-            collection='eod_logs_snapshots'
+            collection='eod_logs'
         )
 
 
-def run_restaurant_eod(eod_date: date):
+def initiate_restaurant_eod(eod_date: date):
     all_restaurants = Restaurant.objects.all()
 
     with concurrent.futures.ThreadPoolExecutor(thread_name_prefix='DinifyEOD') as executor:
