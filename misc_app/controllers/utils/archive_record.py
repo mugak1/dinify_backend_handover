@@ -1,4 +1,5 @@
 import uuid
+from datetime import date
 from misc_app.controllers.con_class_utils import ConMiscUtils
 from dinify_backend.mongo_db import MONGO_DB
 
@@ -14,6 +15,8 @@ def archive_record(record_data: str, archive_collection: str):
     )
     for key, value in record_data.items():
         if isinstance(value, uuid.UUID):
+            record_data[key] = str(value)
+        elif isinstance(value, date):
             record_data[key] = str(value)
 
     # save the object in mongodb
