@@ -78,7 +78,7 @@ def establish_eod_status(eod_date: date):
                 }
             }
         )
-    
+
     end_time = datetime.now()
     result = {
         'date': eod_date,

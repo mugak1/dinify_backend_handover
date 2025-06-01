@@ -17,7 +17,6 @@ def snapshot_daily_orders(restaurant_id: str, eod_date: date) -> dict:
     start_time = datetime.now()
     with transaction.atomic():
         restaurant = Restaurant.objects.select_for_update().get(id=restaurant_id)
-        logging.info(f"Taking snapshot for {restaurant.name}: {restaurant_id}.")
         restaurant_orders = Order.objects.select_for_update().filter(
             restaurant=restaurant,
             eod_record_date=None,
@@ -53,13 +52,6 @@ def snapshot_daily_orders(restaurant_id: str, eod_date: date) -> dict:
         for x in restaurant_transactions:
             x.eod_record_date = eod_date
 
-        restaurant_orders.update(eod_record_date=eod_date)
-        restaurant_order_items.update(eod_record_date=eod_date)
-        DinifyTransaction.objects.bulk_update(
-            restaurant_transactions,
-            fields=['eod_record_date']
-        )
-
         # save each order to the archive i.e. mongo
         for order in restaurant_orders:
             data = SerializerPutOrder(order).data
@@ -93,6 +85,12 @@ def snapshot_daily_orders(restaurant_id: str, eod_date: date) -> dict:
                 archive_collection='archive_accounts'
             )
 
+        restaurant_orders.update(eod_record_date=eod_date)
+        restaurant_order_items.update(eod_record_date=eod_date)
+        DinifyTransaction.objects.bulk_update(
+            restaurant_transactions,
+            fields=['eod_record_date']
+        )
         # set new system date for the restaurant to allow new orders
         restaurant.system_date = eod_date + timedelta(days=1)
         restaurant.eod_restaurant_status = 4
@@ -134,8 +132,9 @@ def initiate_restaurant_eod(eod_date: date):
         # Wait for all threads to complete
         for future in concurrent.futures.as_completed(futures):
             try:
-                result = future.result()
+                # result = future.result()
                 # Optionally log result
-                logging.warning(f"\nResult: {result}\n")
+                # logging.warning(f"\nResult: {result}\n")
+                pass
             except Exception as exc:
                 logging.error(f"Thread generated an exception: {exc}")
