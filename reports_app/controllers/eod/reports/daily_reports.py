@@ -1,5 +1,5 @@
 import pandas
-from datetime import date
+from datetime import date, datetime
 from dinify_backend.mongo_db import MONGO_DB
 from dinify_backend.configss.string_definitions import (
     OrderStatus_Initiated,
@@ -247,4 +247,10 @@ def generate_restaurant_daily_report(restaurant_id: int, eod_date: date) -> None
     customer_behaviour = report_on_customer_behaviour(orders)
     report.update(customer_behaviour)
 
-    print(f"\n\n{restaurant_id}\n{report}\n\n")
+    # change the eod_date to a datetime object where the time is 23:59:59
+    eod_date = f"{eod_date}T23:59:59"
+    eod_date = datetime.fromisoformat(eod_date)
+    report['eod_date'] = eod_date
+
+    # save the report to MongoDB
+    MONGO_DB['analysis_restaurant_daily_reports'].insert_one(report)
