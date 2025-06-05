@@ -32,7 +32,8 @@ class SerializerListOrderItem(ModelSerializer):
             'discounted_price', 'savings',
             'options', 'cost_of_options',
             'actual_cost', 'status',
-            'deleted', 'deletion_reason'
+            'deleted', 'deletion_reason',
+            'time_last_updated'
         )
 
     def get_item(self, item):
@@ -56,7 +57,8 @@ class SerializerListGetOrder(ModelSerializer):
             'payment_status', 'order_status',
             'items', 'order_number', 'time_created', 'table_details',
             'order_remarks', 'count_items_served',
-            'total_paid', 'balance_payable', 'payment_status'
+            'total_paid', 'balance_payable', 'payment_status',
+            'time_last_updated'
         )
 
     def get_items(self, order):
@@ -88,7 +90,8 @@ class SerializerPublicOrderDetails(ModelSerializer):
             'payment_status', 'order_status',
             'items', 'order_number',
             'order_remarks',
-            'total_paid', 'balance_payable', 'payment_status'
+            'total_paid', 'balance_payable', 'payment_status',
+            'time_last_updated'
         )
 
     def get_items(self, order):
