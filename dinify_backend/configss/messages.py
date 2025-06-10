@@ -70,4 +70,4 @@ ERR_UPDATING_ITEM_STATUS_UNSUPPORTED_STATUS = 'The provided status is not suppor
 ERR_ORDER_ITEM_NOT_AVAILABLE = 'This order item is unavailable.'
 OK_UPDATED_ITEM_STATUS = 'The item status has been updated successfully.'
 
-EOD_IN_PROGRESS = 'The restaurant is currently processing the end of day tasks. Please wait for about 2 minutes.'  # noqa
+EOD_IN_PROGRESS = 'The restaurant is currently processing the End of Day tasks. Please wait for 5 minutes.'  # noqa
