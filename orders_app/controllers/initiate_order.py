@@ -1,7 +1,7 @@
 from django.db import transaction
 from restaurants_app.models import Restaurant, MenuItem, Table
 from django.core.exceptions import ObjectDoesNotExist
-from dinify_backend.configss.messages import MESSAGES
+from dinify_backend.configss.messages import MESSAGES, EOD_IN_PROGRESS
 from dinify_backend.configss.string_definitions import (
     OrderStatus_Initiated,
     OrderStatus_Pending,
@@ -68,7 +68,7 @@ def initiate_order(data):
         if restaurant.eod_restaurant_status in [1, 2]:
             return {
                 'status': 400,
-                'message': MESSAGES.get('EOD_IN_PROGRESS')
+                'message': EOD_IN_PROGRESS
             }
     except ObjectDoesNotExist:
         return {
