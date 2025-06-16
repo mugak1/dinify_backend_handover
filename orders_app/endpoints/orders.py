@@ -11,6 +11,7 @@ from orders_app.controllers.v2_initiate_order import (
     v2_initiate_order,
     handle_delete_items
 )
+from orders_app.serializers import SerializerListGetOrder
 from orders_app.controllers.rate import rate_and_review
 from orders_app.controllers.manage_order import update_order_status, update_item_status
 from orders_app.controllers.rate import block_review
@@ -215,4 +216,34 @@ class V2OrdersEndpoint(APIView):
                 reason=data.get('reason'),
                 user=request.user
             )
+            return Response(response, status=200)
+
+    def get(self, request, action):
+        """
+        This endpoint is used to get the order items for a given order
+        """
+        order_id = request.GET.get('order')
+
+        if action == 'details':
+            if order_id is None:
+                response = {
+                    'status': 400,
+                    'message': 'No order reference found'
+                }
+                return Response(response, status=200)
+
+            try:
+                order = Order.objects.get(id=order_id)
+                order_data = SerializerListGetOrder(order, many=False).data
+                response = {
+                    'status': 200,
+                    'message': 'Order retrieved successfully',
+                    'data': order_data
+                }
+            except Exception as error:
+                print(f"Error retrieving order: {error}")
+                response = {
+                    'status': 404,
+                    'message': 'Order not found'
+                }
             return Response(response, status=200)
