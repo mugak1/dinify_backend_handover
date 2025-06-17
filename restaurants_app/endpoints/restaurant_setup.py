@@ -52,6 +52,7 @@ from dinify_backend.configss.string_definitions import (
     OrderStatus_Pending,
     OrderStatus_Preparing,
     OrderStatus_Served,
+    OrderStatus_Paid,
     OrderStatus_Cancelled,
     OrderStatus_Refunded,
     PaymentStatus_Paid,
@@ -461,7 +462,7 @@ class RestaurantSetupEndpoint(APIView):
                     orm_filter['payment_status'] = PaymentStatus_Pending
 
                 if request.GET.get('status') == 'closed':
-                    orm_filter['order_status'] = OrderStatus_Served
+                    orm_filter['order_status__in'] = [OrderStatus_Served, OrderStatus_Paid]
                     orm_filter['payment_status'] = PaymentStatus_Paid
 
                 if request.GET.get('status') == 'all':
