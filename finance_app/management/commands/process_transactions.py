@@ -36,6 +36,7 @@ class Command(BaseCommand):
         )
 
         for txs in pending_transactions:
+            print(f"Processing transaction ID: {txs['id']} of type: {txs['transaction_type']}")
             if txs['transaction_type'] == TransactionType_OrderPayment:
                 OrderPaymentTransaction().process(transaction_id=txs['id'])
             elif txs['transaction_type'] == TransactionType_Subscription:
