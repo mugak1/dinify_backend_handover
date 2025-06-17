@@ -12,6 +12,8 @@ from dinify_backend.configss.string_definitions import (
     PaymentForm_Split, PaymentForm_Full,
     TransactionStatus_Success, TransactionStatus_Initiated,
     PaymentStatus_Paid,
+    OrderStatus_Paid,
+    OrderStatus_Served,
     OrderItemStatus_Served,
     AccountType_User,
     TransactionType_Tip,
@@ -213,8 +215,8 @@ class OrderPaymentTransaction:
 
                 if order.balance_payable <= clean_amount(Decimal(1.00)):
                     order.payment_status = PaymentStatus_Paid
-                    if order.order_status == OrderItemStatus_Served:
-                        order.order_status = "Paid"
+                    if order.order_status == OrderStatus_Served:
+                        order.order_status = OrderStatus_Paid
                 order.save()
 
                 if txs_record.tip_amount > Decimal(0.00):
