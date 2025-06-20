@@ -59,7 +59,12 @@ class OrderPaymentTransaction:
                 restaurant=order.restaurant
             )
 
-        transaction_amount = clean_amount(Decimal(order.actual_cost))
+        transaction_amount = clean_amount(Decimal(order.actual_cost)) if payment_form is PaymentForm_Full else clean_amount(Decimal(amount)) # noqa
+        if transaction_amount is None:
+            return {
+                'status': 400,
+                'message': 'Invalid transaction amount'
+            }
         tip_amount = clean_amount(Decimal(tip_amount))
 
         if payment_form is PaymentForm_Split:
@@ -67,19 +72,8 @@ class OrderPaymentTransaction:
             if amount is None:
                 return {
                     'status': 400,
-                    'message': 'Please provide the amount for the split payment.'
+                    'message': 'Specify an amount for the split payment.'
                 }
-
-        print(f"{str(order.pk)} - {amount} - {transaction_amount} - {payment_form}")
-        # return {
-        #     'status': 400,
-        #     'message': 'Blocking all payments for now.'
-        # }
-        if amount is None:
-            return {
-                'status': 400,
-                'message': 'Invalid amount'
-            }
 
         if payment_form is PaymentForm_Split:
             if transaction_amount >= clean_amount(Decimal(order.actual_cost)):
@@ -87,6 +81,23 @@ class OrderPaymentTransaction:
                     'status': 400,
                     'message': 'The split payment amount should be less than the order amount.'
                 }
+
+        print(f"{str(order.pk)} - {amount} - {transaction_amount} - {payment_form}")
+        return {
+            'status': 400,
+            'message': 'Blocking all payments for now.',
+            'data': {
+                'order': str(order.pk),
+                'amount': amount,
+                'transaction_amount': transaction_amount,
+                'payment_form': payment_form
+            }
+        }
+        if amount is None:
+            return {
+                'status': 400,
+                'message': 'Invalid amount'
+            }
 
         # determine of the verify otp
         check_otp = False
