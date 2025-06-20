@@ -63,8 +63,18 @@ class OrderPaymentTransaction:
         tip_amount = clean_amount(Decimal(tip_amount))
 
         if payment_form is PaymentForm_Split:
+            print("inside split payment form", amount)
             if amount is not None:
                 transaction_amount = clean_amount(Decimal(amount))
+
+        print(f"{str(order.pk)} - {amount} - {transaction_amount} - {payment_form}")
+
+        if payment_form is PaymentForm_Split:
+            if transaction_amount >= clean_amount(Decimal(order.actual_cost)):
+                return {
+                    'status': 400,
+                    'message': 'The split payment amount should be less than the order amount.'
+                }
 
         # determine of the verify otp
         check_otp = False

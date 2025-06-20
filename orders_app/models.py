@@ -101,7 +101,7 @@ class OrderItem(BaseModel):
 
     class Meta:
         db_table = 'order_items'
-        ordering = ['item__name']
+        ordering = ['-time_created', 'item__name']
 
 
 @receiver(pre_save, sender=Order)
