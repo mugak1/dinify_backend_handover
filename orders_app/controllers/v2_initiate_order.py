@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Optional, Union
 from django.db import transaction
 from django.db.models import Sum
+from pandas import options
 from restaurants_app.models import Restaurant, MenuItem, Table
 from django.core.exceptions import ObjectDoesNotExist
 from dinify_backend.configss.messages import MESSAGES
@@ -307,6 +308,28 @@ def update_order_amounts(order: Order) -> dict:
     order.save()
 
 
+def check_options_requirements(order_items: list) -> dict:
+    for item in order_items:
+        menu_item = MenuItem.objects.get(pk=item['item'])
+        item_options = menu_item.options
+        if item_options:
+            min_selections = item_options.get('min_selections', 0)
+            max_selections = item_options.get('max_selections', 0)
+            selected_options = item.get('options', [])
+
+            if len(selected_options) < min_selections:
+                return {
+                    'status': 400,
+                    'message': f"Item {menu_item.name} requires at least {min_selections} option selections."
+                }
+            if len(selected_options) > max_selections:
+                return {
+                    'status': 400,
+                    'message': f"Item {menu_item.name} allows a maximum of {max_selections} option selections."
+                }
+    return {'status': 200}
+
+
 def v2_initiate_order(
     restaurant_id: str,
     table_id: str,
@@ -358,6 +381,9 @@ def v2_initiate_order(
         }
 
     # for each order item, check if the options are applicable
+    options_check = check_options_requirements(order_items=items)
+    if options_check.get('status') != 200:
+        return options_check
 
     # check that the table does not have any other ongoing order
     table = Table.objects.get(pk=table_id)

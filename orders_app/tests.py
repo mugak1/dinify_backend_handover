@@ -34,7 +34,8 @@ from orders_app.controllers.v2_initiate_order import (
     add_order_item,
     update_order_amounts,
     v2_initiate_order,
-    handle_add_order_items
+    handle_add_order_items,
+    check_options_requirements
 )
 
 
@@ -233,6 +234,38 @@ class TestOrderFunctions(TestCase):
         self.assertEqual(effective_unit_price['status'], 200)
         self.assertEqual(effective_unit_price['price'], 3500)
 
+    def test_check_options_requirement(self):
+        """
+        test the options requirement for a menu item
+        """
+        menu_item_without_options = MenuItem.objects.get(name=TEST_MENU_ITEM1_NAME)
+        menu_item_with_options = MenuItem.objects.get(name=TEST_OPTION_MENU_ITEM_NAME)
+
+        order_items = [{
+            "item": str(menu_item_without_options.pk),
+            "quantity": 2,
+            "options": {},
+            "extras": []
+        }]
+
+        result = check_options_requirements(order_items)
+        self.assertEqual(result['status'], 200)
+
+        order_items.append({
+            "item": str(menu_item_with_options.pk),
+            "quantity": 1,
+            "options": {},
+            "extras": []
+        })
+        result = check_options_requirements(order_items)
+        self.assertEqual(result['status'], 400)
+
+        order_items[1]['options'] = {
+            0: [],
+            1: []
+        }
+        result = check_options_requirements(order_items)
+        self.assertEqual(result['status'], 200)
     def test_add_order_item(self):
         order_record = Order.objects.get(
             table=Table.objects.get(number=TEST_TABLE_NUMBER3)
@@ -309,13 +342,25 @@ class TestOrderFunctions(TestCase):
                 'choice': 1,
                 'extras': [str(menu_item1.pk), str(menu_item2.pk)]
             },
+        ]
+        response = v2_initiate_order(
+            restaurant_id=str(restaurant.pk),
+            table_id=str(table.pk),
+            items=items
+        )
+        self.assertEqual(response['status'], 400)
+
+        items = [
+            {
+                'item': str(menu_item1.pk),
+                'quantity': 2
+            },
             {
                 'item': str(MenuItem.objects.get(name=TEST_OPTION_MENU_ITEM_NAME).pk),
                 'quantity': 1,
-                'option': 0,
-                'choice': 1,
+                'options': {0: [1]},
                 'extras': [str(menu_item1.pk), str(menu_item2.pk)]
-            }
+            },
         ]
         response = v2_initiate_order(
             restaurant_id=str(restaurant.pk),
@@ -323,6 +368,8 @@ class TestOrderFunctions(TestCase):
             items=items
         )
         self.assertEqual(response['status'], 200)
+
+
 
     def test_handle_add_order_items(self):
         menu_item1 = MenuItem.objects.get(name=TEST_MENU_ITEM1_NAME)
@@ -341,8 +388,8 @@ class TestOrderFunctions(TestCase):
             {
                 'item': str(MenuItem.objects.get(name=TEST_OPTION_MENU_ITEM_NAME).pk),
                 'quantity': 1,
-                'option': 0,
-                'choice': 1,
+                'options': {0: [], 'choice': 1},
+                # 'choice': 1,
                 'extras': [str(menu_item1.pk), str(menu_item2.pk)]
             }
         ]

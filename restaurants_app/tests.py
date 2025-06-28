@@ -107,6 +107,12 @@ def seed_menu_items():
                         'selectable': True,
                         'choices': ['oo1', 'oo2', 'oo3'],
                         'cost': 1100
+                    },
+                    {
+                        'name': 'Option 2',
+                        'selectable': True,
+                        'choices': ['oo1', 'oo2', 'oo3'],
+                        'cost': 1500
                     }
                 ]
             }
