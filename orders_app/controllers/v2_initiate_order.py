@@ -2,7 +2,6 @@ from datetime import datetime
 from typing import Optional, Union
 from django.db import transaction
 from django.db.models import Sum
-from pandas import options
 from restaurants_app.models import Restaurant, MenuItem, Table
 from django.core.exceptions import ObjectDoesNotExist
 from dinify_backend.configss.messages import MESSAGES

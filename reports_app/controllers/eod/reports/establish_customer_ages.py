@@ -16,7 +16,14 @@ def establish_customer_ages() -> dict:
         customer_id = order.get('customer')
         if customer_id is not None:
             customer = MONGO_DB['archive_users'].find_one({"id": customer_id})
-            customer_reg_time = customer.get('time_created')['timestamp']
+            if customer is None:
+                continue
+            customer_reg_time = None
+
+            customer_reg_time = customer.get('time_created')
+            if customer_reg_time is None:
+                customer_reg_time = customer.get('date_joined')
+            customer_reg_time = customer_reg_time['timestamp']
             order_start_time = order.get('time_created')['timestamp']
 
             customer_age_at_order = (order_start_time - customer_reg_time).days

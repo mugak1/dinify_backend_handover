@@ -43,7 +43,7 @@ class Command(BaseCommand):
         # 1. block incoming orders
         #  for each restaurant, take a snapshot of the values as at the moment
         # 2. Confirm daily orders
-        # Restaurant.objects.all().update(eod_restaurant_status=1)
+        Restaurant.objects.all().update(eod_restaurant_status=1)
 
         # return
         SysActivityConfig.objects.update_or_create(
@@ -51,7 +51,7 @@ class Command(BaseCommand):
             defaults={'config_integer_value': 2}
         )
         # 3a. Set new system business date at restaurant level
-        # initiate_restaurant_eod(eod_date)
+        initiate_restaurant_eod(eod_date)
 
         # 3b. Set new system business date at system level
         # system is typically open for orders at this stage

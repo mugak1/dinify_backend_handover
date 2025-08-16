@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from reports_app.controllers.restaurant.dashboard import (
     generate_restaurant_dashboard_details,
-    get_restaurant_dashboard_1    
+    get_restaurant_dashboard_1
 )
 from reports_app.controllers.restaurant.sales import (
     generate_restaurant_sales_summary,
