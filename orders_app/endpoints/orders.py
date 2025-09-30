@@ -160,7 +160,12 @@ class V2OrdersEndpoint(APIView):
         if action == 'initiate':
             data = request.data
             source = data.get('source')
-            user = request.user.pk
+            user = request.user
+            try:
+                user = request.user.pk
+            except Exception:
+                user = None
+
             customer = None
             created_by = None
 

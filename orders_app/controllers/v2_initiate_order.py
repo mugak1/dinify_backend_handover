@@ -457,6 +457,7 @@ def v2_initiate_order(
         }
 
     # initiate the order object
+    customer = customer.pk if customer else None
     order_data = {
         'restaurant': restaurant_id,
         'table': table_id,
@@ -474,6 +475,7 @@ def v2_initiate_order(
         'customer': customer,
         'created_by': created_by
     }
+
 
     order_record = SerializerPutOrder(data=order_data)
     if not order_record.is_valid():
