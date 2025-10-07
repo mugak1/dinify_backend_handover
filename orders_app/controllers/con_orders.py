@@ -112,6 +112,8 @@ class ConOrder:
 
         if options is not None:
             for key, value in options.items():
+                if None in value:
+                    value.pop(value.index(None))
                 if not isinstance(key, int):
                     try:
                         key = int(key)
@@ -120,6 +122,7 @@ class ConOrder:
                             'status': 400,
                             'message': f'Invalid options selected for item, {menu_item.name}'
                         }
+
                 if key < 0 or any(v < 0 for v in value):
                     return {
                         'status': 400,
@@ -303,8 +306,7 @@ class ConOrder:
         # check if the item already exists in the order so that we just update the quantity
         existing_item = ConOrder.determine_existing_order_item(item=item, order_id=order_id)
         if existing_item:
-            ...
-            # return update_item_quantity(item=item, order_id=order_id)
+            return ConOrder.update_item_quantity(item=item, order_id=order_id)
 
         # handling multiple options
         selected_options = []
@@ -322,6 +324,9 @@ class ConOrder:
                         choices = option_detail.get('choices')
                         option_name = option_detail['name']
                         if choices is not None:
+                            if None in value:
+                                value.pop(value.index(None))
+
                             names = ''
                             if len(choices) > 0:
                                 names += ', '.join([choices[v] for v in value if v < len(choices)])
@@ -507,7 +512,6 @@ class ConOrder:
         order_record = SerializerPutOrder(data=order_data)
         if not order_record.is_valid():
             error_message = ""
-            print(order_record.errors)
             for _, value in order_record.errors.items():
                 error_message += f"{', '.join(value)}\n"
             return {
