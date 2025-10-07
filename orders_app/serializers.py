@@ -52,7 +52,7 @@ class SerializerListOrderItem(ModelSerializer):
 
     def get_extra_items(self, item):
         extras = []
-        extra_items = OrderItem.objects.filter(order_item=item)
+        extra_items = OrderItem.objects.filter(parent_item=item)
         for extra in extra_items:
             extras.append({
                 'id': extra.pk,
