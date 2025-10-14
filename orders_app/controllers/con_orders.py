@@ -44,6 +44,38 @@ class ConOrder:
         return {'status': 200}
 
     @staticmethod
+    def construct_option_items(item: dict) -> list:
+        menu_item = MenuItem.objects.get(pk=item['item'])
+        # handling multiple options
+        selected_options = []
+        item_options = item.get('options')
+        if item_options is not None:
+            if isinstance(item_options, dict):
+                for key, value in item_options.items():
+                    index = None
+                    try:
+                        index = int(key)
+                    except ValueError:
+                        pass
+                    if isinstance(index, int):
+                        option_detail = menu_item.options.get('options')[index]
+                        choices = option_detail.get('choices')
+                        option_name = option_detail['name']
+                        names_of_choices = ''
+                        if choices is not None:
+                            if None in value:
+                                value.pop(value.index(None))
+                            if len(choices) > 0:
+                                names_of_choices += ', '.join([choices[v] for v in value if v < len(choices)])
+                        option_cost = option_detail['cost']
+                        selected_options.append({
+                            'name': option_name,
+                            'cost': option_cost,
+                            'choices': names_of_choices
+                        })
+        return selected_options
+
+    @staticmethod
     def any_present_ongoing_order(table: Table) -> dict:
         # TODO check if this is an ongoing order
         present_orders = Order.objects.values('id', 'eod_record_date').filter(
@@ -85,24 +117,41 @@ class ConOrder:
             item=menu_item,
             deleted=False
         )
-
-        if existing_item.exists():
+        if existing_item.count() > 0:
+            existing_item = existing_item[0]
             extras = item.get('extras')
-            existing_item_extras = OrderItem.objects.filter(parent_item=existing_item[0])
+            existing_item_extras = OrderItem.objects.filter(parent_item=existing_item)
+            item_options = ConOrder.construct_option_items(item=item)
+            existing_options = existing_item.options
 
-            if existing_item_extras.count() == 0:
-                if extras is None:
-                    return True
-                if len(extras) == 0:
-                    return True
-
-            if len(extras) == existing_item_extras.count():
-                for existing_item in existing_item_extras:
-                    if str(existing_item.item.pk) not in extras:
-                        return False
+            # no extras and no options
+            if existing_item_extras.count() == 0 and len(item_options) == 0:
                 return True
 
-            options = item.get('options')
+            # only extras but no item_options
+            if existing_item_extras.count() > 0 and len(item_options) == 0:
+                print('checking only extras with no items')
+                if len(extras) == existing_item_extras.count():
+                    for existing_item in existing_item_extras:
+                        if str(existing_item.item.pk) not in extras:
+                            return False
+                    return True
+
+            # only options but no extras
+            if existing_item_extras.count() == 0 and len(item_options) > 0:
+                if existing_options == item_options:
+                    return True
+                return False
+
+            # both extras and options
+            if existing_item_extras.count() > 0 and len(item_options) > 0:
+                if len(extras) == existing_item_extras.count():
+                    for existing_item in existing_item_extras:
+                        if str(existing_item.item.pk) not in extras:
+                            return False
+                    if existing_options == item_options:
+                        return True
+
         return False
 
     @staticmethod
@@ -309,32 +358,8 @@ class ConOrder:
             return ConOrder.update_item_quantity(item=item, order_id=order_id)
 
         # handling multiple options
-        selected_options = []
+        selected_options = ConOrder.construct_option_items(item=item)
         item_options = item.get('options')
-        if item_options is not None:
-            if isinstance(item_options, dict):
-                for key, value in item_options.items():
-                    index = None
-                    try:
-                        index = int(key)
-                    except ValueError:
-                        pass
-                    if isinstance(index, int):
-                        option_detail = menu_item.options.get('options')[index]
-                        choices = option_detail.get('choices')
-                        option_name = option_detail['name']
-                        names_of_choices = ''
-                        if choices is not None:
-                            if None in value:
-                                value.pop(value.index(None))
-                            if len(choices) > 0:
-                                names_of_choices += ', '.join([choices[v] for v in value if v < len(choices)])
-                        option_cost = option_detail['cost']
-                        selected_options.append({
-                            'name': option_name,
-                            'cost': option_cost,
-                            'choices': names_of_choices
-                        })
 
         price_selection = ConOrder.determine_effective_unit_price(menu_item=menu_item, options=item_options)
         if price_selection.get('status') != 200:
