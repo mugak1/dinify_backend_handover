@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 from django.test import TestCase
+from decouple import config
 from users_app.models import User
 from users_app.tests import TEST_PHONE, seed_user
 from finance_app.models import DinifyAccount, DinifyTransaction
@@ -90,7 +91,7 @@ class FinanceAppTestFunctions(TestCase):
                 order=order,
                 tip_amount=0,
                 payment_mode=PaymentMode_MobileMoney,
-                msisdn='256706087495'
+                msisdn=config('TEST_MSISDN')
             )
             # self.assertEqual(result['status'], 200)
             # self.assertEqual(result['message'], OK_ORDER_PAYMENT_INITIATED)
@@ -149,20 +150,20 @@ class FinanceAppTestFunctions(TestCase):
             order=order,
             tip_amount=0,
             payment_mode=PaymentMode_MobileMoney,
-            msisdn='256706087495'
+            msisdn=config('TEST_MSISDN')
         )
         self.assertEqual(result['status'], 400)
 
         # ask for the OTP
         OtpManager().resend_otp(
             identification='msisdn',
-            identifier='256706087495'
+            identifier=config('TEST_MSISDN')
         )
         result = OrderPaymentTransaction().initiate(
             order=order,
             tip_amount=0,
             payment_mode=PaymentMode_MobileMoney,
-            msisdn='256706087495',
+            msisdn=config('TEST_MSISDN'),
             otp='1234'
         )
         # print(f'\n\n{result}\n\n')
@@ -200,7 +201,7 @@ class FinanceAppTestFunctions(TestCase):
             transaction_platform='web',
             payment_mode=PaymentMode_MobileMoney,
             user=None,
-            msisdn='256706087495'
+            msisdn=config('TEST_MSISDN')
         )
         print(result)
 
@@ -214,7 +215,7 @@ class FinanceAppTestFunctions(TestCase):
             transaction_platform='web',
             payment_mode=PaymentMode_MobileMoney,
             user=None,
-            msisdn='256706087495'
+            msisdn=config('TEST_MSISDN')
         )
         print(result)
         self.assertEqual(result['status'], 200)
@@ -246,7 +247,7 @@ class FinanceAppTestFunctions(TestCase):
             transaction_platform='web',
             payment_mode=PaymentMode_Ova,
             user=None,
-            msisdn='256706087495'
+            msisdn=config('TEST_MSISDN')
         )
         self.assertEqual(result['status'], 200)
 
@@ -274,7 +275,7 @@ class FinanceAppTestFunctions(TestCase):
             restaurant_id=restaurant.id,
             payment_mode=PaymentMode_MobileMoney,
             user=user,
-            msisdn='256706087495',
+            msisdn=config('TEST_MSISDN'),
             amount=50000
         )
         print(result)

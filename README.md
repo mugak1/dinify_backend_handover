@@ -23,13 +23,14 @@ xxx_app
 - ConXXX - Controller class.
 - SerializerXXX - Serializer class.
 
-
 # Background tasks
 - Determine customer who has made the order | `determine-customers`
 - Verify DPO tokens | `verify-dpo-tokens`
 - Processing Yo responses | `process_yo_responses`
 - Check transaction status with aggregator | `check_transaction_statuses`
 - Processing transactions | `process_transactions`
+- Sending messages | `send_messages`
+- more commands can be found in management/commands directories throughout the apps. use some of them with caution since they are meant for operational maintenance.
 
 # TODO
 - Refactor serializer files to smaller manageable ones.
@@ -37,3 +38,5 @@ xxx_app
 - Refactor to adopt class implementations for the various functions. Apart from misc/controller functions, many of these functions are likely in the same files or in the same controller folders.
 - Refactor to have a single file for string definitions. This may be a huge file but best to keep all strings in one location.
 - Refactor to have single file for all definitions of non-variable dependent messages.
+- Ensure all amount calculations are in Decimal
+- More TODOs are within the various files, most could be for O&M, performance improvements and code readability improvements.

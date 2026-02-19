@@ -15,84 +15,83 @@ class PaymentIntegrationsTestFunctions(TestCase):
     the test functions for the payment integrations app
     """
     # def test_verify_token(self):
-    #     dpo_response = DpoIntegration(
-    #         amount=None,
-    #         currency=None,
-    #         msisdn=None,
-    #         transaction_reference=None,
-    #         timestamp=None,
-    #         dpo_transaction_token="CF63B58B-C2C7-473F-A938-50FA956DB346"
-    #     ).verify_token()
-    #     self.assertEquals(dpo_response['status'], 200)
+        # dpo_response = DpoIntegration(
+        #     amount=None,
+        #     currency=None,
+        #     msisdn=None,
+        #     transaction_reference=None,
+        #     timestamp=None,
+        #     dpo_transaction_token=''
+        # ).verify_token()
+        # self.assertEquals(dpo_response['status'], 200)
 
     def otest_pesapal_authenticate(self):
         pesapal_response = Pesapal().authenticate()
         self.assertEquals(pesapal_response['status'], 200)
 
     def test_yo(self):
-        # momo_collect = YoIntegration().momo_collect(
-        #     transaction_amount=100000,
-        #     msisdn='256776117403',
-        #     transaction_id=str(uuid.uuid4())
-        # )
-        # self.assertTrue(momo_collect)
+        momo_collect = YoIntegration().momo_collect(
+            transaction_amount=100000,
+            msisdn=config('TEST_MSISDN'),
+            transaction_id=str(uuid.uuid4())
+        )
+        self.assertTrue(momo_collect)
 
-        # momo_check_transaction = YoIntegration().momo_check_transaction(
-        #     yo_transaction_reference='0BOvvK1loqGauhReTUfzH7MlVVmSALv6RpXtI0ZLYLIUTBdiXhOx0FIgmMlLTuxqc372b6adb2ee2084d56f73966afe38a0'
-        # )
-        # self.assertTrue(momo_check_transaction)
+        momo_check_transaction = YoIntegration().momo_check_transaction(
+            yo_transaction_reference=''
+        )
+        self.assertTrue(momo_check_transaction)
 
-        # momo_disburse = YoIntegration().momo_disburse(
-        #     transaction_amount=100,
-        #     msisdn='256706087495',
-        #     transaction_id=str(uuid.uuid4())
-        # )
-        # self.assertTrue(momo_disburse)
+        momo_disburse = YoIntegration().momo_disburse(
+            transaction_amount=100,
+            msisdn=config('TEST_MSISDN'),
+            transaction_id=str(uuid.uuid4())
+        )
+        self.assertTrue(momo_disburse)
 
-        # bank_create_account = YoIntegration().bank_create_verified_account(
-        #     arg_account_name='ESAU  LWANGA',
-        #     arg_account_number='9030017868518',
-        #     arg_bank_name='STANBIC BANK UGANDA LTD',
-        #     arg_address_line1='KIRA',
-        #     arg_address_line2='KAMPALA',
-        #     arg_city='KAMPALA',
-        #     arg_country='UGANDA',
-        # )
-        # self.assertTrue(bank_create_account)
+        bank_create_account = YoIntegration().bank_create_verified_account(
+            arg_account_name='',
+            arg_account_number='',
+            arg_bank_name='',
+            arg_address_line1='',
+            arg_address_line2='',
+            arg_city='',
+            arg_country='',
+        )
+        self.assertTrue(bank_create_account)
 
-        # bank_disburse = YoIntegration().bank_disburse(
-        #     arg_transaction_id=str(uuid.uuid4()),
-        #     arg_amount=100000,
-        #     arg_account_number='9030017868518',
-        #     arg_account_identifier='320722549d1751cf3f247855f937b982',
-        #     arg_transfer_type='RTGS'
-        # )
-        # self.assertTrue(bank_disburse)
+        bank_disburse = YoIntegration().bank_disburse(
+            arg_transaction_id=str(uuid.uuid4()),
+            arg_amount=100000,
+            arg_account_number='',
+            arg_account_identifier='',
+            arg_transfer_type=''
+        )
+        self.assertTrue(bank_disburse)
 
-        # bank_check_disbursement = YoIntegration().bank_check_disbursement_status(
-        #     # arg_settlement_id='d81f9c1be2e08964bf9f24b15f0e4900'
-        #     arg_settlement_id='0bb4aec1710521c12ee76289d9440817'
-        # )
-        # self.assertTrue(bank_check_disbursement)
+        bank_check_disbursement = YoIntegration().bank_check_disbursement_status(
+            arg_settlement_id=''
+        )
+        self.assertTrue(bank_check_disbursement)
 
-        # send_sms = YoIntegration().send_sms(
-        #     to=config('TEST_SMS_RECIPIENT'),
-        #     message='Dinify SMS test'
-        # )
-        # self.assertTrue(send_sms)
+        send_sms = YoIntegration().send_sms(
+            to=config('TEST_SMS_RECIPIENT'),
+            message='Dinify SMS test'
+        )
+        self.assertTrue(send_sms)
 
-    # def test_dpo(self):
-    #     dpo_transaction_token = 'CF63B58B-C2C7-473F-A938-50FA956DB346'
-    #     create_token = DpoIntegration().create_token(
-    #         amount=50000,
-    #         currency='UGX',
-    #         timestamp=str(timezone.now()),
-    #         transaction_reference=str(uuid.uuid4())
-    #     )
-    #     self.assertIsNotNone(create_token)
+    def test_dpo(self):
+        dpo_transaction_token = ''
+        create_token = DpoIntegration().create_token(
+            amount=50000,
+            currency='UGX',
+            timestamp=str(timezone.now()),
+            transaction_reference=str(uuid.uuid4())
+        )
+        self.assertIsNotNone(create_token)
 
-    #     verify_token = DpoIntegration().verify_token(
-    #         transaction_reference=str(uuid.uuid4()),
-    #         dpo_token=dpo_transaction_token
-    #     )
-    #     self.assertIsNotNone(verify_token)
+        verify_token = DpoIntegration().verify_token(
+            transaction_reference=str(uuid.uuid4()),
+            dpo_token=dpo_transaction_token
+        )
+        self.assertIsNotNone(verify_token)

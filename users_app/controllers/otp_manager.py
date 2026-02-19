@@ -41,15 +41,8 @@ class OtpManager:
             YoIntegration().send_sms(to=msisdn, message=otp_message)
 
             # send OTP email as well
-            # TODO remove from production code, move email values to an env file
             if config('ENV') in ['dev', 'test']:
-                recipients = [
-                    'esau@falconexcellence.com',
-                    'lemndev@gmail.com',
-                    'laura@falconexcellence.com',
-                    'anthony@falconexcellence.com',
-                    'akampamugambe23@gmail.com'
-                ]
+                recipients = [user.email] if user and user.email else []
 
                 otp_email_message = f"{otp_message} OTP is valid for 5 minutes."
 
