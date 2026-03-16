@@ -6,13 +6,17 @@ from dataclasses import dataclass
 from misc_app.controllers.determine_telecom import determine_telecom
 
 
-@ dataclass
+@dataclass
 class Pesapal:
-    pesapal_domain = 'https://cybqa.pesapal.com/pesapalv3/api'
-    HEADERS = {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-    }
+    pesapal_domain: str = 'https://cybqa.pesapal.com/pesapalv3/api'
+    HEADERS: dict = None
+
+    def __post_init__(self):
+        if self.HEADERS is None:
+            self.HEADERS = {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+            }
 
     def authenticate(self):
         URL = f"{self.pesapal_domain}/Auth/RequestToken"
@@ -30,7 +34,3 @@ class Pesapal:
         print(f"\nResponse: {response}\n")
         response['status'] = 200
         return response
-    
-
-
-

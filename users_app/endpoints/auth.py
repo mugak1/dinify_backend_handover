@@ -7,6 +7,18 @@ from users_app.controllers.reset_password import reset_password, initiate_passwo
 from users_app.controllers.change_password import change_password
 from misc_app.controllers.decode_auth_token import decode_jwt_token
 from users_app.controllers.otp_manager import OtpManager
+from users_app.throttles import LoginThrottle, OtpThrottle, PasswordResetThrottle
+
+
+# Map action names to their throttle classes.
+# Actions not listed here get no extra throttling.
+_ACTION_THROTTLES = {
+    'login': [LoginThrottle],
+    'verify-otp': [OtpThrottle],
+    'resend-otp': [OtpThrottle],
+    'initiate-reset-password': [PasswordResetThrottle],
+    'reset-password': [PasswordResetThrottle],
+}
 
 
 class UsersAuthenticationEndpoint(APIView):
@@ -14,6 +26,12 @@ class UsersAuthenticationEndpoint(APIView):
     endpoint for authenticating users
     """
     permission_classes = (AllowAny,)
+
+    def get_throttles(self):
+        """Return throttle instances based on the requested action."""
+        action = self.kwargs.get('action', '')
+        throttle_classes = _ACTION_THROTTLES.get(action, [])
+        return [t() for t in throttle_classes]
 
     def post(self, request, action):
         """

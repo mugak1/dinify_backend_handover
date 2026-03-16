@@ -27,11 +27,13 @@ from misc_app.controllers.flag_doc_as_processed import flag_doc_as_processed
 
 @dataclass
 class DpoIntegration:
-    API_URL = 'https://secure.3gdirectpay.com/API/v6/'
-    PAYMENT_URL = 'https://secure.3gdirectpay.com/payv3.php?ID='
-    COMPANY_TOKEN = config('DPO_COMPANY_TOKEN')
-    SERVICE_TYPE = config('DPO_SERVICE_TYPE')
-    REDIRECT_URL = 'https://dinify-web'
+    API_URL: str = 'https://secure.3gdirectpay.com/API/v6/'
+    PAYMENT_URL: str = 'https://secure.3gdirectpay.com/payv3.php?ID='
+    REDIRECT_URL: str = 'https://dinify-web'
+
+    def __post_init__(self):
+        self.COMPANY_TOKEN = config('DPO_COMPANY_TOKEN')
+        self.SERVICE_TYPE = config('DPO_SERVICE_TYPE')
 
     def interprete_response(self, request_type: str, request_body: dict, dpo_response: str):
         response_xml_object = ET.fromstring(dpo_response.text)
