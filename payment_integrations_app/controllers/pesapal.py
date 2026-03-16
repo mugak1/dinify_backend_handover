@@ -1,9 +1,12 @@
+import logging
 import requests
 import json
-from typing import Optional
 from decouple import config
 from dataclasses import dataclass
-from misc_app.controllers.determine_telecom import determine_telecom
+
+logger = logging.getLogger(__name__)
+
+REQUEST_TIMEOUT = 30  # seconds
 
 
 @dataclass
@@ -24,13 +27,16 @@ class Pesapal:
             'consumer_key': config('PESAPAL_CONSUMER_KEY'),
             'consumer_secret': config('PESAPAL_CONSUMER_SECRET')
         }
-        print(URL, post_body)
-        response = requests.post(
-            URL,
-            data=json.dumps(post_body),
-            headers=self.HEADERS,
-        )
-        response = response.json()
-        print(f"\nResponse: {response}\n")
+        try:
+            response = requests.post(
+                URL,
+                data=json.dumps(post_body),
+                headers=self.HEADERS,
+                timeout=REQUEST_TIMEOUT,
+            )
+            response = response.json()
+        except requests.RequestException as exc:
+            logger.error("Pesapal authentication failed: %s", exc)
+            return {'status': 500, 'message': 'Pesapal authentication request failed'}
         response['status'] = 200
         return response

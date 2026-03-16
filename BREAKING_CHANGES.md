@@ -178,3 +178,39 @@ Response: { "access": "<new-access-token>" }
    `403`, `429`) instead of assuming all responses are `200`.
 4. **Token refresh:** Optionally use `/users/auth/token/refresh/` for session
    extension.
+
+---
+
+## Remaining external dependencies and risks
+
+### CI limitations
+- **SQLite-backed CI**: `misc_app` and `restaurants_app` tests use Django
+  `JSONField.__contains` lookups which require PostgreSQL. These tests cannot
+  run in CI until a PostgreSQL service is added to the GitHub Actions workflow.
+- **`finance_app` tests** have a bug (`resend_otp(identification='msisdn')`
+  leaves `user=None` then tries `user.phone_number`) and call internal payment
+  controllers that trigger live Yo API calls. Not CI-ready without fixing and
+  mocking.
+
+### Payment provider behavior (cannot be verified from this repo)
+- **Yo Uganda sandbox** URL is hardcoded (`sandbox.yo.co.ug`). Production URL
+  must be switched via code change or env var before go-live.
+- **Pesapal sandbox** URL is hardcoded (`cybqa.pesapal.com`). Same concern.
+- **DPO redirect URL** is `https://dinify-web` — incomplete/placeholder.
+- **SMS gateway** credentials are passed in URL query strings
+  (`yo_integrations.py:send_sms`, `messenger.py:send_sms`). This is the
+  vendor's API design, but credentials may appear in HTTP access logs.
+
+### Money/Decimal handling
+- All 19 monetary fields across `orders_app` and `restaurants_app` use
+  `FloatField` instead of `DecimalField`. Float arithmetic is used throughout
+  order calculations. This risks rounding errors on large orders or sums.
+  Fixing requires a database migration and serializer audit — too invasive
+  for a stabilization pass.
+
+### Permissions
+- `OrderPaymentsEndpoint` uses `AllowAny` — intentional for anonymous web
+  payments but should be reviewed for whether unauthenticated users should be
+  able to initiate payments.
+- `MsisdnLookupEndpoint` uses `AllowAny` — may allow user enumeration by
+  phone number. Needs product decision.

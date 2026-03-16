@@ -25,4 +25,4 @@ jobs:
 
       - name: Run tests
         run: |
-          python -m django test users_app orders_app --settings=dinify_backend.test_settings --verbosity=2
+          python -m django test users_app orders_app payment_integrations_app --settings=dinify_backend.test_settings --verbosity=2
