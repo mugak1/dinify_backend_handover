@@ -2,7 +2,7 @@ import logging
 from typing import Optional
 from datetime import timedelta
 from django.db import transaction
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from restaurants_app.models import Restaurant
 from users_app.models import User
 from finance_app.models import DinifyAccount, DinifyTransaction
@@ -91,7 +91,8 @@ class SubscriptionPaymentTransaction:
 
         if payment_mode == PaymentMode_MobileMoney:
             collection = YoIntegration().momo_collect(
-                transaction_amount=int(transaction_amount),
+                # UGX has no subunits; round to whole units for the gateway
+                transaction_amount=int(transaction_amount.quantize(Decimal('1'), rounding=ROUND_HALF_UP)),
                 msisdn=msisdn,
                 transaction_id=str(subscription_payment.id)
             )
@@ -114,7 +115,8 @@ class SubscriptionPaymentTransaction:
 
         if payment_mode == PaymentMode_Card:
             dpo_token = DpoIntegration().create_token(
-                amount=int(transaction_amount),
+                # UGX has no subunits; round to whole units for the gateway
+                amount=int(transaction_amount.quantize(Decimal('1'), rounding=ROUND_HALF_UP)),
                 currency=account.account_currency,
                 transaction_reference=str(subscription_payment.id),
                 timestamp=str(subscription_payment.time_created),

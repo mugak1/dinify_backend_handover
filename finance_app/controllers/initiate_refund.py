@@ -1,5 +1,5 @@
 import logging
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from orders_app.models import Order
 from finance_app.models import DinifyAccount, DinifyTransaction
 from users_app.models import User
@@ -51,7 +51,8 @@ def initiate_refund(
         # send a mobile money prompt
         flutterwave_response = Flutterwave(
             payment_channel=payment_mode,
-            amount=int(amount),
+            # UGX has no subunits; round to whole units for the gateway
+            amount=int(amount.quantize(Decimal('1'), rounding=ROUND_HALF_UP)),
             email=order.customer.email if order.customer else None,
             transaction_id=str(refund_transaction.id),
             msisdn=order.customer.phone_number,

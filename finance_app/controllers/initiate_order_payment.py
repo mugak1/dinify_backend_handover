@@ -1,6 +1,6 @@
 import logging
 from typing import Optional
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from misc_app.controllers.secretary import make_notification_for_new_entry
 from users_app.models import User
 from orders_app.models import Order
@@ -51,12 +51,12 @@ def initiate_order_payment(
             restaurant=order.restaurant
         )
 
-    transaction_amount = clean_amount(Decimal(order.actual_cost))
-    tip_amount = clean_amount(Decimal(tip_amount))
+    transaction_amount = clean_amount(Decimal(str(order.actual_cost)))
+    tip_amount = clean_amount(Decimal(str(tip_amount)))
 
     if payment_form is PaymentForm_Split:
         if amount is not None:
-            transaction_amount = clean_amount(Decimal(amount))
+            transaction_amount = clean_amount(Decimal(str(amount)))
 
     # determine of the verify otp
     check_otp = False
@@ -153,7 +153,8 @@ def initiate_order_payment(
         #     }
         # YO integration
         collection = YoIntegration().momo_collect(
-            transaction_amount=int(amount_collectable),
+            # UGX has no subunits; round to whole units for the gateway
+            transaction_amount=int(amount_collectable.quantize(Decimal('1'), rounding=ROUND_HALF_UP)),
             msisdn=msisdn,
             transaction_id=str(order_payment.id)
         )
@@ -176,7 +177,8 @@ def initiate_order_payment(
 
     if payment_mode == PaymentMode_Card and not manual_payment:
         dpo_token = DpoIntegration(
-            amount=int(amount_collectable),
+            # UGX has no subunits; round to whole units for the gateway
+            amount=int(amount_collectable.quantize(Decimal('1'), rounding=ROUND_HALF_UP)),
             currency=account.account_currency,
             msisdn=msisdn,
             transaction_reference=str(order_payment.id),

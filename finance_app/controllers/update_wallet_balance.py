@@ -13,11 +13,11 @@ from dinify_backend.configss.string_definitions import (
 def update_wallet_balance(
     id: str,
     mode: str,
-    credit: Optional[Decimal] = Decimal(0.0),
-    debit: Optional[Decimal] = Decimal(0.0),
-    credit_charge: Optional[Decimal] = Decimal(0.0),
-    debit_charge: Optional[Decimal] = Decimal(0.0),
-    predebit: Optional[Decimal] = Decimal(0.0),
+    credit: Optional[Decimal] = Decimal('0.00'),
+    debit: Optional[Decimal] = Decimal('0.00'),
+    credit_charge: Optional[Decimal] = Decimal('0.00'),
+    debit_charge: Optional[Decimal] = Decimal('0.00'),
+    predebit: Optional[Decimal] = Decimal('0.00'),
 ) -> dict:
     """
     - Should be called in an atomic transaction

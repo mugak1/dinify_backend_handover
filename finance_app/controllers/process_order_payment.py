@@ -29,11 +29,11 @@ def process_order_payment(
         # TODO check if the cumulative amount paid is equal to the order amount
         total_paid = order.total_paid
         total_paid += transaction_record.transaction_amount
-        balance_payable = clean_amount(Decimal(order.total_cost)) - total_paid
+        balance_payable = clean_amount(order.total_cost) - total_paid
         order.total_paid = total_paid
         order.balance_payable = balance_payable
 
-        if order.balance_payable <= clean_amount(Decimal(1.00)):
+        if order.balance_payable <= clean_amount(Decimal('1.00')):
             order.payment_status = PaymentStatus_Paid
             if order.order_status == OrderItemStatus_Served:
                 order.order_status = "Paid"
@@ -41,7 +41,7 @@ def process_order_payment(
         return True
 
     # TODO check if a tip is included and add it to the waiter's account.
-    if transaction_record.tip_amount > Decimal(0.00):
+    if transaction_record.tip_amount > Decimal('0.00'):
         collect_tip(
             waiter=order.waiter,
             amount=transaction_record.tip_amount,
