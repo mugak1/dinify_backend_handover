@@ -227,7 +227,7 @@ class RestaurantSetupEndpoint(APIView):
                     'status': 400,
                     'message': f"Table number {request.data.get('number')} is already in use."
                 }
-                return Response(response, status=403)
+                return Response(response, status=400)
 
         if config_detail == 'employees':
             shortcut_employee_creation = ConRestaurantEmployee.create_employee_from_existing_user(
