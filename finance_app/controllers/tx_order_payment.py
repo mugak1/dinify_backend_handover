@@ -1,6 +1,6 @@
 import logging
 from typing import Optional
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from django.db import transaction
 from finance_app.models import DinifyAccount, DinifyTransaction
 from users_app.models import User
@@ -62,13 +62,13 @@ class OrderPaymentTransaction:
                 restaurant=order.restaurant
             )
 
-        transaction_amount = clean_amount(Decimal(order.actual_cost)) if payment_form is PaymentForm_Full else clean_amount(Decimal(amount)) # noqa
+        transaction_amount = clean_amount(Decimal(str(order.actual_cost))) if payment_form is PaymentForm_Full else clean_amount(Decimal(str(amount))) # noqa
         if transaction_amount is None:
             return {
                 'status': 400,
                 'message': 'Invalid transaction amount'
             }
-        tip_amount = clean_amount(Decimal(tip_amount))
+        tip_amount = clean_amount(Decimal(str(tip_amount)))
 
         if payment_form == PaymentForm_Split:
             logger.debug("inside split payment form, amount: %s", amount)
@@ -79,7 +79,7 @@ class OrderPaymentTransaction:
                 }
 
         if payment_form == PaymentForm_Split:
-            if transaction_amount >= clean_amount(Decimal(order.actual_cost)):
+            if transaction_amount >= clean_amount(Decimal(str(order.actual_cost))):
                 return {
                     'status': 400,
                     'message': 'The split payment amount should be less than the order amount.'
@@ -167,7 +167,8 @@ class OrderPaymentTransaction:
 
         if payment_mode == PaymentMode_MobileMoney and not manual_payment:
             collection = YoIntegration().momo_collect(
-                transaction_amount=int(amount_collectable),
+                # UGX has no subunits; round to whole units for the gateway
+                transaction_amount=int(amount_collectable.quantize(Decimal('1'), rounding=ROUND_HALF_UP)),
                 msisdn=msisdn,
                 transaction_id=str(order_payment.id)
             )
@@ -190,7 +191,8 @@ class OrderPaymentTransaction:
 
         if payment_mode == PaymentMode_Card and not manual_payment:
             dpo_token = DpoIntegration().create_token(
-                amount=int(amount_collectable),
+                # UGX has no subunits; round to whole units for the gateway
+                amount=int(amount_collectable.quantize(Decimal('1'), rounding=ROUND_HALF_UP)),
                 currency=account.account_currency,
                 transaction_reference=str(order_payment.id),
                 timestamp=str(order_payment.time_created),
@@ -245,17 +247,17 @@ class OrderPaymentTransaction:
                 # TODO check if the cumulative amount paid is equal to the order amount
                 total_paid = order.total_paid
                 total_paid += txs_record.transaction_amount
-                balance_payable = clean_amount(Decimal(order.total_cost)) - total_paid
+                balance_payable = clean_amount(Decimal(str(order.total_cost))) - total_paid
                 order.total_paid = total_paid
                 order.balance_payable = balance_payable
 
-                if order.balance_payable <= clean_amount(Decimal(1.00)):
+                if order.balance_payable <= clean_amount(Decimal('1.00')):
                     order.payment_status = PaymentStatus_Paid
                     if order.order_status == OrderStatus_Served:
                         order.order_status = OrderStatus_Paid
                 order.save()
 
-                if txs_record.tip_amount > Decimal(0.00):
+                if txs_record.tip_amount > Decimal('0.00'):
                     return TipTransaction().initiate(
                         waiter=order.waiter,
                         order_payment=txs_record,
@@ -270,7 +272,7 @@ class OrderPaymentTransaction:
                 balance_update = update_wallet_balance(
                     id=str(txs_record.account.id),
                     mode=txs_record.payment_mode,
-                    credit=Decimal(0.00)
+                    credit=Decimal('0.00')
                 )
                 txs_record.account_balances = balance_update
                 txs_record.save()
