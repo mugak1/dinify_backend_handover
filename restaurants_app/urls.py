@@ -3,9 +3,12 @@ from restaurants_app.endpoints.restaurant_setup import RestaurantSetupEndpoint
 from restaurants_app.endpoints.misc_public import MiscPublicEndpoint
 from restaurants_app.endpoints.manager_actions import RestaurantManagerActionsEndpoint
 from restaurants_app.endpoints.upsell_config import UpsellConfigEndpoint, UpsellItemsEndpoint
+from restaurants_app.endpoints.preset_tags import PresetTagsEndpoint
 
 
 urlpatterns = [
+    # Preset tags endpoint (must be before the catch-all)
+    path('preset-tags/', PresetTagsEndpoint.as_view()),
     # Upsell config endpoints (must be before the catch-all)
     path('upsell-config/', UpsellConfigEndpoint.as_view()),
     path('upsell-config/items/reorder/', UpsellItemsEndpoint.as_view(), {'action': 'reorder'}),
