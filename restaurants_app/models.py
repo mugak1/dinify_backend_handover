@@ -55,6 +55,7 @@ class Restaurant(BaseModel):
     subscription_expiry_date = models.DateTimeField(null=True, blank=True)
 
     branding_configuration = models.JSONField(default=dict)
+    preset_tags = models.JSONField(default=list, blank=True)
     country = models.CharField(max_length=5, default="UG")
 
     # for batch approvals
@@ -173,6 +174,7 @@ class MenuItem(BaseModel):
     name = models.CharField(max_length=255)
     description = models.TextField(null=True, blank=True)
     allergens = models.JSONField(default=list)
+    tags = models.JSONField(default=list, blank=True)
     primary_price = models.DecimalField(max_digits=50, decimal_places=2)
 
     discounted_price = models.DecimalField(max_digits=50, decimal_places=2, null=True, blank=True)

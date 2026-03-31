@@ -67,7 +67,8 @@ class SerializerPublicGetRestaurant(ModelSerializer):
         model = Restaurant
         fields = (
             "id", "name", "location",
-            "logo", "cover_photo", "status", "owner"
+            "logo", "cover_photo", "status", "owner",
+            "preset_tags"
         )
 
     def get_owner(self, restaurant):
@@ -232,7 +233,7 @@ class SerializerPublicGetMenuItem(ModelSerializer):
         fields = (
             'id', 'name', 'description', 'primary_price',
             'discounted_price', 'running_discount', 'image',
-            'available', 'allergens', 'discount_details',
+            'available', 'allergens', 'tags', 'discount_details',
             'has_options', 'options', 'group', 'extras', 'is_extra',
             'discount_percentage', 'has_extras', 'is_special',
             'is_featured', 'is_popular', 'is_new'
