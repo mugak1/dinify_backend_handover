@@ -232,7 +232,8 @@ class SerializerPublicGetMenuItem(ModelSerializer):
             'discounted_price', 'running_discount', 'image',
             'available', 'allergens', 'discount_details',
             'has_options', 'options', 'group', 'extras', 'is_extra',
-            'discount_percentage', 'has_extras', 'is_special'
+            'discount_percentage', 'has_extras', 'is_special',
+            'is_featured', 'is_popular', 'is_new'
         )
 
     def get_has_options(self, menu_item):

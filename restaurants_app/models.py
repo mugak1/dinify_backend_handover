@@ -176,6 +176,9 @@ class MenuItem(BaseModel):
     available = models.BooleanField(default=True)
     is_extra = models.BooleanField(default=False)
     is_special = models.BooleanField(default=False)
+    is_featured = models.BooleanField(default=False)
+    is_popular = models.BooleanField(default=False)
+    is_new = models.BooleanField(default=False)
 
     options = models.JSONField(default=dict)
     # Grouped modifier structure (new):
