@@ -6,7 +6,7 @@ from decouple import config
 
 logger = logging.getLogger(__name__)
 
-REQUEST_TIMEOUT = 15  # seconds
+REQUEST_TIMEOUT = 10  # seconds
 
 
 class Messenger():
@@ -27,7 +27,7 @@ class Messenger():
             from_email=self.from_email
         )
         message.content_subtype = 'html'
-        message.send(fail_silently=False)
+        message.send(fail_silently=True)
 
     def send_sms(self, message: str, msisdn: str):
         if config('ENV', default='dev') in ['prod', 'test']:

@@ -26,7 +26,7 @@ REQUEST_HEADERS = {
     'Content-transfer-encoding': 'text'
 }
 
-REQUEST_TIMEOUT = 30  # seconds
+REQUEST_TIMEOUT = 10  # seconds
 
 
 class YoIntegration:
