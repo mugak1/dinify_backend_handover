@@ -42,7 +42,7 @@ def is_restaurant_owner(user: User, restaurant_id: str) -> bool:
 
 
 def get_any_restaurant_roles(user: User) -> list:
-    res_roles = RestaurantEmployee.objects.filter(
+    res_roles = RestaurantEmployee.objects.select_related('restaurant').filter(
         restaurant__status__in=['active'],
         user=user,
         deleted=False

@@ -135,7 +135,7 @@ def login(
             'require_otp': True,
             'prompt_password_change': auth_user.prompt_password_change,
             'user_id': str(auth_user.id),
-            'profile': SerGetUserProfile(auth_user).data
+            'profile': SerGetUserProfile(auth_user, context={'restaurant_roles': restaurant_roles}).data
         }
 
         # Always require OTP for privileged roles — never leak tokens
@@ -159,6 +159,6 @@ def login(
             'prompt_password_change': auth_user.prompt_password_change,
             'token': str(token.access_token),
             'refresh': str(token),
-            'profile': SerGetUserProfile(auth_user).data
+            'profile': SerGetUserProfile(auth_user, context={'restaurant_roles': restaurant_roles}).data
         }
     }
