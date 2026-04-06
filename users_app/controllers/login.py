@@ -1,6 +1,8 @@
 """
 implementation to handle user login i.e. authentication
 """
+import logging
+import time
 from typing import Optional
 from django.utils import timezone
 from django.contrib.auth import authenticate
@@ -22,6 +24,8 @@ from dinify_backend.configss.string_definitions import (
     RESTAURANT_MANAGER
 )
 
+logger = logging.getLogger(__name__)
+
 
 def login(
     username: str,
@@ -31,6 +35,7 @@ def login(
     """
     handle the login of a user
     """
+    t_start = time.monotonic()
     username = username.strip()
     password = password.strip()
 
@@ -41,12 +46,18 @@ def login(
     if consider_email:
         username = User.objects.get(email=username).username
 
+    t_lookup = time.monotonic()
+    logger.info("login [%s]: email lookup %.3fs", username, t_lookup - t_start)
+
     # authenticate the user
     username = username.strip()
     auth_user = authenticate(
         username=username,
         password=password
     )
+
+    t_auth = time.monotonic()
+    logger.info("login [%s]: authenticate %.3fs", username, t_auth - t_lookup)
 
     if auth_user is None:
         # Single query to check why auth failed (replaces exists() + get())
@@ -65,6 +76,7 @@ def login(
                 changes=None,
                 filter_information=None
             )
+            logger.info("login [%s]: failed (no user) total %.3fs", username, time.monotonic() - t_start)
             return {
                 'status': 401,
                 'message': MESSAGES.get('NO_USERNAME')
@@ -83,22 +95,28 @@ def login(
                 changes=None,
                 filter_information=None
             )
+            logger.info("login [%s]: failed (inactive) total %.3fs", username, time.monotonic() - t_start)
             return {
                 'status': 401,
                 'message': MESSAGES.get('ACCOUNT_NOT_ACTIVE')
             }
 
+        logger.info("login [%s]: failed (wrong password) total %.3fs", username, time.monotonic() - t_start)
         return {
             'status': 401,
             'message': MESSAGES.get('WRONG_PASSWORD')
         }
 
     # when the login is successful
-    # Use update() to avoid triggering the post_save archive_user signal —
-    # archiving the full user to MongoDB on every login is unnecessary overhead.
-    User.objects.filter(username=username).update(last_login=timezone.now())
-    auth_user = User.objects.get(username=username)
+    # Use update() to avoid triggering the post_save archive_user signal.
+    # Reuse the auth_user object from authenticate() — no need to re-fetch.
+    login_time = timezone.now()
+    User.objects.filter(username=username).update(last_login=login_time)
+    auth_user.last_login = login_time
     token = RefreshToken.for_user(auth_user)
+
+    t_token = time.monotonic()
+    logger.info("login [%s]: update + token %.3fs", username, t_token - t_auth)
 
     # save action
     save_action(
@@ -114,7 +132,6 @@ def login(
         filter_information=None
     )
 
-    # TODO check if the user has roles that require otp login
     require_otp = False
     if is_dinify_admin(user=auth_user) or is_dinify_superuser(user=auth_user):
         require_otp = True
@@ -129,7 +146,9 @@ def login(
             require_otp = True
             break
 
-    # require_otp = True
+    t_roles = time.monotonic()
+    logger.info("login [%s]: roles + permissions %.3fs", username, t_roles - t_token)
+
     if require_otp and source != 'diner':
         data = {
             'require_otp': True,
@@ -144,6 +163,8 @@ def login(
         # change-password with the token returned by verify-otp.
         otp = OtpManager().make_otp(user=auth_user, purpose='login')
 
+        logger.info("login [%s]: otp created, total %.3fs", username, time.monotonic() - t_start)
+
         if otp:
             return {
                 'status': 200,
@@ -151,6 +172,7 @@ def login(
                 'data': data
             }
 
+    logger.info("login [%s]: complete (no otp), total %.3fs", username, time.monotonic() - t_start)
     return {
         'status': 200,
         'message': MESSAGES.get('OK_LOGIN'),
