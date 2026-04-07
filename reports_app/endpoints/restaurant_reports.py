@@ -6,7 +6,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from reports_app.controllers.restaurant.dashboard import (
     generate_restaurant_dashboard_details,
-    get_restaurant_dashboard_1
+    get_restaurant_dashboard_1,
+    generate_restaurant_dashboard_v2
 )
 from reports_app.controllers.restaurant.sales import (
     generate_restaurant_sales_summary,
@@ -102,6 +103,13 @@ class RestaurantReportsEndpoint(APIView):
                 date_to=request.GET.get('to', str(date_today)),
                 transaction_type=request.GET.get('type', None),
                 transaction_status=request.GET.get('status', None)
+            )
+        elif report_name == 'dashboard-v2':
+            response = generate_restaurant_dashboard_v2(
+                restaurant_id=request.GET.get('restaurant'),
+                date_from=request.GET.get('from', str(date_today)),
+                date_to=request.GET.get('to', str(date_today)),
+                period=request.GET.get('period', 'day')
             )
         else:
             response = {
