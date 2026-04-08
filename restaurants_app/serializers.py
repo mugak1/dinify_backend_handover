@@ -1,6 +1,7 @@
 """
 the serializers for the restaurant app
 """
+import json
 import logging
 
 logger = logging.getLogger(__name__)
@@ -242,6 +243,13 @@ class SerializerPublicGetMenuItem(ModelSerializer):
     def get_has_options(self, menu_item):
         options = menu_item.options
         if not options:
+            return False
+        if isinstance(options, str):
+            try:
+                options = json.loads(options)
+            except (ValueError, TypeError):
+                return False
+        if not isinstance(options, dict):
             return False
         # New grouped format
         if 'hasModifiers' in options:
