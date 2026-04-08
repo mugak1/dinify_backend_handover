@@ -3,6 +3,7 @@ the serializers for the restaurant app
 """
 import json
 import logging
+import uuid
 
 logger = logging.getLogger(__name__)
 
@@ -271,12 +272,28 @@ class SerializerPublicGetMenuItem(ModelSerializer):
 
     def get_extras(self, menu_item):
         applicable_extras = menu_item.extras_applicable
+        if not applicable_extras:
+            return []
+        if isinstance(applicable_extras, str):
+            try:
+                applicable_extras = json.loads(applicable_extras)
+            except (ValueError, TypeError):
+                return []
+        if not isinstance(applicable_extras, list):
+            return []
         extras = []
         for extra in applicable_extras:
-            record = MenuItem.objects.values(
-                'id', 'name', 'primary_price'
-            ).get(id=extra)
-            extras.append(record)
+            try:
+                uuid.UUID(str(extra))
+            except (ValueError, AttributeError):
+                continue
+            try:
+                record = MenuItem.objects.values(
+                    'id', 'name', 'primary_price'
+                ).get(id=extra)
+                extras.append(record)
+            except MenuItem.DoesNotExist:
+                continue
         return extras
 
     def get_discount_percentage(self, menu_item):
