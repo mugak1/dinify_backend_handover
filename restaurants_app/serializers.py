@@ -335,7 +335,11 @@ class SerializerPublicGetTable(ModelSerializer):
             'name': table.dining_area.name,
             'available': table.dining_area.available,
             'smoking_zone': table.dining_area.smoking_zone,
-            'outdoor_seating': table.dining_area.outdoor_seating
+            'outdoor_seating': table.dining_area.outdoor_seating,
+            'is_indoor': table.dining_area.is_indoor,
+            'accessible': table.dining_area.accessible,
+            'default_server_section': table.dining_area.default_server_section,
+            'is_active': table.dining_area.is_active,
         }
 
 
@@ -353,7 +357,10 @@ class SerializerPublicGetTableDetails(ModelSerializer):
         fields = (
             'id', 'number', 'room_name', 'prepayment_required',
             'available', 'current_order', 'restaurant', 'reserved',
-            'dining_area', 'enabled'
+            'dining_area', 'enabled',
+            'display_name', 'min_capacity', 'max_capacity', 'shape',
+            'status', 'tags', 'has_qr', 'qr_mode', 'qr_regenerated_at',
+            'floor_x', 'floor_y', 'floor_width', 'floor_height', 'is_active',
         )
 
     def get_dining_area(self, table):
@@ -363,7 +370,11 @@ class SerializerPublicGetTableDetails(ModelSerializer):
             'name': table.dining_area.name,
             'available': table.dining_area.available,
             'smoking_zone': table.dining_area.smoking_zone,
-            'outdoor_seating': table.dining_area.outdoor_seating
+            'outdoor_seating': table.dining_area.outdoor_seating,
+            'is_indoor': table.dining_area.is_indoor,
+            'accessible': table.dining_area.accessible,
+            'default_server_section': table.dining_area.default_server_section,
+            'is_active': table.dining_area.is_active,
         }
 
     def get_current_order(self, table):
@@ -567,6 +578,7 @@ class SerializerGetDiningArea(ModelSerializer):
         fields = (
             'id', 'name', 'description',
             'smoking_zone', 'outdoor_seating',
+            'is_indoor', 'accessible', 'default_server_section', 'is_active',
             'no_tables', 'tables', 'available'
         )
 
@@ -582,6 +594,17 @@ class SerializerGetDiningArea(ModelSerializer):
                 'available': get_table_availability(table_id=str(table.pk)),
                 'reserved': table.reserved,
                 'enabled': table.enabled,
+                'display_name': table.display_name,
+                'min_capacity': table.min_capacity,
+                'max_capacity': table.max_capacity,
+                'shape': table.shape,
+                'status': table.status,
+                'tags': table.tags,
+                'has_qr': table.has_qr,
+                'qr_mode': table.qr_mode,
+                'floor_x': table.floor_x,
+                'floor_y': table.floor_y,
+                'is_active': table.is_active,
             } for table in tables
         ]
 
