@@ -4,6 +4,8 @@ from restaurants_app.endpoints.misc_public import MiscPublicEndpoint
 from restaurants_app.endpoints.manager_actions import RestaurantManagerActionsEndpoint
 from restaurants_app.endpoints.upsell_config import UpsellConfigEndpoint, UpsellItemsEndpoint
 from restaurants_app.endpoints.preset_tags import PresetTagsEndpoint
+from restaurants_app.endpoints.reservations import ReservationsEndpoint
+from restaurants_app.endpoints.waitlist import WaitlistEndpoint
 
 
 urlpatterns = [
@@ -14,6 +16,9 @@ urlpatterns = [
     path('upsell-config/items/reorder/', UpsellItemsEndpoint.as_view(), {'action': 'reorder'}),
     path('upsell-config/items/<str:item_id>/', UpsellItemsEndpoint.as_view()),
     path('upsell-config/items/', UpsellItemsEndpoint.as_view()),
+    # Reservations & waitlist endpoints (must be before the catch-all)
+    path('reservations/', ReservationsEndpoint.as_view()),
+    path('waitlist/', WaitlistEndpoint.as_view()),
     # Existing patterns
     path('<str:config_detail>/', RestaurantSetupEndpoint.as_view()),
     path('manager-actions/<str:action>/', RestaurantManagerActionsEndpoint.as_view()),
