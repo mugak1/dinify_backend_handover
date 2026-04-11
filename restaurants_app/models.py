@@ -246,6 +246,10 @@ class DiningArea(BaseModel):
     available = models.BooleanField(default=True)
     smoking_zone = models.BooleanField(default=False)
     outdoor_seating = models.BooleanField(default=False)
+    is_indoor = models.BooleanField(default=True)
+    accessible = models.BooleanField(default=False)
+    default_server_section = models.CharField(max_length=10, blank=True, default='')
+    is_active = models.BooleanField(default=True)
 
     class Meta:
         """
@@ -277,6 +281,48 @@ class Table(BaseModel):
     # available = models.BooleanField(default=True)
     reserved = models.BooleanField(default=False)
     enabled = models.BooleanField(default=True)
+
+    display_name = models.CharField(max_length=100, blank=True, default='')
+    min_capacity = models.IntegerField(default=1)
+    max_capacity = models.IntegerField(default=4)
+    shape = models.CharField(
+        max_length=20,
+        default='square',
+        choices=[
+            ('round', 'Round'),
+            ('square', 'Square'),
+            ('rectangle', 'Rectangle'),
+            ('bar', 'Bar'),
+        ]
+    )
+    status = models.CharField(
+        max_length=20,
+        default='available',
+        choices=[
+            ('available', 'Available'),
+            ('seated', 'Seated'),
+            ('bill_requested', 'Bill Requested'),
+            ('dirty', 'Dirty'),
+            ('out_of_service', 'Out of Service'),
+        ]
+    )
+    tags = models.JSONField(default=list, blank=True)
+    has_qr = models.BooleanField(default=False)
+    qr_mode = models.CharField(
+        max_length=20,
+        default='order_pay',
+        choices=[
+            ('menu_only', 'Menu Only'),
+            ('order_pay', 'Order & Pay'),
+            ('order_only', 'Order Only'),
+        ]
+    )
+    qr_regenerated_at = models.DateTimeField(null=True, blank=True)
+    floor_x = models.FloatField(default=50.0)
+    floor_y = models.FloatField(default=50.0)
+    floor_width = models.FloatField(default=10.0)
+    floor_height = models.FloatField(default=10.0)
+    is_active = models.BooleanField(default=True)
 
     class Meta:
         """

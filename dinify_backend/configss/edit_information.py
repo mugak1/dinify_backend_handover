@@ -62,6 +62,20 @@ EDIT_INFORMATION = {
         {'key': 'available', 'label': 'available', 'type': 'bool', 'min_length': 5, 'text_presentation': None},  # noqa
         {'key': 'reserved', 'label': 'reserved', 'type': 'bool', 'min_length': 5, 'text_presentation': None},  # noqa
         {'key': 'enabled', 'label': 'enabled', 'type': 'bool', 'min_length': 5, 'text_presentation': None},  # noqa
+        {'key': 'display_name', 'label': 'display name', 'type': 'char', 'min_length': 0, 'text_presentation': None},  # noqa
+        {'key': 'min_capacity', 'label': 'min capacity', 'type': 'int', 'min_length': 1, 'text_presentation': None},  # noqa
+        {'key': 'max_capacity', 'label': 'max capacity', 'type': 'int', 'min_length': 1, 'text_presentation': None},  # noqa
+        {'key': 'shape', 'label': 'shape', 'type': 'char', 'min_length': 3, 'text_presentation': str.lower},  # noqa
+        {'key': 'status', 'label': 'status', 'type': 'char', 'min_length': 5, 'text_presentation': str.lower},  # noqa
+        {'key': 'tags', 'label': 'tags', 'type': 'list', 'min_length': 0, 'text_presentation': None},  # noqa
+        {'key': 'has_qr', 'label': 'has QR', 'type': 'bool', 'min_length': 5, 'text_presentation': None},  # noqa
+        {'key': 'qr_mode', 'label': 'QR mode', 'type': 'char', 'min_length': 5, 'text_presentation': str.lower},  # noqa
+        {'key': 'qr_regenerated_at', 'label': 'QR regenerated at', 'type': 'char', 'min_length': 5, 'text_presentation': None},  # noqa
+        {'key': 'floor_x', 'label': 'floor X', 'type': 'float', 'min_length': 1, 'text_presentation': None},  # noqa
+        {'key': 'floor_y', 'label': 'floor Y', 'type': 'float', 'min_length': 1, 'text_presentation': None},  # noqa
+        {'key': 'floor_width', 'label': 'floor width', 'type': 'float', 'min_length': 1, 'text_presentation': None},  # noqa
+        {'key': 'floor_height', 'label': 'floor height', 'type': 'float', 'min_length': 1, 'text_presentation': None},  # noqa
+        {'key': 'is_active', 'label': 'is active', 'type': 'bool', 'min_length': 5, 'text_presentation': None},  # noqa
     ]
 }
 
@@ -78,5 +92,9 @@ EI_DINING_AREA = [
     {'key': 'description', 'label': 'description', 'type': 'char', 'min_length': 3, 'text_presentation': None},  # noqa
     {'key': 'smoking_zone', 'label': 'smoking zone', 'type': 'bool', 'min_length': 5, 'text_presentation': None},  # noqa
     {'key': 'outdoor_seating', 'label': 'outdoor seating', 'type': 'bool', 'min_length': 5, 'text_presentation': None},  # noqa  
-    {'key': 'available', 'label': 'available', 'type': 'bool', 'min_length': 5, 'text_presentation': None},  # noqa  
+    {'key': 'available', 'label': 'available', 'type': 'bool', 'min_length': 5, 'text_presentation': None},  # noqa
+    {'key': 'is_indoor', 'label': 'is indoor', 'type': 'bool', 'min_length': 5, 'text_presentation': None},  # noqa
+    {'key': 'accessible', 'label': 'accessible', 'type': 'bool', 'min_length': 5, 'text_presentation': None},  # noqa
+    {'key': 'default_server_section', 'label': 'default server section', 'type': 'char', 'min_length': 0, 'text_presentation': None},  # noqa
+    {'key': 'is_active', 'label': 'is active', 'type': 'bool', 'min_length': 5, 'text_presentation': None},  # noqa
 ]

@@ -87,7 +87,8 @@ def get_tables_by_area(restaurant_id: str):
     dining_areas = DiningArea.objects.filter(
         restaurant=restaurant_id,
         deleted=False
-    ).values('id', 'name', 'available', 'description')
+    ).values('id', 'name', 'available', 'description',
+             'is_indoor', 'accessible', 'default_server_section', 'is_active')
 
     # get the tables in each area
     for area in dining_areas:
@@ -105,7 +106,18 @@ def get_tables_by_area(restaurant_id: str):
             'number': table.number,
             'enabled': table.enabled,
             'reserved': table.reserved,
-            'available': get_table_availability(table_id=str(table.id))
+            'available': get_table_availability(table_id=str(table.id)),
+            'display_name': table.display_name,
+            'min_capacity': table.min_capacity,
+            'max_capacity': table.max_capacity,
+            'shape': table.shape,
+            'status': table.status,
+            'tags': table.tags,
+            'has_qr': table.has_qr,
+            'qr_mode': table.qr_mode,
+            'floor_x': table.floor_x,
+            'floor_y': table.floor_y,
+            'is_active': table.is_active,
         } for table in area_tables]
 
         tables_listing.append({
@@ -145,7 +157,18 @@ def get_tables_by_area(restaurant_id: str):
                 'number': table.number,
                 'enabled': table.enabled,
                 'reserved': table.reserved,
-                'available': get_table_availability(table_id=str(table.id))
+                'available': get_table_availability(table_id=str(table.id)),
+                'display_name': table.display_name,
+                'min_capacity': table.min_capacity,
+                'max_capacity': table.max_capacity,
+                'shape': table.shape,
+                'status': table.status,
+                'tags': table.tags,
+                'has_qr': table.has_qr,
+                'qr_mode': table.qr_mode,
+                'floor_x': table.floor_x,
+                'floor_y': table.floor_y,
+                'is_active': table.is_active,
             } for table in unassigned_tables]
         })
     return {
