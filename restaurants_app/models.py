@@ -333,6 +333,74 @@ class Table(BaseModel):
         unique_together = ['number', 'str_number', 'restaurant']
 
 
+class Reservation(BaseModel):
+    """
+    Guest booking / reservation for a restaurant table.
+    """
+    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE)
+    table = models.ForeignKey(Table, on_delete=models.SET_NULL, null=True, blank=True)
+    guest_name = models.CharField(max_length=255)
+    guest_phone = models.CharField(max_length=50, blank=True, default='')
+    guest_email = models.CharField(max_length=255, blank=True, default='')
+    date_time = models.DateTimeField()
+    party_size = models.IntegerField(default=2)
+    status = models.CharField(
+        max_length=20,
+        default='confirmed',
+        choices=[
+            ('confirmed', 'Confirmed'),
+            ('arrived', 'Arrived'),
+            ('late', 'Late'),
+            ('no_show', 'No Show'),
+            ('seated', 'Seated'),
+            ('cancelled', 'Cancelled'),
+        ]
+    )
+    area_preference = models.CharField(max_length=255, blank=True, default='')
+    notes = models.TextField(blank=True, default='')
+    tags = models.JSONField(default=dict, blank=True)
+    seated_at = models.DateTimeField(null=True, blank=True)
+    server = models.ForeignKey(
+        RestaurantEmployee, on_delete=models.SET_NULL, null=True, blank=True
+    )
+
+    class Meta:
+        db_table = 'reservations'
+        ordering = ['date_time']
+
+
+class WaitlistEntry(BaseModel):
+    """
+    Walk-in queue entry for a restaurant.
+    """
+    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE)
+    guest_name = models.CharField(max_length=255)
+    guest_phone = models.CharField(max_length=50, blank=True, default='')
+    party_size = models.IntegerField(default=2)
+    quoted_wait_min = models.IntegerField(default=15)
+    quoted_wait_max = models.IntegerField(default=30)
+    added_at = models.DateTimeField(auto_now_add=True)
+    tags = models.JSONField(default=dict, blank=True)
+    notes = models.TextField(blank=True, default='')
+    status = models.CharField(
+        max_length=20,
+        default='waiting',
+        choices=[
+            ('waiting', 'Waiting'),
+            ('seated', 'Seated'),
+            ('left', 'Left'),
+        ]
+    )
+    seated_table = models.ForeignKey(
+        Table, on_delete=models.SET_NULL, null=True, blank=True
+    )
+    seated_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'waitlist_entries'
+        ordering = ['added_at']
+
+
 class UpsellConfig(BaseModel):
     """
     Per-restaurant configuration for checkout upsell suggestions.
@@ -483,5 +551,29 @@ class SerArcUpsellItem(ModelSerializer):
 def archive_upsell_item(sender, instance, **kwargs):
     record_data = SerArcUpsellItem(instance).data
     archive_record(record_data, 'archive_upsell_items')
+
+
+class SerArcReservation(ModelSerializer):
+    class Meta:
+        model = Reservation
+        fields = '__all__'
+
+
+@receiver(post_save, sender=Reservation)
+def archive_reservation(sender, instance, **kwargs):
+    record_data = SerArcReservation(instance).data
+    archive_record(record_data, 'archive_reservations')
+
+
+class SerArcWaitlistEntry(ModelSerializer):
+    class Meta:
+        model = WaitlistEntry
+        fields = '__all__'
+
+
+@receiver(post_save, sender=WaitlistEntry)
+def archive_waitlist_entry(sender, instance, **kwargs):
+    record_data = SerArcWaitlistEntry(instance).data
+    archive_record(record_data, 'archive_waitlist_entries')
 
 

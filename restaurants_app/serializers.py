@@ -12,7 +12,8 @@ from orders_app.models import Order, OrderItem
 from rest_framework import serializers
 from restaurants_app.models import (
     Restaurant, RestaurantEmployee, MenuSection, MenuItem, Table,
-    SectionGroup, DiningArea, UpsellConfig, UpsellItem
+    SectionGroup, DiningArea, UpsellConfig, UpsellItem,
+    Reservation, WaitlistEntry
 )
 from dinify_backend.configss.string_definitions import (
     OrderItemStatus_Initiated,
@@ -644,3 +645,62 @@ class UpsellConfigUpdateSerializer(ModelSerializer):
     class Meta:
         model = UpsellConfig
         fields = ['enabled', 'title', 'max_items_to_show', 'hide_if_in_basket', 'hide_out_of_stock']
+
+
+class SerializerPutReservation(ModelSerializer):
+    class Meta:
+        model = Reservation
+        fields = '__all__'
+
+
+class SerializerGetReservation(ModelSerializer):
+    table_info = SerializerMethodField()
+
+    class Meta:
+        model = Reservation
+        fields = (
+            'id', 'restaurant', 'table', 'table_info',
+            'guest_name', 'guest_phone', 'guest_email',
+            'date_time', 'party_size', 'status',
+            'area_preference', 'notes', 'tags',
+            'seated_at', 'server',
+            'time_created', 'time_last_updated',
+        )
+
+    def get_table_info(self, reservation):
+        if reservation.table is None:
+            return None
+        return {
+            'id': str(reservation.table.pk),
+            'number': reservation.table.number,
+            'display_name': reservation.table.display_name,
+        }
+
+
+class SerializerPutWaitlistEntry(ModelSerializer):
+    class Meta:
+        model = WaitlistEntry
+        fields = '__all__'
+
+
+class SerializerGetWaitlistEntry(ModelSerializer):
+    seated_table_info = SerializerMethodField()
+
+    class Meta:
+        model = WaitlistEntry
+        fields = (
+            'id', 'restaurant', 'guest_name', 'guest_phone',
+            'party_size', 'quoted_wait_min', 'quoted_wait_max',
+            'added_at', 'tags', 'notes', 'status',
+            'seated_table', 'seated_table_info', 'seated_at',
+            'time_created', 'time_last_updated',
+        )
+
+    def get_seated_table_info(self, entry):
+        if entry.seated_table is None:
+            return None
+        return {
+            'id': str(entry.seated_table.pk),
+            'number': entry.seated_table.number,
+            'display_name': entry.seated_table.display_name,
+        }
