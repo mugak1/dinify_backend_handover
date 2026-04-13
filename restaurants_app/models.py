@@ -93,6 +93,26 @@ class Restaurant(BaseModel):
         ordering = ['name']
         unique_together = ['name', 'location', 'owner']
 
+    def save(self, *args, **kwargs):
+        for field_name in ('logo', 'cover_photo'):
+            field = getattr(self, field_name)
+            if not field:
+                continue
+            optimize_new = False
+            if self.pk:
+                try:
+                    old = Restaurant.objects.get(pk=self.pk)
+                    if getattr(old, field_name) != field:
+                        optimize_new = True
+                except Restaurant.DoesNotExist:
+                    optimize_new = True
+            else:
+                optimize_new = True
+            if optimize_new:
+                from restaurants_app.utils.image_optimizer import optimize_image
+                optimize_image(field)
+        super().save(*args, **kwargs)
+
 
 class RestaurantEmployee(BaseModel):
     """
@@ -155,6 +175,23 @@ class MenuSection(BaseModel):
         db_table = 'menu_sections'
         ordering = ['listing_position', 'time_created']
         unique_together = ['name', 'restaurant']
+
+    def save(self, *args, **kwargs):
+        if self.section_banner_image:
+            optimize_new = False
+            if self.pk:
+                try:
+                    old = MenuSection.objects.get(pk=self.pk)
+                    if old.section_banner_image != self.section_banner_image:
+                        optimize_new = True
+                except MenuSection.DoesNotExist:
+                    optimize_new = True
+            else:
+                optimize_new = True
+            if optimize_new:
+                from restaurants_app.utils.image_optimizer import optimize_image
+                optimize_image(self.section_banner_image, max_width=1200, max_height=400)
+        super().save(*args, **kwargs)
 
 
 class SectionGroup(BaseModel):
@@ -251,6 +288,24 @@ class MenuItem(BaseModel):
         db_table = 'menu_items'
         ordering = ['section', 'name']
         unique_together = ['name', 'section']
+
+    def save(self, *args, **kwargs):
+        optimize_new_image = False
+        if self.pk:
+            try:
+                old_instance = MenuItem.objects.get(pk=self.pk)
+                if old_instance.image != self.image:
+                    optimize_new_image = True
+            except MenuItem.DoesNotExist:
+                optimize_new_image = bool(self.image)
+        else:
+            optimize_new_image = bool(self.image)
+
+        if optimize_new_image and self.image:
+            from restaurants_app.utils.image_optimizer import optimize_image
+            optimize_image(self.image)
+
+        super().save(*args, **kwargs)
 
 
 class DiningArea(BaseModel):
