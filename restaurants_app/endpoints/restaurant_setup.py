@@ -322,8 +322,8 @@ class RestaurantSetupEndpoint(APIView):
 
             if restaurant_id is not None:
                 restaurant = Restaurant.objects.get(id=restaurant_id)
-                post_data['approved'] = restaurant.first_time_menu_approval
-                post_data['enabled'] = restaurant.first_time_menu_approval
+                post_data['approved'] = True   # Always approve — approval UI removed in redesign
+                post_data['enabled'] = True    # Always enable — approval UI removed in redesign
             post_data['restaurant_id'] = restaurant_id
 
         if config_detail == 'tables':
