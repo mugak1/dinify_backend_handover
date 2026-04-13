@@ -20,6 +20,22 @@ SUBSCRIPTION_CHOICES = (
 )
 
 
+def default_branding_configuration():
+    return {
+        'home': {
+            'bgColor': '#f5f5f5',
+            'headerCase': 'none',
+            'headerShow': 'name',
+            'headerColor': '#171717',
+            'headerTextColor': '#ffffff',
+            'headerShowName': '',
+            'viewMenuBgColor': '#dc2626',
+            'headerFontWeight': '600',
+            'viewMenuTextColor': '#ffffff'
+        }
+    }
+
+
 class Restaurant(BaseModel):
     """
     the model for the restaurant
@@ -54,16 +70,16 @@ class Restaurant(BaseModel):
     subscription_validity = models.BooleanField(default=True)
     subscription_expiry_date = models.DateTimeField(null=True, blank=True)
 
-    branding_configuration = models.JSONField(default=dict)
+    branding_configuration = models.JSONField(default=default_branding_configuration)
     preset_tags = models.JSONField(default=list, blank=True)
     country = models.CharField(max_length=5, default="UG")
 
     # for batch approvals
     first_time_menu_approval_decision = models.CharField(
         max_length=255,
-        default='pending',
+        default='approve',
     )
-    first_time_menu_approval = models.BooleanField(default=False)
+    first_time_menu_approval = models.BooleanField(default=True)
 
     # eod processing
     eod_restaurant_last_date = models.DateField(null=True, db_index=True)
