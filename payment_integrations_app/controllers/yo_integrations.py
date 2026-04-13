@@ -1,4 +1,5 @@
 import logging
+import threading
 from typing import Optional
 import requests
 import xml.etree.ElementTree as ET
@@ -42,15 +43,19 @@ class YoIntegration:
             response_xml_object = ET.fromstring(yo_response.text)
         except ET.ParseError as exc:
             logger.error("Yo XML parse error for %s: %s", request_type, exc)
-            try:
-                MONGO_DB[COL_YO_RESPONSES].insert_one({
-                    'request_type': request_type,
-                    'request_body': request_body,
-                    'response_string': yo_response.text,
-                    'response_dict': None
-                })
-            except Exception as e:
-                logger.error("Failed to save Yo error response to MongoDB: %s", e)
+
+            def _write_yo_error_response():
+                try:
+                    MONGO_DB[COL_YO_RESPONSES].insert_one({
+                        'request_type': request_type,
+                        'request_body': request_body,
+                        'response_string': yo_response.text,
+                        'response_dict': None
+                    })
+                except Exception as e:
+                    logger.error("Failed to save Yo error response to MongoDB: %s", e)
+
+            threading.Thread(target=_write_yo_error_response, daemon=True).start()
             return None
 
         yo_response_dict = None
@@ -61,16 +66,19 @@ class YoIntegration:
         except Exception as error:
             logger.error("Error interpreting Yo Response: %s", error)
 
-        try:
-            MONGO_DB[COL_YO_RESPONSES].insert_one({
-                'request_type': request_type,
-                'request_body': request_body,
-                'response_string': yo_response.text,
-                'response_dict': yo_response_dict
-            })
-        except Exception as e:
-            logger.error("Failed to save Yo response to MongoDB: %s", e)
+        # Fire-and-forget: archival-only, caller uses yo_response_dict
+        def _write_yo_response():
+            try:
+                MONGO_DB[COL_YO_RESPONSES].insert_one({
+                    'request_type': request_type,
+                    'request_body': request_body,
+                    'response_string': yo_response.text,
+                    'response_dict': yo_response_dict
+                })
+            except Exception as e:
+                logger.error("Failed to save Yo response to MongoDB: %s", e)
 
+        threading.Thread(target=_write_yo_response, daemon=True).start()
         return yo_response_dict
 
     def momo_collect(self, transaction_amount: int, msisdn: str, transaction_id: str) -> bool:

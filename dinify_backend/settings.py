@@ -241,10 +241,6 @@ LOGGING = {
             'format': '{asctime} [{levelname}] {name}: {message}',
             'style': '{',
         },
-        'simple': {
-            'format': '[{levelname}] {message}',
-            'style': '{',
-        },
     },
     'handlers': {
         'console': {
@@ -254,10 +250,25 @@ LOGGING = {
     },
     'root': {
         'handlers': ['console'],
-        'level': 'INFO',  # Or 'DEBUG' for more verbosity
+        'level': 'INFO',
     },
     'loggers': {
-        'django': {
+        'django.request': {
+            'handlers': ['console'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'restaurants_app': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'users_app': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'misc_app': {
             'handlers': ['console'],
             'level': 'INFO',
             'propagate': False,
