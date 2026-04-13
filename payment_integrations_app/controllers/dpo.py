@@ -1,4 +1,5 @@
 import logging
+import threading
 import requests
 from bson import ObjectId
 from datetime import datetime
@@ -56,15 +57,19 @@ class DpoIntegration:
         for elem in response_xml_object.iter():
             dpo_response_dict[elem.tag] = elem.text
 
-        try:
-            MONGO_DB[COL_DPO_RESPONSES].insert_one({
-                'request_type': request_type,
-                'request_body': request_body,
-                'response_string': dpo_response.text,
-                'response_dict': dpo_response_dict
-            })
-        except Exception as e:
-            logger.error("Failed to save DPO response to MongoDB: %s", e)
+        # Fire-and-forget: archival-only, caller uses dpo_response_dict
+        def _write_dpo_response():
+            try:
+                MONGO_DB[COL_DPO_RESPONSES].insert_one({
+                    'request_type': request_type,
+                    'request_body': request_body,
+                    'response_string': dpo_response.text,
+                    'response_dict': dpo_response_dict
+                })
+            except Exception as e:
+                logger.error("Failed to save DPO response to MongoDB: %s", e)
+
+        threading.Thread(target=_write_dpo_response, daemon=True).start()
         return dpo_response_dict
 
     def create_token(self, amount: int, currency: str, transaction_reference: str, timestamp: datetime) -> str:  # noqa
