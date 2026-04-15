@@ -50,7 +50,7 @@ jobs:
           DATABASE_PORT: 5432
         run: |
           python -m django check --settings=dinify_backend.test_settings
-          python -m django migrate --check --settings=dinify_backend.test_settings
+          python -m django makemigrations --check --dry-run --settings=dinify_backend.test_settings
 
       - name: Run tests
         env:
