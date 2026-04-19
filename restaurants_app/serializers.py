@@ -24,6 +24,7 @@ from dinify_backend.configss.string_definitions import (
 )
 from finance_app.serializers import SerializerPutAccount
 from finance_app.models import DinifyAccount
+from misc_app.serializers.fields import JSONStringCompatField
 from restaurants_app.controllers.tables import get_table_availability
 
 
@@ -140,6 +141,8 @@ class SerializerPutMenuSection(ModelSerializer):
     """
     serializer for adding menu section
     """
+    schedules = JSONStringCompatField(required=False)
+
     class Meta:
         model = MenuSection
         fields = '__all__'
@@ -217,6 +220,12 @@ class SerializerPutMenuItem(ModelSerializer):
     """
     serializer for adding menu Item
     """
+    options = JSONStringCompatField(required=False)
+    allergens = JSONStringCompatField(required=False)
+    tags = JSONStringCompatField(required=False)
+    discount_details = JSONStringCompatField(required=False)
+    extras_applicable = JSONStringCompatField(required=False)
+
     class Meta:
         model = MenuItem
         fields = '__all__'
