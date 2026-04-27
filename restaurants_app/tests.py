@@ -3,6 +3,7 @@ from django.db import transaction
 from django.test import TestCase
 from dinify_backend.configs import ROLES
 from dinify_backend.configss.messages import MESSAGES
+from dinify_backend.configss.string_definitions import RestaurantStatus_Active
 from misc_app.controllers.secretary import Secretary
 from users_app.tests import TEST_PHONE, seed_user
 from users_app.models import User
@@ -10,6 +11,8 @@ from restaurants_app.controllers.create_restaurant import (
     create_restaurant, admin_register_restaurant
 )
 from restaurants_app.controllers.create_employee import create_employee
+from restaurants_app.controllers.menu_sections import ConMenuSection
+from restaurants_app.endpoints.restaurant_setup import normalize_ordered_section_ids
 from restaurants_app.models import Restaurant, RestaurantEmployee, MenuSection, MenuItem, Table
 from users_app.controllers.otp_manager import OtpManager
 
@@ -269,3 +272,184 @@ class RestaurantAppTestFunctions(TestCase):
         result = admin_register_restaurant(data, auth_info)
         print(f'admin result: {result}')
         self.assertEqual(result['status'], 200)
+
+
+def _seed_two_sections(restaurant):
+    """Helper: seed two sections at positions 0 and 1, return them."""
+    s1 = MenuSection.objects.create(
+        name='Starters', restaurant=restaurant, listing_position=0,
+    )
+    s2 = MenuSection.objects.create(
+        name='Mains', restaurant=restaurant, listing_position=1,
+    )
+    return s1, s2
+
+
+class MenuSectionReorderTests(TestCase):
+    """Tests for ConMenuSection.reorder_listing and the dispatch slug."""
+
+    def setUp(self):
+        seed_user()
+        seed_restaurant()
+        self.admin_user = User.objects.get(username=TEST_PHONE)
+        self.restaurant = Restaurant.objects.get(name=TEST_RESTAURANT_NAME)
+
+    def test_reorder_flips_two_sections(self):
+        s1, s2 = _seed_two_sections(self.restaurant)
+        result = ConMenuSection().reorder_listing(
+            ordered_ids=[str(s2.id), str(s1.id)],
+            user=self.admin_user,
+        )
+        self.assertEqual(result['status'], 200)
+        s1.refresh_from_db()
+        s2.refresh_from_db()
+        self.assertEqual(s2.listing_position, 0)
+        self.assertEqual(s1.listing_position, 1)
+
+    def test_reorder_rejects_cross_restaurant(self):
+        s1, _ = _seed_two_sections(self.restaurant)
+        other_restaurant = Restaurant.objects.create(
+            name='Other Restaurant',
+            location='elsewhere',
+            owner=self.admin_user,
+        )
+        other_section = MenuSection.objects.create(
+            name='Drinks', restaurant=other_restaurant, listing_position=0,
+        )
+        result = ConMenuSection().reorder_listing(
+            ordered_ids=[str(s1.id), str(other_section.id)],
+            user=self.admin_user,
+        )
+        self.assertEqual(result['status'], 400)
+        self.assertIn('same restaurant', result['message'])
+
+    def test_reorder_rejects_unknown_id(self):
+        s1, _ = _seed_two_sections(self.restaurant)
+        bogus_id = '00000000-0000-0000-0000-000000000000'
+        result = ConMenuSection().reorder_listing(
+            ordered_ids=[str(s1.id), bogus_id],
+            user=self.admin_user,
+        )
+        self.assertEqual(result['status'], 400)
+
+    def test_reorder_rejects_empty_list(self):
+        result = ConMenuSection().reorder_listing(
+            ordered_ids=[],
+            user=self.admin_user,
+        )
+        self.assertEqual(result['status'], 400)
+
+    def test_reorder_rejects_duplicate_ids(self):
+        s1, s2 = _seed_two_sections(self.restaurant)
+        result = ConMenuSection().reorder_listing(
+            ordered_ids=[str(s1.id), str(s2.id), str(s1.id)],
+            user=self.admin_user,
+        )
+        self.assertEqual(result['status'], 400)
+        self.assertIn('duplicate', result['message'])
+
+    def test_reorder_rejects_unauthorized_user(self):
+        # User who is neither dinify admin nor owner/manager of the restaurant.
+        outsider = User.objects.create_user(
+            first_name='No', last_name='Access',
+            email='outsider@test.com', phone_number='256700000001',
+            username='256700000001', country='Uganda', password='password',
+            roles=['diner'],
+        )
+        s1, s2 = _seed_two_sections(self.restaurant)
+        result = ConMenuSection().reorder_listing(
+            ordered_ids=[str(s2.id), str(s1.id)],
+            user=outsider,
+        )
+        self.assertEqual(result['status'], 403)
+
+    def test_reorder_allows_owner_role(self):
+        # Activate the seeded restaurant so role-lookup matches the
+        # `restaurant__status__in=['active']` filter in get_user_restaurant_roles.
+        self.restaurant.status = RestaurantStatus_Active
+        self.restaurant.save(update_fields=['status'])
+        owner = User.objects.create_user(
+            first_name='Restaurant', last_name='Owner',
+            email='owner@test.com', phone_number='256700000002',
+            username='256700000002', country='Uganda', password='password',
+            roles=['diner'],
+        )
+        RestaurantEmployee.objects.create(
+            user=owner, restaurant=self.restaurant,
+            roles=[ROLES.get('RESTAURANT_OWNER')],
+        )
+        s1, s2 = _seed_two_sections(self.restaurant)
+        result = ConMenuSection().reorder_listing(
+            ordered_ids=[str(s2.id), str(s1.id)],
+            user=owner,
+        )
+        self.assertEqual(result['status'], 200)
+
+
+class NormalizeOrderedSectionIdsTests(TestCase):
+    """Unit tests for the legacy/new shape resolver used by the dispatch."""
+
+    def test_new_shape_passes_through(self):
+        ids = ['a', 'b', 'c']
+        self.assertEqual(
+            normalize_ordered_section_ids({'ordered_ids': ids}),
+            ids,
+        )
+
+    def test_legacy_dict_shape_extracted(self):
+        legacy = {
+            'ordering': [
+                {'id': 'a', 'listing_position': 0},
+                {'id': 'b', 'listing_position': 1},
+            ],
+        }
+        self.assertEqual(
+            normalize_ordered_section_ids(legacy),
+            ['a', 'b'],
+        )
+
+    def test_legacy_string_shape_passes_through(self):
+        self.assertEqual(
+            normalize_ordered_section_ids({'ordering': ['a', 'b']}),
+            ['a', 'b'],
+        )
+
+    def test_no_payload_returns_none(self):
+        self.assertIsNone(normalize_ordered_section_ids({}))
+
+
+class NewSectionListingPositionTests(TestCase):
+    """Tests that a newly-POSTed section gets a clean listing_position."""
+
+    def setUp(self):
+        seed_user()
+        seed_restaurant()
+        self.admin_user = User.objects.get(username=TEST_PHONE)
+        self.restaurant = Restaurant.objects.get(name=TEST_RESTAURANT_NAME)
+
+    def _post_section(self, name):
+        from rest_framework_simplejwt.tokens import RefreshToken
+        token = str(RefreshToken.for_user(self.admin_user).access_token)
+        return self.client.post(
+            f'/api/v1/restaurant-setup/menusections/',
+            data={'name': name, 'restaurant': str(self.restaurant.id)},
+            HTTP_AUTHORIZATION=f'Bearer {token}',
+        )
+
+    def test_new_section_assigned_next_position(self):
+        MenuSection.objects.create(
+            name='First', restaurant=self.restaurant, listing_position=0,
+        )
+        MenuSection.objects.create(
+            name='Second', restaurant=self.restaurant, listing_position=1,
+        )
+        response = self._post_section('Drinks')
+        self.assertEqual(response.status_code, 200)
+        created = MenuSection.objects.get(name='Drinks', restaurant=self.restaurant)
+        self.assertEqual(created.listing_position, 2)
+
+    def test_first_section_assigned_position_zero(self):
+        response = self._post_section('Brunch')
+        self.assertEqual(response.status_code, 200)
+        created = MenuSection.objects.get(name='Brunch', restaurant=self.restaurant)
+        self.assertEqual(created.listing_position, 0)

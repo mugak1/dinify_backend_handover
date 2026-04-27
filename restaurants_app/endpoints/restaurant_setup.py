@@ -4,6 +4,7 @@ Refactoring needed to make it more maintainable.
 """
 import ast
 import logging
+from django.db.models import Max
 from rest_framework.response import Response
 
 logger = logging.getLogger(__name__)
@@ -75,6 +76,26 @@ from restaurants_app.controllers.subscriptions import RestaurantSubscription
 from restaurants_app.configs.non_unique_combination import RECORDS_NON_UNIQUE_COMBINATIONS
 from restaurants_app.controllers.con_cla_employees import ConRestaurantEmployee
 
+
+
+def normalize_ordered_section_ids(put_data) -> list:
+    """
+    Resolve the section-reorder payload into a flat list of section ids.
+
+    New contract: ``ordered_ids`` is a flat list of UUID strings.
+    Legacy contract: ``ordering`` was a list of ``{id, listing_position}`` dicts.
+    Accepts either so frontend builds shipped before/after the rename keep working.
+    Returns None if neither key is present so the controller can return a 400.
+    """
+    ordered_ids = put_data.get('ordered_ids')
+    if ordered_ids is not None:
+        return ordered_ids
+    legacy = put_data.get('ordering') or []
+    if legacy and isinstance(legacy[0], dict):
+        return [item.get('id') for item in legacy]
+    if legacy and isinstance(legacy[0], str):
+        return legacy
+    return None
 
 
 def check_permission(user: User, record: str, id: str):
@@ -325,6 +346,19 @@ class RestaurantSetupEndpoint(APIView):
                 post_data['approved'] = True   # Always approve — approval UI removed in redesign
                 post_data['enabled'] = True    # Always enable — approval UI removed in redesign
             post_data['restaurant_id'] = restaurant_id
+
+            # Default new sections to the end of the rail so they don't
+            # collide with existing sections at listing_position=0.
+            if (
+                config_detail == 'menusections'
+                and restaurant_id is not None
+                and 'listing_position' not in post_data
+            ):
+                max_pos = MenuSection.objects.filter(
+                    restaurant_id=restaurant_id,
+                    deleted=False,
+                ).aggregate(max_pos=Max('listing_position'))['max_pos']
+                post_data['listing_position'] = (max_pos + 1) if max_pos is not None else 0
 
         if config_detail == 'tables':
             try:
@@ -646,13 +680,17 @@ class RestaurantSetupEndpoint(APIView):
         if config_detail == 'subscription-details':
             return RestaurantSubscription().update(request)
 
-        if config_detail == 'reorder-menu-items':
+        if config_detail in ('reorder-menu-sections', 'reorder-menu-items'):
+            if config_detail == 'reorder-menu-items':
+                logger.warning(
+                    'Deprecated endpoint reorder-menu-items called; use reorder-menu-sections.'
+                )
+            ordered_ids = normalize_ordered_section_ids(put_data)
             response = ConMenuSection().reorder_listing(
-                ordering=put_data.get('ordering'),
-                user=request.user
+                ordered_ids=ordered_ids,
+                user=request.user,
             )
             return Response(response, status=response['status'])
-            # reorder the menu items
 
         # if editing a menu item,
         # convert the options and extras_applicable to a list
