@@ -280,12 +280,14 @@ class MenuItem(BaseModel):
     approved = models.BooleanField(default=False)
     enabled = models.BooleanField(default=False)
 
+    listing_position = models.IntegerField(default=0)
+
     class Meta:
         """
         the metadata for the MenuItem model
         """
         db_table = 'menu_items'
-        ordering = ['section', 'name']
+        ordering = ['section', 'listing_position', 'name']
         unique_together = ['name', 'section']
 
     def save(self, *args, **kwargs):
