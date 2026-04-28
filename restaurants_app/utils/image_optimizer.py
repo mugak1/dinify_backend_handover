@@ -32,7 +32,7 @@ def optimize_image(image_field, max_width=800, max_height=800, quality=80):
 
         # Skip if already small enough
         if original_width <= max_width and original_height <= max_height:
-            image_field.close()
+            image_field.seek(0)
             return False
 
         # Convert RGBA/P to RGB for JPEG compatibility
