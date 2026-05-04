@@ -23,15 +23,10 @@ SUBSCRIPTION_CHOICES = (
 def default_branding_configuration():
     return {
         'home': {
-            'bgColor': '#f5f5f5',
-            'headerCase': 'none',
-            'headerShow': 'name',
-            'headerColor': '#171717',
-            'headerTextColor': '#ffffff',
-            'headerShowName': '',
-            'viewMenuBgColor': '#dc2626',
-            'headerFontWeight': '600',
-            'viewMenuTextColor': '#ffffff'
+            'header_style': 'solid',
+            'brand_color': '#171717',
+            'logo_display': 'name_only',
+            'tagline': '',
         }
     }
 
