@@ -91,6 +91,15 @@ def seed_menu_items():
             discounted_price=900.0,
             running_discount=True,
             consider_discount_object=True,
+            # CANONICAL discount_details schema (must match restaurants_app/models.py:234-242):
+            #   discount_type:        'percentage' | 'fixed'
+            #   discount_percentage:  0..100 (subtract this % of primary_price)
+            #   discount_amount:      UGX amount to subtract from primary_price
+            #   recurring_days:       list[int 1..7] ISO weekday filter
+            #   start_date/end_date:  'YYYY-MM-DD' strings, '' for unbounded
+            #   start_time/end_time:  'HH:MM' strings, '' for unbounded
+            # Never add raw_discount_value / raw_discount_type — those are the
+            # pre-0042 buggy schema and were migrated out of all production rows.
             discount_details={
                 'recurring_days': [1, 2, 3, 4, 5, 6, 7],
                 'start_date': '2021-01-01',
@@ -639,3 +648,116 @@ class MenuItemReorderTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.item_b.refresh_from_db()
         self.assertEqual(self.item_b.listing_position, 0)
+
+
+class MenuItemDiscountMathTests(TestCase):
+    """Regression tests for the canonical discount_details schema and the
+    order pipeline's effective-unit-price calculation."""
+
+    def setUp(self):
+        seed_user()
+        seed_restaurant()
+        seed_menu_section()
+        self.section = MenuSection.objects.get(name=TEST_MENU_SECTION_NAME)
+
+    def _make_item(self, name, primary, discount_details, discounted_price):
+        return MenuItem.objects.create(
+            name=name,
+            section=self.section,
+            primary_price=primary,
+            discounted_price=discounted_price,
+            running_discount=True,
+            consider_discount_object=True,
+            discount_details=discount_details,
+        )
+
+    @staticmethod
+    def _always_active_temporal():
+        # recurring_days covers every weekday and the date/time fields are
+        # left blank so the temporal gates in con_orders.py don't fire.
+        return {
+            'recurring_days': [1, 2, 3, 4, 5, 6, 7],
+            'start_date': '',
+            'end_date': '',
+            'start_time': '',
+            'end_time': '',
+        }
+
+    def test_percentage_discount_serializer_and_pipeline(self):
+        from decimal import Decimal
+        from orders_app.controllers.con_orders import ConOrder
+        from restaurants_app.serializers import SerializerPublicGetMenuItem
+
+        details = {
+            'discount_type': 'percentage',
+            'discount_percentage': 20.0,
+            'discount_amount': 0.0,
+            **self._always_active_temporal(),
+        }
+        item = self._make_item('Pct Item', Decimal('10000'), details, Decimal('8000.00'))
+
+        data = SerializerPublicGetMenuItem(item).data
+        self.assertEqual(data['discount_percentage'], 20.0)
+
+        result = ConOrder.determine_effective_unit_price(item)
+        self.assertEqual(result['status'], 200)
+        self.assertEqual(result['price'], Decimal('8000.00'))
+
+    def test_fixed_discount_serializer_and_pipeline(self):
+        from decimal import Decimal
+        from orders_app.controllers.con_orders import ConOrder
+        from restaurants_app.serializers import SerializerPublicGetMenuItem
+
+        details = {
+            'discount_type': 'fixed',
+            'discount_percentage': 0.0,
+            'discount_amount': 2000.0,
+            **self._always_active_temporal(),
+        }
+        item = self._make_item('Fixed Item', Decimal('10000'), details, Decimal('8000.00'))
+
+        data = SerializerPublicGetMenuItem(item).data
+        self.assertEqual(data['discount_percentage'], 20.0)
+
+        result = ConOrder.determine_effective_unit_price(item)
+        self.assertEqual(result['status'], 200)
+        self.assertEqual(result['price'], Decimal('8000.00'))
+
+    def test_no_discount_returns_primary_price(self):
+        from decimal import Decimal
+        from orders_app.controllers.con_orders import ConOrder
+        from restaurants_app.serializers import SerializerPublicGetMenuItem
+
+        item = MenuItem.objects.create(
+            name='Plain Item',
+            section=self.section,
+            primary_price=Decimal('5000'),
+            discounted_price=None,
+            running_discount=False,
+            consider_discount_object=False,
+            discount_details={},
+        )
+
+        data = SerializerPublicGetMenuItem(item).data
+        self.assertEqual(data['discount_percentage'], 0)
+
+        result = ConOrder.determine_effective_unit_price(item)
+        self.assertEqual(result['status'], 200)
+        self.assertEqual(result['price'], Decimal('5000.00'))
+
+    def test_canonical_shape_has_no_raw_keys(self):
+        # Regression guard: the canonical schema must never include
+        # raw_discount_value or raw_discount_type. The pre-0042 buggy keys
+        # are migrated out and must not be reintroduced.
+        from decimal import Decimal
+
+        details = {
+            'discount_type': 'percentage',
+            'discount_percentage': 15.0,
+            'discount_amount': 0.0,
+            **self._always_active_temporal(),
+        }
+        item = self._make_item('Guard Item', Decimal('10000'), details, Decimal('8500.00'))
+        item.refresh_from_db()
+        self.assertNotIn('raw_discount_value', item.discount_details)
+        self.assertNotIn('raw_discount_type', item.discount_details)
