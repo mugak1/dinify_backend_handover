@@ -91,6 +91,15 @@ def seed_menu_items():
             discounted_price=900.0,
             running_discount=True,
             consider_discount_object=True,
+            # CANONICAL discount_details schema (must match restaurants_app/models.py:234-242):
+            #   discount_type:        'percentage' | 'fixed'
+            #   discount_percentage:  0..100 (subtract this % of primary_price)
+            #   discount_amount:      UGX amount to subtract from primary_price
+            #   recurring_days:       list[int 1..7] ISO weekday filter
+            #   start_date/end_date:  'YYYY-MM-DD' strings, '' for unbounded
+            #   start_time/end_time:  'HH:MM' strings, '' for unbounded
+            # Never add raw_discount_value / raw_discount_type — those are the
+            # pre-0042 buggy schema and were migrated out of all production rows.
             discount_details={
                 'recurring_days': [1, 2, 3, 4, 5, 6, 7],
                 'start_date': '2021-01-01',
