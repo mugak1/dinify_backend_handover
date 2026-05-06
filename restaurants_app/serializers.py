@@ -299,16 +299,31 @@ class SerializerPublicGetMenuItem(ModelSerializer):
         return extras
 
     def get_discount_percentage(self, menu_item):
+        # Returns the discount magnitude as a non-negative percentage.
+        # Source-of-truth precedence: discount_details.discount_percentage,
+        # then discount_details.discount_amount, then derive from discounted_price.
         from decimal import Decimal
         if not menu_item.running_discount:
             return 0
-        if menu_item.discounted_price is None:
+        primary = Decimal(str(menu_item.primary_price or 0))
+        if primary == 0:
             return 0
-        difference = menu_item.discounted_price - menu_item.primary_price
-        if difference == 0:
-            return 0
-        percentage = (difference / menu_item.primary_price) * Decimal('100')
-        return float(round(percentage, 2))
+
+        details = menu_item.discount_details or {}
+        if isinstance(details, dict):
+            pct = Decimal(str(details.get('discount_percentage', 0) or 0))
+            amt = Decimal(str(details.get('discount_amount', 0) or 0))
+            if pct > 0:
+                return float(round(pct, 2))
+            if amt > 0:
+                return float(round((amt / primary) * Decimal('100'), 2))
+
+        if menu_item.discounted_price is not None:
+            diff = primary - Decimal(str(menu_item.discounted_price))
+            if diff <= 0:
+                return 0
+            return float(round((diff / primary) * Decimal('100'), 2))
+        return 0
 
 
 class SerializerPutTable(ModelSerializer):
