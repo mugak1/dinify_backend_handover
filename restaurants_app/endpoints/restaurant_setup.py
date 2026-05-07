@@ -68,7 +68,6 @@ from dinify_backend.configss.string_definitions import (
 
 from users_app.controllers.permissions_check import (
     is_dinify_admin,
-    get_user_restaurant_roles
 )
 
 from restaurants_app.models import RestaurantEmployee, DiningArea, Table
@@ -99,34 +98,186 @@ def normalize_ordered_section_ids(put_data) -> list:
     return None
 
 
-def check_permission(user: User, record: str, id: str):
-    # return False
-    has_permission = False
-    if is_dinify_admin(user):
-        has_permission = True
+_PRIVILEGED_RESTAURANT_ROLES = (RESTAURANT_OWNER, RESTAURANT_MANAGER)
 
-    if not has_permission:
-        # get the restaurants to which the user belongs
-        # TODO #60 only get roles at the restaurant in question
-        res_mapping = RestaurantEmployee.objects.values('restaurant').filter(
-            user=user,
-            active=True,
+
+def _as_str_id(value):
+    """Normalize a UUID/str/None FK value to a string id, or None."""
+    return str(value) if value else None
+
+
+def _resolve_restaurants(action, data):
+    # The resource IS the restaurant; the id (or POST owner) IS the target.
+    return _as_str_id(data.get('id') or data.get('restaurant'))
+
+
+def _resolve_employees(action, data):
+    if action == 'create':
+        return _as_str_id(data.get('restaurant'))
+    try:
+        return _as_str_id(
+            RestaurantEmployee.objects
+            .values_list('restaurant_id', flat=True)
+            .get(id=data.get('id'))
         )
-        # for x in res_mapping:
-        #     print(f"res mapping: {x['restaurant']}")
-        restaurant_ids = [str(res['restaurant']) for res in res_mapping]
-        for restaurant_id in restaurant_ids:
-            roles = get_user_restaurant_roles(
-                user_id=str(user.id),
-                restaurant_id=restaurant_id
+    except (RestaurantEmployee.DoesNotExist, ValueError, TypeError):
+        return None
+
+
+def _resolve_menusections(action, data):
+    if action == 'create':
+        return _as_str_id(data.get('restaurant'))
+    try:
+        return _as_str_id(
+            MenuSection.objects
+            .values_list('restaurant_id', flat=True)
+            .get(id=data.get('id'))
+        )
+    except (MenuSection.DoesNotExist, ValueError, TypeError):
+        return None
+
+
+def _resolve_sectiongroups(action, data):
+    if action == 'create':
+        try:
+            return _as_str_id(
+                MenuSection.objects
+                .values_list('restaurant_id', flat=True)
+                .get(id=data.get('section'))
             )
-            logger.debug("check_permission: restaurant_id=%s, user_id=%s, roles=%s", restaurant_id, user.id, roles)
-            restaurant_roles = [RESTAURANT_OWNER, RESTAURANT_MANAGER]
-            if len(roles) > 0:
-                if any(role in restaurant_roles for role in roles):
-                    has_permission = True
-                    break
-    return has_permission
+        except (MenuSection.DoesNotExist, ValueError, TypeError):
+            return None
+    try:
+        return _as_str_id(
+            SectionGroup.objects
+            .values_list('section__restaurant_id', flat=True)
+            .get(id=data.get('id'))
+        )
+    except (SectionGroup.DoesNotExist, ValueError, TypeError):
+        return None
+
+
+def _resolve_menuitems(action, data):
+    if action == 'create':
+        try:
+            return _as_str_id(
+                MenuSection.objects
+                .values_list('restaurant_id', flat=True)
+                .get(id=data.get('section'))
+            )
+        except (MenuSection.DoesNotExist, ValueError, TypeError):
+            return None
+    try:
+        return _as_str_id(
+            MenuItem.objects
+            .values_list('section__restaurant_id', flat=True)
+            .get(id=data.get('id'))
+        )
+    except (MenuItem.DoesNotExist, ValueError, TypeError):
+        return None
+
+
+def _resolve_tables(action, data):
+    if action == 'create':
+        return _as_str_id(data.get('restaurant'))
+    try:
+        return _as_str_id(
+            Table.objects
+            .values_list('restaurant_id', flat=True)
+            .get(id=data.get('id'))
+        )
+    except (Table.DoesNotExist, ValueError, TypeError):
+        return None
+
+
+def _resolve_diningareas(action, data):
+    if action == 'create':
+        return _as_str_id(data.get('restaurant'))
+    try:
+        return _as_str_id(
+            DiningArea.objects
+            .values_list('restaurant_id', flat=True)
+            .get(id=data.get('id'))
+        )
+    except (DiningArea.DoesNotExist, ValueError, TypeError):
+        return None
+
+
+# Dispatch table: maps URL `config_detail` segment → restaurant resolver.
+# Update/delete resolvers walk FK chains server-side from the record's id;
+# they intentionally ignore any client-supplied `restaurant` field so a
+# crafted payload like {id: <victim's record>, restaurant: <attacker's own>}
+# cannot smuggle authorization.
+_RESTAURANT_RESOLVERS = {
+    'restaurants':   _resolve_restaurants,
+    'employee':      _resolve_employees,   # alias used by handle_create_employee
+    'employees':     _resolve_employees,
+    'menusections':  _resolve_menusections,
+    'sectiongroups': _resolve_sectiongroups,
+    'menuitems':     _resolve_menuitems,
+    'tables':        _resolve_tables,
+    'diningareas':   _resolve_diningareas,
+}
+
+
+def _resolve_target_restaurant_id(record, action, data):
+    resolver = _RESTAURANT_RESOLVERS.get(record)
+    if resolver is None:
+        return None
+    try:
+        return resolver(action, data or {})
+    except Exception:
+        logger.exception("Resolver %s failed; denying.", record)
+        return None
+
+
+def check_permission(user, record: str, action: str, request_data) -> bool:
+    """
+    Authorize a write against a restaurant-scoped resource.
+
+    Returns True iff:
+      - the user is authenticated and active, AND
+      - the user is a dinify admin (bypass), OR has an active, non-deleted
+        RestaurantEmployee row at the *target* restaurant with role owner
+        or manager.
+
+    Resolution of the target restaurant is server-side (see
+    _RESTAURANT_RESOLVERS): for create it reads the payload, for
+    update/delete it walks FK chains from the record's id. This blocks the
+    spoof payload `{id: <victim's record>, restaurant: <attacker's own>}`.
+
+    Returns False if the target restaurant cannot be resolved.
+    """
+    if user is None or not getattr(user, 'is_authenticated', False):
+        return False
+    if not user.is_active:
+        return False
+    if is_dinify_admin(user):
+        return True
+
+    target_restaurant_id = _resolve_target_restaurant_id(record, action, request_data)
+    if not target_restaurant_id:
+        logger.warning(
+            "check_permission denied: unresolved restaurant. user=%s record=%s action=%s",
+            getattr(user, 'id', None), record, action,
+        )
+        return False
+
+    employments = RestaurantEmployee.objects.filter(
+        user=user,
+        restaurant_id=target_restaurant_id,
+        active=True,
+        deleted=False,
+    ).values_list('roles', flat=True)
+    for roles in employments:
+        if any(role in _PRIVILEGED_RESTAURANT_ROLES for role in (roles or [])):
+            return True
+
+    logger.warning(
+        "check_permission denied: insufficient role. user=%s record=%s action=%s restaurant=%s",
+        getattr(user, 'id', None), record, action, target_restaurant_id,
+    )
+    return False
 
 
 class RestaurantSetupEndpoint(APIView):
@@ -146,19 +297,14 @@ class RestaurantSetupEndpoint(APIView):
         if not check_permission(
             user=request.user,
             record='employee',
-            id=data.get('restaurant')
+            action='create',
+            request_data=data,
         ):
             response = {
                 'status': 401,
                 'message': 'You do not have permission to perform this action.'
             }
             return Response(response, status=403)
-
-        # response = {
-        #     'status': 200,
-        #     'message': 'Ok'
-        # }
-        # return Response(response, status=200)
 
         try:
             response = create_employee(
@@ -255,6 +401,20 @@ class RestaurantSetupEndpoint(APIView):
                 return Response(response, status=400)
 
         if config_detail == 'employees':
+            # Gate the shortcut path explicitly: it returns 200 on success and
+            # mutates the database, so it cannot rely on the check below.
+            if not check_permission(
+                user=request.user,
+                record='employees',
+                action='create',
+                request_data=request.data,
+            ):
+                response = {
+                    'status': 401,
+                    'message': 'You do not have permission to perform this action.'
+                }
+                return Response(response, status=403)
+
             shortcut_employee_creation = ConRestaurantEmployee.create_employee_from_existing_user(
                 user_id=request.data.get('user'),
                 restaurant_id=request.data.get('restaurant'),
@@ -318,7 +478,8 @@ class RestaurantSetupEndpoint(APIView):
         if not check_permission(
             user=request.user,
             record=config_detail,
-            id=post_data.get('restaurant')
+            action='create',
+            request_data=post_data,
         ):
             response = {
                 'status': 401,
@@ -681,18 +842,11 @@ class RestaurantSetupEndpoint(APIView):
 
         put_data = request.data
 
-        # check if the actor has rights to perform the action
-        if not check_permission(
-            user=request.user,
-            record=config_detail,
-            id=put_data.get('restaurant')
-        ):
-            response = {
-                'status': 401,
-                'message': 'You do not have permission to perform this action.'
-            }
-            return Response(response, status=403)
-
+        # Non-CRUD config_detail values (reorder + subscription) have their
+        # own scoped permission checks inside their controllers, and don't
+        # match the resolver dispatch (which is keyed on CRUD resource
+        # names). Handle them above the generic gate so the resolver isn't
+        # asked to authorize an action it doesn't model.
         if config_detail == 'subscription-details':
             return RestaurantSubscription().update(request)
 
@@ -715,6 +869,19 @@ class RestaurantSetupEndpoint(APIView):
                 user=request.user,
             )
             return Response(response, status=response['status'])
+
+        # check if the actor has rights to perform the action
+        if not check_permission(
+            user=request.user,
+            record=config_detail,
+            action='update',
+            request_data=put_data,
+        ):
+            response = {
+                'status': 401,
+                'message': 'You do not have permission to perform this action.'
+            }
+            return Response(response, status=403)
 
         # if editing a menu item,
         # convert the options and extras_applicable to a list
@@ -808,7 +975,8 @@ class RestaurantSetupEndpoint(APIView):
         if not check_permission(
             user=request.user,
             record=config_detail,
-            id=request.data['id']
+            action='delete',
+            request_data=request.data,
         ):
             response = {
                 'status': 401,

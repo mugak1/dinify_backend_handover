@@ -13,7 +13,10 @@ from restaurants_app.controllers.create_restaurant import (
 from restaurants_app.controllers.create_employee import create_employee
 from restaurants_app.controllers.menu_sections import ConMenuSection
 from restaurants_app.endpoints.restaurant_setup import normalize_ordered_section_ids
-from restaurants_app.models import Restaurant, RestaurantEmployee, MenuSection, MenuItem, Table
+from restaurants_app.models import (
+    Restaurant, RestaurantEmployee, MenuSection, MenuItem, Table,
+    SectionGroup, DiningArea,
+)
 from users_app.controllers.otp_manager import OtpManager
 
 
@@ -761,3 +764,394 @@ class MenuItemDiscountMathTests(TestCase):
         item.refresh_from_db()
         self.assertNotIn('raw_discount_value', item.discount_details)
         self.assertNotIn('raw_discount_type', item.discount_details)
+
+
+class TenantIsolationTests(TestCase):
+    """
+    Cross-restaurant authorization tests for the RestaurantSetupEndpoint
+    permission gate. Owner of restaurant A must NOT be able to mutate
+    resources belonging to restaurant B; only dinify admins or active
+    owner/manager employees of the *target* restaurant may write.
+
+    Headline security property: update/delete resolvers walk FK chains
+    server-side from the record's id and ignore any client-supplied
+    `restaurant` field. Spoofing `{id: <victim's record>, restaurant:
+    <attacker's own>}` must not authorize.
+    """
+
+    def setUp(self):
+        from rest_framework_simplejwt.tokens import RefreshToken  # noqa: F401
+        # Two unrelated restaurants, two unrelated owners.
+        self.owner_a = User.objects.create_user(
+            first_name='Owner', last_name='A',
+            email='owner_a@test.com', phone_number='256700000010',
+            username='256700000010', country='Uganda', password='password',
+            roles=[],  # not a dinify admin
+        )
+        self.restaurant_a = Restaurant.objects.create(
+            name='Restaurant A', location='loc-a',
+            status=RestaurantStatus_Active, owner=self.owner_a,
+        )
+        self.employment_a = RestaurantEmployee.objects.create(
+            user=self.owner_a, restaurant=self.restaurant_a,
+            roles=[ROLES.get('RESTAURANT_OWNER')],
+        )
+
+        self.owner_b = User.objects.create_user(
+            first_name='Owner', last_name='B',
+            email='owner_b@test.com', phone_number='256700000020',
+            username='256700000020', country='Uganda', password='password',
+            roles=[],
+        )
+        self.restaurant_b = Restaurant.objects.create(
+            name='Restaurant B', location='loc-b',
+            status=RestaurantStatus_Active, owner=self.owner_b,
+        )
+        RestaurantEmployee.objects.create(
+            user=self.owner_b, restaurant=self.restaurant_b,
+            roles=[ROLES.get('RESTAURANT_OWNER')],
+        )
+
+        # Resources living in restaurant B that owner_a may try to attack.
+        self.section_b = MenuSection.objects.create(
+            name='B Mains', restaurant=self.restaurant_b, listing_position=0,
+        )
+        self.item_b = MenuItem.objects.create(
+            name='B Item', section=self.section_b, primary_price=1000,
+            listing_position=0,
+        )
+        self.group_b = SectionGroup.objects.create(
+            name='B Group', section=self.section_b,
+        )
+        self.dining_area_b = DiningArea.objects.create(
+            name='B Patio', restaurant=self.restaurant_b,
+        )
+        self.table_b = Table.objects.create(
+            number=1, str_number='1', restaurant=self.restaurant_b,
+        )
+        self.section_a = MenuSection.objects.create(
+            name='A Mains', restaurant=self.restaurant_a, listing_position=0,
+        )
+
+        # Outsider with zero employments.
+        self.outsider = User.objects.create_user(
+            first_name='Out', last_name='Sider',
+            email='outsider@test.com', phone_number='256700000030',
+            username='256700000030', country='Uganda', password='password',
+            roles=[],
+        )
+
+        # Independent dinify admin (no employments at either restaurant).
+        self.dinify_admin = User.objects.create_user(
+            first_name='Dinify', last_name='Admin',
+            email='admin@test.com', phone_number='256700000040',
+            username='256700000040', country='Uganda', password='password',
+            roles=['dinify_admin'],
+        )
+
+    def _token_for(self, user):
+        from rest_framework_simplejwt.tokens import RefreshToken
+        return str(RefreshToken.for_user(user).access_token)
+
+    def _request(self, user, method, config_detail, body):
+        path = f'/api/v1/restaurant-setup/{config_detail}/'
+        token = self._token_for(user)
+        kwargs = {
+            'data': body,
+            'content_type': 'application/json',
+            'HTTP_AUTHORIZATION': f'Bearer {token}',
+        }
+        return getattr(self.client, method)(path, **kwargs)
+
+    # -- admin bypass --------------------------------------------------------
+
+    def test_dinify_admin_can_create_in_any_restaurant(self):
+        # Admin has no employment at restaurant B but should still be allowed.
+        response = self._request(
+            self.dinify_admin, 'post', 'menusections',
+            {'name': 'Admin Section', 'restaurant': str(self.restaurant_b.id)},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(MenuSection.objects.filter(
+            name='Admin Section', restaurant=self.restaurant_b,
+        ).exists())
+
+    def test_inactive_dinify_admin_is_denied(self):
+        self.dinify_admin.is_active = False
+        self.dinify_admin.save(update_fields=['is_active'])
+        response = self._request(
+            self.dinify_admin, 'post', 'menusections',
+            {'name': 'Should Fail', 'restaurant': str(self.restaurant_b.id)},
+        )
+        # JWT auth itself rejects inactive users; the contract is "not 200".
+        self.assertNotEqual(response.status_code, 200)
+        self.assertFalse(MenuSection.objects.filter(name='Should Fail').exists())
+
+    # -- happy path ----------------------------------------------------------
+
+    def test_owner_can_update_own_menusection(self):
+        response = self._request(
+            self.owner_a, 'put', 'menusections',
+            {'id': str(self.section_a.id), 'name': 'A Mains Renamed',
+             'restaurant': str(self.restaurant_a.id)},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.section_a.refresh_from_db()
+        self.assertEqual(self.section_a.name, 'A Mains Renamed')
+
+    # -- cross-restaurant rejection: menusections ----------------------------
+
+    def test_owner_of_a_cannot_create_menusection_in_b(self):
+        response = self._request(
+            self.owner_a, 'post', 'menusections',
+            {'name': 'Hostile', 'restaurant': str(self.restaurant_b.id)},
+        )
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(MenuSection.objects.filter(name='Hostile').exists())
+
+    def test_owner_of_a_cannot_update_menusection_in_b_via_spoof(self):
+        # Spoof payload: id points at B's section, restaurant points at A.
+        # Resolver must walk FK from id to detect the real target is B.
+        original_name = self.section_b.name
+        response = self._request(
+            self.owner_a, 'put', 'menusections',
+            {'id': str(self.section_b.id), 'name': 'pwned',
+             'restaurant': str(self.restaurant_a.id)},
+        )
+        self.assertEqual(response.status_code, 403)
+        self.section_b.refresh_from_db()
+        self.assertEqual(self.section_b.name, original_name)
+
+    def test_owner_of_a_cannot_delete_menusection_in_b(self):
+        response = self._request(
+            self.owner_a, 'delete', 'menusections',
+            {'id': str(self.section_b.id)},
+        )
+        self.assertEqual(response.status_code, 403)
+        self.section_b.refresh_from_db()
+        self.assertFalse(self.section_b.deleted)
+
+    # -- cross-restaurant rejection: menuitems (two-hop FK) ------------------
+
+    def test_owner_of_a_cannot_create_menuitem_in_b(self):
+        response = self._request(
+            self.owner_a, 'post', 'menuitems',
+            {'name': 'Hostile Item', 'section': str(self.section_b.id),
+             'primary_price': '1000.00'},
+        )
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(MenuItem.objects.filter(name='Hostile Item').exists())
+
+    def test_owner_of_a_cannot_update_menuitem_in_b_via_spoof(self):
+        original_name = self.item_b.name
+        response = self._request(
+            self.owner_a, 'put', 'menuitems',
+            {'id': str(self.item_b.id), 'name': 'pwned',
+             'restaurant': str(self.restaurant_a.id)},
+        )
+        self.assertEqual(response.status_code, 403)
+        self.item_b.refresh_from_db()
+        self.assertEqual(self.item_b.name, original_name)
+
+    def test_owner_of_a_cannot_delete_menuitem_in_b(self):
+        response = self._request(
+            self.owner_a, 'delete', 'menuitems',
+            {'id': str(self.item_b.id)},
+        )
+        self.assertEqual(response.status_code, 403)
+        self.item_b.refresh_from_db()
+        self.assertFalse(self.item_b.deleted)
+
+    # -- cross-restaurant rejection: sectiongroups (two-hop FK) --------------
+
+    def test_owner_of_a_cannot_create_sectiongroup_in_b(self):
+        response = self._request(
+            self.owner_a, 'post', 'sectiongroups',
+            {'name': 'Hostile Group', 'section': str(self.section_b.id)},
+        )
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(SectionGroup.objects.filter(name='Hostile Group').exists())
+
+    def test_owner_of_a_cannot_delete_sectiongroup_in_b(self):
+        response = self._request(
+            self.owner_a, 'delete', 'sectiongroups',
+            {'id': str(self.group_b.id)},
+        )
+        self.assertEqual(response.status_code, 403)
+        self.group_b.refresh_from_db()
+        self.assertFalse(self.group_b.deleted)
+
+    # -- cross-restaurant rejection: tables ----------------------------------
+
+    def test_owner_of_a_cannot_create_table_in_b(self):
+        response = self._request(
+            self.owner_a, 'post', 'tables',
+            {'number': 99, 'restaurant': str(self.restaurant_b.id)},
+        )
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(Table.objects.filter(
+            number=99, restaurant=self.restaurant_b,
+        ).exists())
+
+    def test_owner_of_a_cannot_delete_table_in_b(self):
+        response = self._request(
+            self.owner_a, 'delete', 'tables',
+            {'id': str(self.table_b.id)},
+        )
+        self.assertEqual(response.status_code, 403)
+        self.table_b.refresh_from_db()
+        self.assertFalse(self.table_b.deleted)
+
+    # -- cross-restaurant rejection: diningareas -----------------------------
+
+    def test_owner_of_a_cannot_create_diningarea_in_b(self):
+        response = self._request(
+            self.owner_a, 'post', 'diningareas',
+            {'name': 'Hostile Patio', 'restaurant': str(self.restaurant_b.id)},
+        )
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(DiningArea.objects.filter(name='Hostile Patio').exists())
+
+    def test_owner_of_a_cannot_delete_diningarea_in_b(self):
+        response = self._request(
+            self.owner_a, 'delete', 'diningareas',
+            {'id': str(self.dining_area_b.id)},
+        )
+        self.assertEqual(response.status_code, 403)
+        self.dining_area_b.refresh_from_db()
+        self.assertFalse(self.dining_area_b.deleted)
+
+    # -- cross-restaurant rejection: employees -------------------------------
+
+    def test_owner_of_a_cannot_create_employee_in_b_via_create_employee(self):
+        response = self._request(
+            self.owner_a, 'post', 'create-employee',
+            {'first_name': 'Mole', 'last_name': 'Spy',
+             'email': 'mole@test.com', 'phone_number': '256700000099',
+             'restaurant': str(self.restaurant_b.id),
+             'roles': [ROLES.get('RESTAURANT_KITCHEN')]},
+        )
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(User.objects.filter(phone_number='256700000099').exists())
+
+    def test_owner_of_a_cannot_create_employee_in_b_via_employees_shortcut(self):
+        # The /employees/ shortcut path bypassed the gate before the fix —
+        # it now has its own check_permission call.
+        response = self._request(
+            self.owner_a, 'post', 'employees',
+            {'user': str(self.owner_b.id),
+             'restaurant': str(self.restaurant_b.id),
+             'roles': [ROLES.get('RESTAURANT_MANAGER')]},
+        )
+        self.assertEqual(response.status_code, 403)
+        # owner_b should still have only their original owner row.
+        self.assertEqual(
+            RestaurantEmployee.objects.filter(
+                user=self.owner_b, restaurant=self.restaurant_b,
+            ).count(),
+            1,
+        )
+
+    def test_owner_of_a_cannot_delete_employee_in_b(self):
+        b_employee = RestaurantEmployee.objects.get(
+            user=self.owner_b, restaurant=self.restaurant_b,
+        )
+        response = self._request(
+            self.owner_a, 'delete', 'employees',
+            {'id': str(b_employee.id)},
+        )
+        self.assertEqual(response.status_code, 403)
+        b_employee.refresh_from_db()
+        self.assertTrue(b_employee.active)
+
+    # -- role gating ---------------------------------------------------------
+
+    def test_outsider_with_no_employment_denied_for_all_resources(self):
+        cases = [
+            ('post', 'menusections',
+             {'name': 'X', 'restaurant': str(self.restaurant_a.id)}),
+            ('post', 'menuitems',
+             {'name': 'X', 'section': str(self.section_a.id), 'primary_price': '1000'}),
+            ('post', 'sectiongroups',
+             {'name': 'X', 'section': str(self.section_a.id)}),
+            ('post', 'tables',
+             {'number': 50, 'restaurant': str(self.restaurant_a.id)}),
+            ('post', 'diningareas',
+             {'name': 'X', 'restaurant': str(self.restaurant_a.id)}),
+            ('delete', 'menusections', {'id': str(self.section_a.id)}),
+            ('delete', 'menuitems', {'id': str(self.item_b.id)}),
+            ('delete', 'tables', {'id': str(self.table_b.id)}),
+        ]
+        for method, resource, body in cases:
+            with self.subTest(method=method, resource=resource):
+                response = self._request(self.outsider, method, resource, body)
+                self.assertEqual(
+                    response.status_code, 403,
+                    f'Expected 403 for outsider {method} {resource}, got {response.status_code}',
+                )
+
+    def test_waiter_role_at_own_restaurant_denied(self):
+        waiter = User.objects.create_user(
+            first_name='W', last_name='aiter',
+            email='waiter@test.com', phone_number='256700000050',
+            username='256700000050', country='Uganda', password='password',
+            roles=[],
+        )
+        RestaurantEmployee.objects.create(
+            user=waiter, restaurant=self.restaurant_a,
+            roles=[ROLES.get('RESTAURANT_WAITER')],
+        )
+        response = self._request(
+            waiter, 'post', 'menusections',
+            {'name': 'Waiter section', 'restaurant': str(self.restaurant_a.id)},
+        )
+        self.assertEqual(response.status_code, 403)
+
+    def test_inactive_employee_record_denied(self):
+        # Owner role at the right restaurant, but the employee row is inactive.
+        self.employment_a.active = False
+        self.employment_a.save(update_fields=['active'])
+        response = self._request(
+            self.owner_a, 'post', 'menusections',
+            {'name': 'Should Fail', 'restaurant': str(self.restaurant_a.id)},
+        )
+        self.assertEqual(response.status_code, 403)
+
+    def test_soft_deleted_employee_record_denied(self):
+        self.employment_a.deleted = True
+        self.employment_a.save(update_fields=['deleted'])
+        response = self._request(
+            self.owner_a, 'post', 'menusections',
+            {'name': 'Should Fail', 'restaurant': str(self.restaurant_a.id)},
+        )
+        self.assertEqual(response.status_code, 403)
+
+    # -- resolver failure modes (deny by default) ----------------------------
+
+    def test_delete_with_unknown_record_id_returns_403(self):
+        response = self._request(
+            self.owner_a, 'delete', 'menuitems',
+            {'id': '00000000-0000-0000-0000-000000000000'},
+        )
+        self.assertEqual(response.status_code, 403)
+
+    def test_put_with_missing_id_returns_403(self):
+        response = self._request(
+            self.owner_a, 'put', 'menusections',
+            {'name': 'no id here'},
+        )
+        self.assertEqual(response.status_code, 403)
+
+    def test_post_menusection_missing_restaurant_returns_403(self):
+        response = self._request(
+            self.owner_a, 'post', 'menusections',
+            {'name': 'no restaurant here'},
+        )
+        self.assertEqual(response.status_code, 403)
+
+    def test_post_menuitem_missing_section_returns_403(self):
+        response = self._request(
+            self.owner_a, 'post', 'menuitems',
+            {'name': 'no section here', 'primary_price': '1000'},
+        )
+        self.assertEqual(response.status_code, 403)
