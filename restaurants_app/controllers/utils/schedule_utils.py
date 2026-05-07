@@ -1,36 +1,79 @@
 from datetime import datetime
+from typing import Optional
+
 import pytz
+from django.conf import settings
 
 
-def is_section_currently_active(section) -> bool:
+# ISO weekday number (Monday=1..Sunday=7) -> string code matching the frontend.
+ISO_WEEKDAY_TO_CODE = {
+    1: 'mon', 2: 'tue', 3: 'wed', 4: 'thu',
+    5: 'fri', 6: 'sat', 7: 'sun',
+}
+
+
+def _to_minutes(hhmm: str) -> Optional[int]:
+    """Parse 'HH:MM' to minutes-since-midnight; return None on malformed input."""
+    try:
+        hh, mm = hhmm.split(':')
+        h, m = int(hh), int(mm)
+        if not (0 <= h <= 23 and 0 <= m <= 59):
+            return None
+        return h * 60 + m
+    except (ValueError, AttributeError):
+        return None
+
+
+def _is_time_in_window(current_min: int, start_min: int, end_min: int) -> bool:
+    """True if current_min falls inside [start, end), with overnight support.
+
+    Mirrors frontend logic in src/app/restaurant-mgt/menu/utils/schedule-utils.ts.
     """
-    Evaluate whether a MenuSection should be visible right now
-    based on its availability setting and schedule slots.
+    if start_min <= end_min:
+        return start_min <= current_min < end_min
+    # Overnight window (e.g. 22:00-02:00): valid if past start OR before end.
+    return current_min >= start_min or current_min < end_min
+
+
+def is_section_currently_active(section, now: Optional[datetime] = None) -> bool:
+    """Whether a MenuSection should be visible right now.
 
     Returns True if:
     - availability == 'always', OR
-    - availability == 'scheduled' AND current time falls within at least one schedule slot
+    - availability == 'scheduled' AND schedules is empty (safe fallback), OR
+    - availability == 'scheduled' AND now falls within at least one slot.
 
-    Uses Africa/Kampala timezone for evaluation.
+    Day codes are strings matching the frontend's ScheduleDay domain
+    ('mon'..'sun'). Time windows handle overnight spans (e.g. 22:00-02:00).
+    Evaluation uses settings.TIME_ZONE.
+
+    The optional `now` parameter is for testing; production callers omit it.
     """
     if section.availability != 'scheduled':
         return True
 
     schedules = section.schedules
     if not schedules or not isinstance(schedules, list):
-        return True  # No schedules defined = always available (safe fallback)
+        return True  # Scheduled mode with no slots: keep section visible.
 
-    tz = pytz.timezone('Africa/Kampala')
-    now = datetime.now(tz)
-    current_day = now.isoweekday()  # 1=Monday, 7=Sunday
-    current_time = now.strftime('%H:%M')
+    if now is None:
+        tz = pytz.timezone(settings.TIME_ZONE)
+        now = datetime.now(tz)
+
+    current_code = ISO_WEEKDAY_TO_CODE.get(now.isoweekday())
+    current_min = now.hour * 60 + now.minute
 
     for slot in schedules:
-        days = slot.get('days', [])
-        start_time = slot.get('startTime', '00:00')
-        end_time = slot.get('endTime', '23:59')
-
-        if current_day in days and start_time <= current_time <= end_time:
+        if not isinstance(slot, dict):
+            continue
+        days = slot.get('days')
+        if not isinstance(days, list) or current_code not in days:
+            continue
+        start_min = _to_minutes(slot.get('startTime', ''))
+        end_min = _to_minutes(slot.get('endTime', ''))
+        if start_min is None or end_min is None:
+            continue
+        if _is_time_in_window(current_min, start_min, end_min):
             return True
 
     return False

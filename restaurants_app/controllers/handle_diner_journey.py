@@ -27,6 +27,10 @@ def handle_table_scan(table_id: str) -> dict:
 
 
 def handle_show_menu(restaurant_id: str, ignore_approval: str) -> dict:
+    from restaurants_app.controllers.utils.schedule_utils import (
+        is_section_currently_active,
+    )
+
     filters = {
         'restaurant': restaurant_id,
         'approved': True,
@@ -41,6 +45,9 @@ def handle_show_menu(restaurant_id: str, ignore_approval: str) -> dict:
         filters.pop('enabled')
 
     sections = MenuSection.objects.filter(**filters)
+    # Schedule is stored as JSON; can't filter at queryset level cleanly.
+    # Section count is bounded so Python-side filter is fine.
+    sections = [s for s in sections if is_section_currently_active(s)]
 
     menu_data = SerializerGetFullMenu(
         sections,

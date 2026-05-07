@@ -1155,3 +1155,198 @@ class TenantIsolationTests(TestCase):
             {'name': 'no section here', 'primary_price': '1000'},
         )
         self.assertEqual(response.status_code, 403)
+
+
+class MenuSectionScheduleTests(TestCase):
+    """Tests for is_section_currently_active and the diner show-menu filter."""
+
+    @staticmethod
+    def _make_section(availability='scheduled', schedules=None):
+        from types import SimpleNamespace
+        return SimpleNamespace(
+            availability=availability,
+            schedules=[] if schedules is None else schedules,
+        )
+
+    @staticmethod
+    def _at(year, month, day, hour, minute):
+        import pytz
+        from datetime import datetime as real_dt
+        return pytz.timezone('Africa/Nairobi').localize(
+            real_dt(year, month, day, hour, minute)
+        )
+
+    # 2026-01-05 is Monday, 2026-01-06 Tuesday, ..., 2026-01-11 Sunday.
+
+    def test_availability_always_returns_true(self):
+        from restaurants_app.controllers.utils.schedule_utils import (
+            is_section_currently_active,
+        )
+        section = self._make_section(availability='always', schedules=[])
+        self.assertTrue(is_section_currently_active(section))
+
+    def test_scheduled_with_empty_schedules_returns_true(self):
+        from restaurants_app.controllers.utils.schedule_utils import (
+            is_section_currently_active,
+        )
+        section = self._make_section(availability='scheduled', schedules=[])
+        self.assertTrue(is_section_currently_active(section))
+
+    def test_scheduled_in_window_active(self):
+        from restaurants_app.controllers.utils.schedule_utils import (
+            is_section_currently_active,
+        )
+        section = self._make_section(schedules=[
+            {'days': ['mon', 'tue'], 'startTime': '07:00', 'endTime': '11:00'},
+        ])
+        # Monday 10:00 -> inside window.
+        self.assertTrue(
+            is_section_currently_active(section, now=self._at(2026, 1, 5, 10, 0))
+        )
+
+    def test_scheduled_wrong_day_inactive(self):
+        from restaurants_app.controllers.utils.schedule_utils import (
+            is_section_currently_active,
+        )
+        section = self._make_section(schedules=[
+            {'days': ['mon', 'tue'], 'startTime': '07:00', 'endTime': '11:00'},
+        ])
+        # Wednesday 10:00 -> day not in slot.
+        self.assertFalse(
+            is_section_currently_active(section, now=self._at(2026, 1, 7, 10, 0))
+        )
+
+    def test_scheduled_in_day_outside_window_inactive(self):
+        from restaurants_app.controllers.utils.schedule_utils import (
+            is_section_currently_active,
+        )
+        section = self._make_section(schedules=[
+            {'days': ['mon'], 'startTime': '07:00', 'endTime': '11:00'},
+        ])
+        # Monday 13:00 -> outside window.
+        self.assertFalse(
+            is_section_currently_active(section, now=self._at(2026, 1, 5, 13, 0))
+        )
+
+    def test_overnight_window_late_evening_active(self):
+        from restaurants_app.controllers.utils.schedule_utils import (
+            is_section_currently_active,
+        )
+        section = self._make_section(schedules=[
+            {'days': ['mon'], 'startTime': '22:00', 'endTime': '02:00'},
+        ])
+        # Monday 23:30 -> past start of overnight window.
+        self.assertTrue(
+            is_section_currently_active(section, now=self._at(2026, 1, 5, 23, 30))
+        )
+
+    def test_overnight_window_early_morning_active(self):
+        from restaurants_app.controllers.utils.schedule_utils import (
+            is_section_currently_active,
+        )
+        # Slot anchored to Monday but with overnight 22:00-02:00 window.
+        # The frontend considers Tuesday 01:00 still inside the Monday slot's
+        # overnight tail. Backend mirrors the frontend by treating "current
+        # day" as the slot day and accepting times before end_min.
+        section = self._make_section(schedules=[
+            {'days': ['tue'], 'startTime': '22:00', 'endTime': '02:00'},
+        ])
+        # Tuesday 01:00 -> before end of overnight window for the Tuesday slot.
+        self.assertTrue(
+            is_section_currently_active(section, now=self._at(2026, 1, 6, 1, 0))
+        )
+
+    def test_overnight_window_outside_inactive(self):
+        from restaurants_app.controllers.utils.schedule_utils import (
+            is_section_currently_active,
+        )
+        section = self._make_section(schedules=[
+            {'days': ['mon'], 'startTime': '22:00', 'endTime': '02:00'},
+        ])
+        # Monday 05:00 -> outside the overnight window (after end, before start).
+        self.assertFalse(
+            is_section_currently_active(section, now=self._at(2026, 1, 5, 5, 0))
+        )
+
+    def test_malformed_days_string_instead_of_list_skipped(self):
+        from restaurants_app.controllers.utils.schedule_utils import (
+            is_section_currently_active,
+        )
+        section = self._make_section(schedules=[
+            {'days': 'mon', 'startTime': '07:00', 'endTime': '11:00'},
+        ])
+        self.assertFalse(
+            is_section_currently_active(section, now=self._at(2026, 1, 5, 10, 0))
+        )
+
+    def test_malformed_days_numeric_skipped(self):
+        from restaurants_app.controllers.utils.schedule_utils import (
+            is_section_currently_active,
+        )
+        # Legacy int-day shape: 'mon' is not in [1, 2, 3] so slot is rejected.
+        section = self._make_section(schedules=[
+            {'days': [1, 2, 3], 'startTime': '07:00', 'endTime': '11:00'},
+        ])
+        self.assertFalse(
+            is_section_currently_active(section, now=self._at(2026, 1, 5, 10, 0))
+        )
+
+    def test_malformed_time_string_skipped(self):
+        from restaurants_app.controllers.utils.schedule_utils import (
+            is_section_currently_active,
+        )
+        section = self._make_section(schedules=[
+            {'days': ['mon'], 'startTime': '25:99', 'endTime': '11:00'},
+        ])
+        self.assertFalse(
+            is_section_currently_active(section, now=self._at(2026, 1, 5, 10, 0))
+        )
+
+    def test_multiple_slots_any_match_active(self):
+        from restaurants_app.controllers.utils.schedule_utils import (
+            is_section_currently_active,
+        )
+        section = self._make_section(schedules=[
+            {'days': ['tue'], 'startTime': '07:00', 'endTime': '11:00'},
+            {'days': ['mon'], 'startTime': '12:00', 'endTime': '14:00'},
+        ])
+        # Monday 13:00 -> matches the second slot only.
+        self.assertTrue(
+            is_section_currently_active(section, now=self._at(2026, 1, 5, 13, 0))
+        )
+
+    def test_handle_show_menu_filters_inactive_scheduled_sections(self):
+        from unittest.mock import patch
+        from restaurants_app.controllers.handle_diner_journey import (
+            handle_show_menu,
+        )
+
+        seed_user()
+        seed_restaurant()
+        restaurant = Restaurant.objects.get(name=TEST_RESTAURANT_NAME)
+
+        always_section = MenuSection.objects.create(
+            name='Always Section', restaurant=restaurant,
+            availability='always', schedules=[],
+            approved=True, enabled=True, available=True,
+        )
+        # Scheduled for Tuesday only; "now" will be Monday 10:00 -> inactive.
+        MenuSection.objects.create(
+            name='Scheduled Inactive', restaurant=restaurant,
+            availability='scheduled',
+            schedules=[
+                {'days': ['tue'], 'startTime': '07:00', 'endTime': '11:00'},
+            ],
+            approved=True, enabled=True, available=True,
+        )
+
+        monday_10am = self._at(2026, 1, 5, 10, 0)
+        with patch(
+            'restaurants_app.controllers.utils.schedule_utils.datetime'
+        ) as mock_datetime:
+            mock_datetime.now.return_value = monday_10am
+            response = handle_show_menu(str(restaurant.id), 'false')
+
+        self.assertEqual(response['status'], 200)
+        returned_ids = [section['id'] for section in response['data']]
+        self.assertEqual(returned_ids, [str(always_section.id)])
