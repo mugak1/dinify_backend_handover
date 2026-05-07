@@ -1350,3 +1350,151 @@ class MenuSectionScheduleTests(TestCase):
         self.assertEqual(response['status'], 200)
         returned_ids = [section['id'] for section in response['data']]
         self.assertEqual(returned_ids, [str(always_section.id)])
+
+
+class NullableFieldClearingTests(TestCase):
+    """
+    Verifies the `clear_<field>: true` sentinel pattern wired into
+    RestaurantSetupEndpoint.put. The Secretary skips payload values that
+    are None (misc_app/controllers/secretary.py:316), so nullable scalar
+    fields cannot be cleared via the normal update path. The sentinel is
+    intercepted before Secretary runs and writes None directly via a
+    queryset .update(), mirroring the clear_image precedent.
+    """
+
+    def setUp(self):
+        from decimal import Decimal
+        self.owner = User.objects.create_user(
+            first_name='Null', last_name='Clearer',
+            email='nullclearer@test.com', phone_number='256700000050',
+            username='256700000050', country='Uganda', password='password',
+            roles=[],
+        )
+        self.restaurant = Restaurant.objects.create(
+            name='Null Clearing Restaurant', location='loc',
+            status=RestaurantStatus_Active, owner=self.owner,
+        )
+        RestaurantEmployee.objects.create(
+            user=self.owner, restaurant=self.restaurant,
+            roles=[ROLES.get('RESTAURANT_OWNER')],
+        )
+        self.section = MenuSection.objects.create(
+            name='Mains', restaurant=self.restaurant, listing_position=0,
+        )
+        # Item starts with both clearable fields set so we can verify
+        # they actually flip to None.
+        self.item = MenuItem.objects.create(
+            name='Burger', section=self.section,
+            primary_price=Decimal('10.00'),
+            calories=200,
+            discounted_price=Decimal('5.00'),
+            listing_position=0,
+        )
+
+    def _token_for(self, user):
+        from rest_framework_simplejwt.tokens import RefreshToken
+        return str(RefreshToken.for_user(user).access_token)
+
+    def _put(self, body):
+        path = '/api/v1/restaurant-setup/menuitems/'
+        token = self._token_for(self.owner)
+        return self.client.put(
+            path,
+            data=body,
+            content_type='application/json',
+            HTTP_AUTHORIZATION=f'Bearer {token}',
+        )
+
+    def test_clear_calories_sets_to_none(self):
+        response = self._put({
+            'id': str(self.item.id),
+            'clear_calories': True,
+        })
+        self.assertEqual(response.status_code, 200)
+        self.item.refresh_from_db()
+        self.assertIsNone(self.item.calories)
+
+    def test_clear_discounted_price_sets_to_none(self):
+        response = self._put({
+            'id': str(self.item.id),
+            'clear_discounted_price': True,
+        })
+        self.assertEqual(response.status_code, 200)
+        self.item.refresh_from_db()
+        self.assertIsNone(self.item.discounted_price)
+
+    def test_clear_with_companion_null_value(self):
+        # Frontend sends only the sentinel, but a programmatic caller
+        # might send both. Should still clear, no error from companion.
+        response = self._put({
+            'id': str(self.item.id),
+            'clear_calories': True,
+            'calories': None,
+        })
+        self.assertEqual(response.status_code, 200)
+        self.item.refresh_from_db()
+        self.assertIsNone(self.item.calories)
+
+    def test_clear_false_does_not_clear(self):
+        # `clear_calories: false` is not a clear request — the field
+        # should retain its existing value.
+        response = self._put({
+            'id': str(self.item.id),
+            'clear_calories': False,
+            'name': 'Burger Renamed',
+        })
+        self.assertEqual(response.status_code, 200)
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.calories, 200)
+
+    def test_clear_does_not_affect_other_fields(self):
+        from decimal import Decimal
+        original_name = self.item.name
+        original_price = self.item.primary_price
+        response = self._put({
+            'id': str(self.item.id),
+            'clear_calories': True,
+        })
+        self.assertEqual(response.status_code, 200)
+        self.item.refresh_from_db()
+        self.assertIsNone(self.item.calories)
+        self.assertEqual(self.item.name, original_name)
+        self.assertEqual(self.item.primary_price, Decimal(original_price))
+
+    def test_multiple_clears_in_one_request(self):
+        response = self._put({
+            'id': str(self.item.id),
+            'clear_calories': True,
+            'clear_discounted_price': True,
+        })
+        self.assertEqual(response.status_code, 200)
+        self.item.refresh_from_db()
+        self.assertIsNone(self.item.calories)
+        self.assertIsNone(self.item.discounted_price)
+
+    def test_clear_unknown_field_is_ignored(self):
+        # Unregistered clear_<field> sentinels must not cause a 500 or
+        # affect any field. The handler only iterates the registered
+        # NULLABLE_CLEARABLE_FIELDS list.
+        response = self._put({
+            'id': str(self.item.id),
+            'clear_nonexistent_field': True,
+            'name': 'Burger Renamed',
+        })
+        self.assertEqual(response.status_code, 200)
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.calories, 200)
+
+    def test_clear_wins_over_explicit_value(self):
+        # Sentinel contract: `clear_<field>` always takes precedence over
+        # a competing value in the same payload, even non-null. Without
+        # this guarantee, Secretary would write 999 *after* our
+        # UPDATE-to-None ran and silently override the clear.
+        response = self._put({
+            'id': str(self.item.id),
+            'clear_calories': True,
+            'calories': 999,
+        })
+        self.assertEqual(response.status_code, 200)
+        self.item.refresh_from_db()
+        self.assertIsNone(self.item.calories)
