@@ -1498,3 +1498,88 @@ class NullableFieldClearingTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.item.refresh_from_db()
         self.assertIsNone(self.item.calories)
+
+
+class PresetTagsEndpointTests(TestCase):
+    """
+    Locks in the contract for PUT /api/v1/restaurant-setup/preset-tags/.
+    The endpoint expects `tags` to be a native JSON array; a stringified
+    array (the historical frontend bug) must be rejected with 400 so the
+    bug cannot regress unnoticed.
+    """
+
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            first_name='Preset', last_name='Owner',
+            email='preset_owner@test.com', phone_number='256700000060',
+            username='256700000060', country='Uganda', password='password',
+            roles=[],
+        )
+        self.restaurant = Restaurant.objects.create(
+            name='Preset Tags Restaurant', location='loc',
+            status=RestaurantStatus_Active, owner=self.owner,
+        )
+        RestaurantEmployee.objects.create(
+            user=self.owner, restaurant=self.restaurant,
+            roles=[ROLES.get('RESTAURANT_OWNER')],
+        )
+
+    def _token_for(self, user):
+        from rest_framework_simplejwt.tokens import RefreshToken
+        return str(RefreshToken.for_user(user).access_token)
+
+    def _put(self, body):
+        token = self._token_for(self.owner)
+        return self.client.put(
+            '/api/v1/restaurant-setup/preset-tags/',
+            data=body,
+            content_type='application/json',
+            HTTP_AUTHORIZATION=f'Bearer {token}',
+        )
+
+    def _tag(self, tid, name):
+        return {
+            'id': tid, 'name': name, 'icon': 'tag',
+            'color': 'gray', 'filterable': True,
+        }
+
+    def test_put_with_native_array_succeeds(self):
+        tags = [self._tag('a', 'vegan'), self._tag('b', 'spicy')]
+        response = self._put({
+            'restaurant': str(self.restaurant.id),
+            'tags': tags,
+        })
+        self.assertEqual(response.status_code, 200)
+        self.restaurant.refresh_from_db()
+        self.assertEqual(self.restaurant.preset_tags, tags)
+
+    def test_put_with_stringified_json_returns_400(self):
+        import json
+        tags = [self._tag('a', 'vegan')]
+        response = self._put({
+            'restaurant': str(self.restaurant.id),
+            'tags': json.dumps(tags),
+        })
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json(), {
+            'status': 400, 'message': 'tags (list) is required',
+        })
+        self.restaurant.refresh_from_db()
+        self.assertEqual(self.restaurant.preset_tags, [])
+
+    def test_put_with_missing_tags_returns_400(self):
+        response = self._put({'restaurant': str(self.restaurant.id)})
+        self.assertEqual(response.status_code, 400)
+        self.restaurant.refresh_from_db()
+        self.assertEqual(self.restaurant.preset_tags, [])
+
+    def test_put_with_empty_list_succeeds(self):
+        self.restaurant.preset_tags = [self._tag('x', 'old')]
+        self.restaurant.save(update_fields=['preset_tags'])
+        response = self._put({
+            'restaurant': str(self.restaurant.id),
+            'tags': [],
+        })
+        self.assertEqual(response.status_code, 200)
+        self.restaurant.refresh_from_db()
+        self.assertEqual(self.restaurant.preset_tags, [])
