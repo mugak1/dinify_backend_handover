@@ -31,7 +31,9 @@ def check_permissions(
     try:
         employee_record = RestaurantEmployee.objects.get(
             user_id=user_id,
-            restaurant_id=restaurant_id
+            restaurant_id=restaurant_id,
+            deleted=False,
+            active=True,
         )
         accepted_roles = [RESTAURANT_OWNER, RESTAURANT_MANAGER]
         if any(role in accepted_roles for role in employee_record.roles):
