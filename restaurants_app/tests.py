@@ -1583,3 +1583,183 @@ class PresetTagsEndpointTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.restaurant.refresh_from_db()
         self.assertEqual(self.restaurant.preset_tags, [])
+
+
+class DedicatedEndpointAuthorizationTests(TestCase):
+    """
+    Locks in the tightened authorization filters (`active=True, deleted=False`)
+    on the two permission helpers used outside the catch-all PUT path:
+
+    - users_app.controllers.permissions_check.get_user_restaurant_roles
+    - restaurants_app.controllers.first_time_batch_approval.check_permissions
+
+    These helpers gate every dedicated endpoint (preset_tags, upsell_config,
+    reservations, waitlist, table_actions) and the first-time-menu-review
+    manager action. The catch-all PUT path is already covered by
+    TenantIsolationTests; this class is its analogue for the dedicated
+    endpoints, plus a cross-tenant regression guard at preset_tags.
+    """
+
+    def setUp(self):
+        self.owner_a = User.objects.create_user(
+            first_name='Owner', last_name='A',
+            email='owner_a_dedicated@test.com', phone_number='256700000110',
+            username='256700000110', country='Uganda', password='password',
+            roles=[],
+        )
+        self.restaurant_a = Restaurant.objects.create(
+            name='Dedicated A', location='loc-a',
+            status=RestaurantStatus_Active, owner=self.owner_a,
+        )
+        self.employment_a = RestaurantEmployee.objects.create(
+            user=self.owner_a, restaurant=self.restaurant_a,
+            roles=[ROLES.get('RESTAURANT_OWNER')],
+        )
+
+        self.owner_b = User.objects.create_user(
+            first_name='Owner', last_name='B',
+            email='owner_b_dedicated@test.com', phone_number='256700000120',
+            username='256700000120', country='Uganda', password='password',
+            roles=[],
+        )
+        self.restaurant_b = Restaurant.objects.create(
+            name='Dedicated B', location='loc-b',
+            status=RestaurantStatus_Active, owner=self.owner_b,
+        )
+        RestaurantEmployee.objects.create(
+            user=self.owner_b, restaurant=self.restaurant_b,
+            roles=[ROLES.get('RESTAURANT_OWNER')],
+        )
+
+        # first-time-menu-review bails with 400 if the restaurant has no
+        # menu sections (see first_time_batch_approval.py:75-82), so seed one.
+        MenuSection.objects.create(
+            name='A Section', restaurant=self.restaurant_a, listing_position=0,
+        )
+
+    def _token_for(self, user):
+        from rest_framework_simplejwt.tokens import RefreshToken
+        return str(RefreshToken.for_user(user).access_token)
+
+    def _tag(self, tid, name):
+        return {
+            'id': tid, 'name': name, 'icon': 'tag',
+            'color': 'gray', 'filterable': True,
+        }
+
+    def _preset_tags_put(self, user, body):
+        token = self._token_for(user)
+        return self.client.put(
+            '/api/v1/restaurant-setup/preset-tags/',
+            data=body,
+            content_type='application/json',
+            HTTP_AUTHORIZATION=f'Bearer {token}',
+        )
+
+    def _first_time_menu_review_post(self, user, body):
+        token = self._token_for(user)
+        return self.client.post(
+            '/api/v1/restaurant-setup/manager-actions/first-time-menu-review/',
+            data=body,
+            content_type='application/json',
+            HTTP_AUTHORIZATION=f'Bearer {token}',
+        )
+
+    # -- unit: get_user_restaurant_roles --------------------------------
+
+    def test_get_user_restaurant_roles_excludes_deactivated_employee(self):
+        from users_app.controllers.permissions_check import (
+            get_user_restaurant_roles,
+        )
+        self.employment_a.active = False
+        self.employment_a.save(update_fields=['active'])
+        roles = get_user_restaurant_roles(
+            user_id=str(self.owner_a.id),
+            restaurant_id=str(self.restaurant_a.id),
+        )
+        self.assertEqual(roles, [])
+
+    def test_get_user_restaurant_roles_excludes_soft_deleted_employee(self):
+        from users_app.controllers.permissions_check import (
+            get_user_restaurant_roles,
+        )
+        self.employment_a.deleted = True
+        self.employment_a.save(update_fields=['deleted'])
+        roles = get_user_restaurant_roles(
+            user_id=str(self.owner_a.id),
+            restaurant_id=str(self.restaurant_a.id),
+        )
+        self.assertEqual(roles, [])
+
+    # -- unit: first_time_batch_approval.check_permissions --------------
+
+    def test_first_time_batch_check_excludes_deactivated_employee(self):
+        from restaurants_app.controllers.first_time_batch_approval import (
+            check_permissions,
+        )
+        self.employment_a.active = False
+        self.employment_a.save(update_fields=['active'])
+        self.assertFalse(check_permissions(
+            restaurant_id=str(self.restaurant_a.id),
+            user_id=str(self.owner_a.id),
+        ))
+
+    def test_first_time_batch_check_excludes_soft_deleted_employee(self):
+        from restaurants_app.controllers.first_time_batch_approval import (
+            check_permissions,
+        )
+        self.employment_a.deleted = True
+        self.employment_a.save(update_fields=['deleted'])
+        self.assertFalse(check_permissions(
+            restaurant_id=str(self.restaurant_a.id),
+            user_id=str(self.owner_a.id),
+        ))
+
+    # -- integration: preset_tags ---------------------------------------
+
+    def test_deactivated_employee_blocked_from_preset_tags_put(self):
+        self.employment_a.active = False
+        self.employment_a.save(update_fields=['active'])
+        response = self._preset_tags_put(
+            self.owner_a,
+            {
+                'restaurant': str(self.restaurant_a.id),
+                'tags': [self._tag('a', 'vegan')],
+            },
+        )
+        self.assertEqual(response.status_code, 403)
+        self.restaurant_a.refresh_from_db()
+        self.assertEqual(self.restaurant_a.preset_tags, [])
+
+    def test_cross_tenant_blocked_from_preset_tags_put(self):
+        # owner_a has an active employment at A but none at B.
+        response = self._preset_tags_put(
+            self.owner_a,
+            {
+                'restaurant': str(self.restaurant_b.id),
+                'tags': [self._tag('a', 'vegan')],
+            },
+        )
+        self.assertEqual(response.status_code, 403)
+        self.restaurant_b.refresh_from_db()
+        self.assertEqual(self.restaurant_b.preset_tags, [])
+
+    # -- integration: first-time-menu-review ----------------------------
+
+    def test_deactivated_employee_blocked_from_first_time_menu_review(self):
+        self.employment_a.active = False
+        self.employment_a.save(update_fields=['active'])
+        response = self._first_time_menu_review_post(
+            self.owner_a,
+            {
+                'restaurant': str(self.restaurant_a.id),
+                'decision': 'submit',
+            },
+        )
+        # The controller returns status 401 in the body when permission is
+        # denied (see first_time_batch_approval.py:67-71).
+        self.assertEqual(response.json().get('status'), 401)
+        self.restaurant_a.refresh_from_db()
+        self.assertNotEqual(
+            self.restaurant_a.first_time_menu_approval_decision, 'submit',
+        )

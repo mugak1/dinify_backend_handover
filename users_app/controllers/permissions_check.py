@@ -19,7 +19,8 @@ def get_user_restaurant_roles(user_id: str, restaurant_id: str) -> list:
             restaurant__status__in=['active'],
             user=user_id,
             restaurant=restaurant_id,
-            deleted=False
+            deleted=False,
+            active=True,
         )['roles']
     except RestaurantEmployee.DoesNotExist:
         logger.debug("User does not have roles in the restaurant")
