@@ -1763,3 +1763,92 @@ class DedicatedEndpointAuthorizationTests(TestCase):
         self.assertNotEqual(
             self.restaurant_a.first_time_menu_approval_decision, 'submit',
         )
+
+
+class MenuItemAllergensToTagsMigrationTests(TestCase):
+    """
+    Locks in the data migration in
+    restaurants_app/migrations/0043_migrate_menuitem_allergens_to_tags.py.
+    The migration moves every saved value out of MenuItem.allergens and
+    into MenuItem.tags, deduplicating while preserving order. allergens
+    is reset to [] for the future allergen-warning feature.
+
+    The migration function is invoked directly with django's live app
+    registry — no schema changes are exercised.
+    """
+
+    def setUp(self):
+        owner = User.objects.create_user(
+            first_name='AllergenMig', last_name='Owner',
+            email='allergen_mig_owner@test.com',
+            phone_number='256700000080',
+            username='256700000080', country='Uganda', password='password',
+            roles=[],
+        )
+        self.restaurant = Restaurant.objects.create(
+            name='Allergen Migration Restaurant', location='loc',
+            status=RestaurantStatus_Active, owner=owner,
+        )
+        self.section = MenuSection.objects.create(
+            name='Mains', restaurant=self.restaurant,
+        )
+
+    def _item(self, name, allergens=None, tags=None):
+        kwargs = {
+            'name': name,
+            'section': self.section,
+            'primary_price': 1000.0,
+        }
+        if allergens is not None:
+            kwargs['allergens'] = allergens
+        if tags is not None:
+            kwargs['tags'] = tags
+        return MenuItem.objects.create(**kwargs)
+
+    def _run_migration(self):
+        # Migration module names start with a digit, so import via importlib.
+        import importlib
+        from django.apps import apps as global_apps
+        mig = importlib.import_module(
+            'restaurants_app.migrations'
+            '.0043_migrate_menuitem_allergens_to_tags'
+        )
+        mig.migrate_allergens_to_tags(global_apps, None)
+
+    def test_migration_moves_allergens_to_tags_when_tags_empty(self):
+        item = self._item(
+            'Plain', allergens=['vegan', 'spicy'], tags=[],
+        )
+        self._run_migration()
+        item.refresh_from_db()
+        self.assertEqual(item.tags, ['vegan', 'spicy'])
+        self.assertEqual(item.allergens, [])
+
+    def test_migration_merges_when_tags_already_populated(self):
+        item = self._item(
+            'Both', allergens=['vegan'], tags=['popular'],
+        )
+        self._run_migration()
+        item.refresh_from_db()
+        # Existing tags first, then allergens entries appended.
+        self.assertEqual(item.tags, ['popular', 'vegan'])
+        self.assertEqual(item.allergens, [])
+
+    def test_migration_dedupes_overlapping_values(self):
+        item = self._item(
+            'Overlap', allergens=['vegan', 'spicy'], tags=['vegan'],
+        )
+        self._run_migration()
+        item.refresh_from_db()
+        # 'vegan' appears once; 'spicy' is appended after.
+        self.assertEqual(item.tags, ['vegan', 'spicy'])
+        self.assertEqual(item.allergens, [])
+
+    def test_migration_skips_empty_allergens(self):
+        item = self._item(
+            'Skip', allergens=[], tags=['existing'],
+        )
+        self._run_migration()
+        item.refresh_from_db()
+        self.assertEqual(item.tags, ['existing'])
+        self.assertEqual(item.allergens, [])
