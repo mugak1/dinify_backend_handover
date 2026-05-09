@@ -91,7 +91,11 @@ def seed_menu_items():
             name=TEST_EXTRA_DISCOUNTED_MENU_ITEM_NAME,
             section=menu_section,
             primary_price=1000.0,
-            discounted_price=900.0,
+            # discounted_price must match the canonical shape: 20% off 1000 = 800.
+            # Post-0042 the migration recomputes discounted_price from
+            # discount_details, so seed values that drifted (e.g. 900) are not
+            # representative of production data.
+            discounted_price=800.0,
             running_discount=True,
             consider_discount_object=True,
             # CANONICAL discount_details schema (must match restaurants_app/models.py:234-242):
