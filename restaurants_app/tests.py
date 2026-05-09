@@ -91,7 +91,11 @@ def seed_menu_items():
             name=TEST_EXTRA_DISCOUNTED_MENU_ITEM_NAME,
             section=menu_section,
             primary_price=1000.0,
-            discounted_price=900.0,
+            # discounted_price must match the canonical shape: 20% off 1000 = 800.
+            # Post-0042 the migration recomputes discounted_price from
+            # discount_details, so seed values that drifted (e.g. 900) are not
+            # representative of production data.
+            discounted_price=800.0,
             running_discount=True,
             consider_discount_object=True,
             # CANONICAL discount_details schema (must match restaurants_app/models.py:234-242):
@@ -1789,3 +1793,122 @@ class MenuItemAllergensToTagsMigrationTests(TestCase):
         item.refresh_from_db()
         self.assertEqual(item.tags, ['existing'])
         self.assertEqual(item.allergens, [])
+
+
+class BackendTechDebtBundleTests(TestCase):
+    """Regression guards for the con_orders.py structural fixes:
+    if/elif conversion of mutually-exclusive discount branches and the
+    end_date inclusivity correction."""
+
+    def setUp(self):
+        seed_user()
+        seed_restaurant()
+        seed_menu_section()
+        self.section = MenuSection.objects.get(name=TEST_MENU_SECTION_NAME)
+
+    @staticmethod
+    def _always_active_temporal():
+        return {
+            'recurring_days': [1, 2, 3, 4, 5, 6, 7],
+            'start_date': '',
+            'end_date': '',
+            'start_time': '',
+            'end_time': '',
+        }
+
+    def test_discount_with_clean_data_unchanged(self):
+        # Regression: with normalized (post-0042) discount_details, the
+        # if/elif structural fix must not change behavior on clean data.
+        # Both percentage and fixed-amount paths are covered here.
+        from decimal import Decimal
+        from orders_app.controllers.con_orders import ConOrder
+
+        pct_item = MenuItem.objects.create(
+            name='Bundle Pct Item',
+            section=self.section,
+            primary_price=Decimal('10000'),
+            discounted_price=Decimal('8000.00'),
+            running_discount=True,
+            consider_discount_object=False,
+            discount_details={
+                'discount_type': 'percentage',
+                'discount_percentage': 20.0,
+                'discount_amount': 0.0,
+                **self._always_active_temporal(),
+            },
+        )
+        result = ConOrder.determine_effective_unit_price(pct_item)
+        self.assertEqual(result['status'], 200)
+        self.assertEqual(result['price'], Decimal('8000.00'))
+
+        # Discount-object path with a percentage value.
+        obj_pct_item = MenuItem.objects.create(
+            name='Bundle Obj Pct Item',
+            section=self.section,
+            primary_price=Decimal('10000'),
+            discounted_price=None,
+            running_discount=False,
+            consider_discount_object=True,
+            discount_details={
+                'discount_type': 'percentage',
+                'discount_percentage': 25.0,
+                'discount_amount': 0.0,
+                **self._always_active_temporal(),
+            },
+        )
+        result = ConOrder.determine_effective_unit_price(obj_pct_item)
+        self.assertEqual(result['status'], 200)
+        self.assertEqual(result['price'], Decimal('7500.00'))
+
+        # Discount-object path with a fixed amount.
+        obj_fixed_item = MenuItem.objects.create(
+            name='Bundle Obj Fixed Item',
+            section=self.section,
+            primary_price=Decimal('10000'),
+            discounted_price=None,
+            running_discount=False,
+            consider_discount_object=True,
+            discount_details={
+                'discount_type': 'fixed',
+                'discount_percentage': 0.0,
+                'discount_amount': 2000.0,
+                **self._always_active_temporal(),
+            },
+        )
+        result = ConOrder.determine_effective_unit_price(obj_fixed_item)
+        self.assertEqual(result['status'], 200)
+        self.assertEqual(result['price'], Decimal('8000.00'))
+
+    def test_discount_end_date_semantic(self):
+        # end_date is treated as INCLUSIVE — the last day the discount is
+        # valid. Setting end_date == today must therefore keep the discount
+        # active. The pre-fix code used '>=' on the expiration check, which
+        # incorrectly fired on the end_date itself (off-by-one).
+        from datetime import datetime
+        from decimal import Decimal
+        from orders_app.controllers.con_orders import ConOrder
+
+        today_iso = datetime.now().date().isoformat()
+        item = MenuItem.objects.create(
+            name='Bundle End Date Item',
+            section=self.section,
+            primary_price=Decimal('10000'),
+            discounted_price=None,
+            running_discount=False,
+            consider_discount_object=True,
+            discount_details={
+                'discount_type': 'percentage',
+                'discount_percentage': 20.0,
+                'discount_amount': 0.0,
+                'recurring_days': [1, 2, 3, 4, 5, 6, 7],
+                'start_date': '',
+                'end_date': today_iso,
+                'start_time': '',
+                'end_time': '',
+            },
+        )
+        result = ConOrder.determine_effective_unit_price(item)
+        self.assertEqual(result['status'], 200)
+        # Discount IS applied on the end_date itself under inclusive semantics.
+        self.assertEqual(result['price'], Decimal('8000.00'))
+
