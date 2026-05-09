@@ -946,56 +946,6 @@ class RestaurantSetupEndpoint(APIView):
                     pass
             put_data.pop('clear_section_banner_image', None)
 
-        # Generic clear-sentinel handler for nullable scalar fields.
-        # Mirrors the clear_image / clear_section_banner_image pattern but
-        # generalised — each `clear_<field>: true` flag is intercepted before
-        # Secretary.update() runs (which would otherwise treat None as
-        # "no change", per misc_app/controllers/secretary.py:316). Add new
-        # fields here when adding a UI clear path; the matching frontend
-        # form must register the field in its `addClearSentinels` helper.
-        NULLABLE_CLEARABLE_FIELDS = {
-            'menuitems': ['calories', 'discounted_price'],
-        }
-
-        cleared_any_field = False
-        if config_detail in NULLABLE_CLEARABLE_FIELDS:
-            record_id = put_data.get('id')
-            fields_to_clear = []
-            for field in NULLABLE_CLEARABLE_FIELDS[config_detail]:
-                sentinel_key = f'clear_{field}'
-                # Always pop the sentinel so Secretary never sees it.
-                sentinel = put_data.pop(sentinel_key, None)
-                if sentinel:
-                    fields_to_clear.append(field)
-                    # Clear wins: drop any competing value for this field
-                    # even if non-null. Without this, a payload like
-                    # {clear_calories: true, calories: 100} would let
-                    # Secretary write 100 *after* our UPDATE-to-None ran,
-                    # silently overriding the clear. The frontend never
-                    # sends this shape; this guards programmatic callers.
-                    put_data.pop(field, None)
-                elif put_data.get(field) is None:
-                    # No sentinel, but a stray null arrived — drop it so
-                    # behaviour at this layer is deterministic (Secretary
-                    # would skip it anyway via the None guard).
-                    put_data.pop(field, None)
-
-            if fields_to_clear and record_id:
-                try:
-                    model = serializers[config_detail].Meta.model
-                    # .update(**kwargs) bypasses MenuItem.save()'s image
-                    # optimisation branch; safe because none of the cleared
-                    # fields trigger it.
-                    model.objects.filter(id=record_id).update(
-                        **{f: None for f in fields_to_clear}
-                    )
-                    cleared_any_field = True
-                except Exception as err:
-                    logger.error(
-                        "Failed to clear fields %s on %s id=%s: %s",
-                        fields_to_clear, config_detail, record_id, err,
-                    )
-
         secretary_args = {
             'serializer': serializer,
             'data': put_data,
@@ -1007,15 +957,6 @@ class RestaurantSetupEndpoint(APIView):
         }
 
         response = Secretary(secretary_args).update()
-
-        # If we cleared a nullable field via the sentinel handler but the
-        # rest of the payload contained no other changes, Secretary returns
-        # 400 "No changes detected". The clear *is* a change — override.
-        if cleared_any_field and response.get('status') == 400:
-            response = {
-                'status': 200,
-                'message': success_message,
-            }
 
         return Response(
             response,
