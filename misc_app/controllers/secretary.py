@@ -313,7 +313,7 @@ class Secretary:
             for item in edit_considerations:
                 try:
                     key = item.get('key')
-                    if self.data.get(key) is not None:
+                    if key in self.data:
                         new_data[key] = self.data.get(key)
                 except KeyError:
                     pass
@@ -322,13 +322,13 @@ class Secretary:
             for info in edit_considerations:
                 try:
                     if info.get('type') == 'char':
-                        # check if the key has been included in the new data
                         if info.get('text_presentation') is not None:
-                            new_data[info.get('key')] = info[
-                                'text_presentation'
-                            ](
-                                new_data[info['key']]
-                            )
+                            value = new_data[info['key']]
+                            if value is not None:
+                                # Don't apply text_presentation (e.g. str.title)
+                                # to None — char fields can be cleared via null
+                                # payloads now that absent vs. None is honoured.
+                                new_data[info['key']] = info['text_presentation'](value)
                 except KeyError:
                     pass
 

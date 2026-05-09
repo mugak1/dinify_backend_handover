@@ -212,3 +212,114 @@ class MiscAppTestFunctions(TestCase):
         notification = Notification(msg_data=data)
         notification.create_notification()
         self.assertIsNotNone(notification)
+
+
+class SecretaryAbsentVsNullSemanticTests(TestCase):
+    """
+    Locks in the absent-vs-None contract for Secretary.update():
+
+      - key absent from payload → field is left untouched on the model
+      - key present with explicit None → field is cleared on the model
+
+    Pre-fix, secretary.py:316 used `if self.data.get(key) is not None`
+    which collapsed both cases into "skip", forcing the Bug 6
+    `clear_<field>: true` sentinel workaround. The fix replaces it with
+    `if key in self.data` and adds a None-guard around the
+    `text_presentation` char block so a null payload to a name/status
+    field doesn't blow up `str.title(None)`.
+    """
+
+    def setUp(self):
+        from decimal import Decimal
+        from restaurants_app.models import (
+            Restaurant, MenuSection, MenuItem,
+        )
+        from dinify_backend.configss.string_definitions import (
+            RestaurantStatus_Active,
+        )
+        self.owner = User.objects.create_user(
+            first_name='Secretary', last_name='Tester',
+            email='secretary_tester@test.com', phone_number='256700000070',
+            username='256700000070', country='Uganda', password='password',
+            roles=[],
+        )
+        self.restaurant = Restaurant.objects.create(
+            name='Secretary Test Restaurant', location='loc',
+            status=RestaurantStatus_Active, owner=self.owner,
+        )
+        self.section = MenuSection.objects.create(
+            name='Mains', restaurant=self.restaurant, listing_position=0,
+        )
+        self.item = MenuItem.objects.create(
+            name='Burger', section=self.section,
+            primary_price=Decimal('10.00'),
+            calories=200,
+            discounted_price=Decimal('5.00'),
+            listing_position=0,
+        )
+
+    def _menu_item_args(self, data):
+        from restaurants_app.serializers import SerializerPutMenuItem
+        return {
+            'serializer': SerializerPutMenuItem,
+            'data': data,
+            'edit_considerations': EDIT_INFORMATION.get('menu_item'),
+            'user_id': str(self.owner.id),
+            'username': self.owner.username,
+            'success_message': 'ok',
+            'error_message': 'err',
+        }
+
+    def test_explicit_null_clears_field(self):
+        """Explicit None in payload clears the field (was a no-op pre-fix)."""
+        result = Secretary(self._menu_item_args({
+            'id': str(self.item.id),
+            'calories': None,
+        })).update()
+        self.assertEqual(result.get('status'), 200)
+        self.item.refresh_from_db()
+        self.assertIsNone(self.item.calories)
+
+    def test_absent_field_skipped(self):
+        """Keys not present in payload leave the model field untouched."""
+        result = Secretary(self._menu_item_args({
+            'id': str(self.item.id),
+            'name': 'Burger Renamed',
+        })).update()
+        self.assertEqual(result.get('status'), 200)
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.calories, 200)
+
+    def test_text_presentation_guarded_against_null(self):
+        """
+        Regression guard for the char-block landmine: a null payload to a
+        text_presentation-bearing field (e.g. name → str.title) must not
+        raise TypeError. Whether the underlying serializer accepts None on
+        a non-nullable field is a separate concern; what matters here is
+        that Secretary itself doesn't crash before the serializer runs.
+        """
+        try:
+            result = Secretary(self._menu_item_args({
+                'id': str(self.item.id),
+                'name': None,
+            })).update()
+        except TypeError as exc:
+            self.fail(f"Secretary raised TypeError on null name: {exc}")
+        # Whatever the serializer decides (likely 400 validation), the
+        # important thing is no exception escaped Secretary.
+        self.assertIn(result.get('status'), (200, 400))
+
+    def test_determine_changes_records_null_transitions(self):
+        """A null transition is now an audit-log change row."""
+        from misc_app.controllers.determine_changes import determine_changes
+        old_info = {'name': 'Burger', 'calories': 200}
+        new_info = {'name': 'Burger Renamed', 'calories': None}
+        changes = determine_changes({
+            'old_info': old_info,
+            'new_info': new_info,
+            'consider': ['name', 'calories'],
+        })
+        self.assertEqual(len(changes), 2)
+        calories_change = next(c for c in changes if c['field'] == 'calories')
+        self.assertEqual(calories_change['old_value'], 200)
+        self.assertIsNone(calories_change['new_value'])

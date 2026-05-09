@@ -1352,14 +1352,13 @@ class MenuSectionScheduleTests(TestCase):
         self.assertEqual(returned_ids, [str(always_section.id)])
 
 
-class NullableFieldClearingTests(TestCase):
+class NullableFieldClearingDirectNullTests(TestCase):
     """
-    Verifies the `clear_<field>: true` sentinel pattern wired into
-    RestaurantSetupEndpoint.put. The Secretary skips payload values that
-    are None (misc_app/controllers/secretary.py:316), so nullable scalar
-    fields cannot be cleared via the normal update path. The sentinel is
-    intercepted before Secretary runs and writes None directly via a
-    queryset .update(), mirroring the clear_image precedent.
+    Endpoint-level coverage of the post-fix contract: PUT payloads with
+    explicit `null` values clear nullable scalar fields directly. The
+    Bug 6 `clear_<field>: true` sentinel and its handler in
+    RestaurantSetupEndpoint.put have been removed; Secretary now honours
+    absent-vs-None semantics (misc_app/controllers/secretary.py).
     """
 
     def setUp(self):
@@ -1405,99 +1404,37 @@ class NullableFieldClearingTests(TestCase):
             HTTP_AUTHORIZATION=f'Bearer {token}',
         )
 
-    def test_clear_calories_sets_to_none(self):
+    def test_clear_calories_via_null(self):
         response = self._put({
             'id': str(self.item.id),
-            'clear_calories': True,
-        })
-        self.assertEqual(response.status_code, 200)
-        self.item.refresh_from_db()
-        self.assertIsNone(self.item.calories)
-
-    def test_clear_discounted_price_sets_to_none(self):
-        response = self._put({
-            'id': str(self.item.id),
-            'clear_discounted_price': True,
-        })
-        self.assertEqual(response.status_code, 200)
-        self.item.refresh_from_db()
-        self.assertIsNone(self.item.discounted_price)
-
-    def test_clear_with_companion_null_value(self):
-        # Frontend sends only the sentinel, but a programmatic caller
-        # might send both. Should still clear, no error from companion.
-        response = self._put({
-            'id': str(self.item.id),
-            'clear_calories': True,
             'calories': None,
         })
         self.assertEqual(response.status_code, 200)
         self.item.refresh_from_db()
         self.assertIsNone(self.item.calories)
 
-    def test_clear_false_does_not_clear(self):
-        # `clear_calories: false` is not a clear request — the field
-        # should retain its existing value.
+    def test_clear_discounted_price_via_null(self):
         response = self._put({
             'id': str(self.item.id),
-            'clear_calories': False,
-            'name': 'Burger Renamed',
+            'discounted_price': None,
         })
         self.assertEqual(response.status_code, 200)
         self.item.refresh_from_db()
-        self.assertEqual(self.item.calories, 200)
+        self.assertIsNone(self.item.discounted_price)
 
-    def test_clear_does_not_affect_other_fields(self):
+    def test_clearing_does_not_affect_other_fields(self):
         from decimal import Decimal
         original_name = self.item.name
         original_price = self.item.primary_price
         response = self._put({
             'id': str(self.item.id),
-            'clear_calories': True,
+            'calories': None,
         })
         self.assertEqual(response.status_code, 200)
         self.item.refresh_from_db()
         self.assertIsNone(self.item.calories)
         self.assertEqual(self.item.name, original_name)
         self.assertEqual(self.item.primary_price, Decimal(original_price))
-
-    def test_multiple_clears_in_one_request(self):
-        response = self._put({
-            'id': str(self.item.id),
-            'clear_calories': True,
-            'clear_discounted_price': True,
-        })
-        self.assertEqual(response.status_code, 200)
-        self.item.refresh_from_db()
-        self.assertIsNone(self.item.calories)
-        self.assertIsNone(self.item.discounted_price)
-
-    def test_clear_unknown_field_is_ignored(self):
-        # Unregistered clear_<field> sentinels must not cause a 500 or
-        # affect any field. The handler only iterates the registered
-        # NULLABLE_CLEARABLE_FIELDS list.
-        response = self._put({
-            'id': str(self.item.id),
-            'clear_nonexistent_field': True,
-            'name': 'Burger Renamed',
-        })
-        self.assertEqual(response.status_code, 200)
-        self.item.refresh_from_db()
-        self.assertEqual(self.item.calories, 200)
-
-    def test_clear_wins_over_explicit_value(self):
-        # Sentinel contract: `clear_<field>` always takes precedence over
-        # a competing value in the same payload, even non-null. Without
-        # this guarantee, Secretary would write 999 *after* our
-        # UPDATE-to-None ran and silently override the clear.
-        response = self._put({
-            'id': str(self.item.id),
-            'clear_calories': True,
-            'calories': 999,
-        })
-        self.assertEqual(response.status_code, 200)
-        self.item.refresh_from_db()
-        self.assertIsNone(self.item.calories)
 
 
 class PresetTagsEndpointTests(TestCase):
