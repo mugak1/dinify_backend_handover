@@ -166,11 +166,14 @@ class ConOrder:
         effective_unit_price = unit_price
 
         # consideration for the discount
+        # The fast path (running_discount + discounted_price) and the
+        # discount-object path are mutually exclusive: one applies a
+        # pre-computed price, the other recomputes from discount_details.
+        # Allowing both to fire let the second silently overwrite the first.
         if menu_item.running_discount:
             if menu_item.discounted_price is not None:
                 effective_unit_price = menu_item.discounted_price
-
-        if menu_item.consider_discount_object:
+        elif menu_item.consider_discount_object:
             run_discount = False
 
             discount = menu_item.discount_details
@@ -199,7 +202,10 @@ class ConOrder:
             if end_date != '':
                 # parse the end date to date
                 end_date = datetime.strptime(end_date, '%Y-%m-%d')
-                if time_now.date() >= end_date.date():
+                # end_date is inclusive: the last day the discount is valid.
+                # Use strict '>' so the discount still applies on end_date
+                # itself; previously this was '>=' which expired one day early.
+                if time_now.date() > end_date.date():
                     run_discount = False
 
             if run_discount:
@@ -215,9 +221,13 @@ class ConOrder:
                         run_discount = False
 
             if run_discount:
+                # Percentage and fixed-amount discounts are mutually exclusive
+                # per the canonical discount_details shape (one of the two is
+                # zero post-0042). if/elif prevents an amount from silently
+                # overwriting a percentage if both were ever non-zero.
                 if discount_percentage > 0:
                     effective_unit_price = unit_price - (unit_price * discount_percentage / Decimal('100'))
-                if discount_amount > 0:
+                elif discount_amount > 0:
                     effective_unit_price = unit_price - discount_amount
 
         # add the cost of the grouped modifier selections

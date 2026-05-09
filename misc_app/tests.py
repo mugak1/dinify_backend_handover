@@ -132,7 +132,7 @@ class MiscAppTestFunctions(TestCase):
             result = Secretary(data).read()
             self.assertEqual(result.get('status'), 200)
             data = result.get('data')
-            self.assertEqual(data.get('pagination').get('page_size'), str(10))
+            self.assertEqual(data.get('pagination').get('page_size'), 10)
 
         def test_update():
             """
@@ -323,3 +323,55 @@ class SecretaryAbsentVsNullSemanticTests(TestCase):
         calories_change = next(c for c in changes if c['field'] == 'calories')
         self.assertEqual(calories_change['old_value'], 200)
         self.assertIsNone(calories_change['new_value'])
+
+
+class BackendTechDebtBundleTests(TestCase):
+    """Regression guards for the DinifyPaginator robustness fixes:
+    string-vs-int page coercion and out-of-range graceful handling."""
+
+    def setUp(self):
+        self.factory = RequestFactory()
+
+    def _paginate(self, query_string, records):
+        from misc_app.controllers.paginator import DinifyPaginator
+        request = self.factory.get(f'/?{query_string}')
+        return DinifyPaginator({
+            'request': request,
+            'records': records,
+        }).paginate()
+
+    def test_paginator_handles_string_page_param(self):
+        # request.GET values are always strings; the paginator must coerce
+        # rather than passing the raw string through to Paginator.page().
+        records = list(range(1, 11))
+        response = self._paginate('page=1&page_size=5', records)
+        pagination = response['pagination']
+        self.assertEqual(list(response['records']), [1, 2, 3, 4, 5])
+        self.assertEqual(pagination['current_page'], 1)
+        self.assertEqual(pagination['page_size'], 5)
+        self.assertEqual(pagination['number_of_pages'], 2)
+        self.assertTrue(pagination['has_next'])
+        self.assertFalse(pagination['has_previous'])
+
+    def test_paginator_handles_invalid_page_param(self):
+        # ?page=abc previously bubbled a ValueError out of Paginator.page().
+        # Should fall back to page 1 instead of 500-ing.
+        records = list(range(1, 6))
+        response = self._paginate('page=abc&page_size=5', records)
+        pagination = response['pagination']
+        self.assertEqual(list(response['records']), [1, 2, 3, 4, 5])
+        self.assertEqual(pagination['current_page'], 1)
+
+    def test_paginator_handles_out_of_range_page(self):
+        # ?page=999 against a 1-page dataset previously raised EmptyPage.
+        # Should return an empty records list with the same pagination shape.
+        records = list(range(1, 6))
+        response = self._paginate('page=999&page_size=5', records)
+        pagination = response['pagination']
+        self.assertEqual(list(response['records']), [])
+        self.assertEqual(pagination['current_page'], 999)
+        self.assertEqual(pagination['number_of_pages'], 1)
+        self.assertFalse(pagination['has_next'])
+        self.assertFalse(pagination['has_previous'])
+        self.assertTrue(pagination['paginated'])
+        self.assertEqual(pagination['total_records'], 5)
