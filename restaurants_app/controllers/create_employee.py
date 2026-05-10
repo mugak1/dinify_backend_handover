@@ -74,6 +74,8 @@ def create_employee(
             'required_information': [],
             'user_id': str(creator.id),
             'username': creator.username,
+            'user': creator,
+            'msg_type': 'new-restaurant-employee',
             'success_message': 'The employee has been created successfully. Access credentials have been sent to the user email.',  # noqa
             'error_message': 'The employee could not be created. Please try again later.'
         }

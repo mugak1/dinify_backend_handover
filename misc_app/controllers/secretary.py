@@ -180,18 +180,24 @@ class Secretary:
                 )
 
                 # TODO send a notification
-                try:
-                    restaurant_id = record.data.get('restaurant')
-                    if self.msg_type in ['new-menu-section']:
-                        restaurant_id = record.data['restaurant']
-                    make_notification_for_new_entry(
-                        restaurant_id=restaurant_id,
-                        user=self.user,
-                        item_name=record.data.get('name'),
-                        msg_type=self.msg_type
-                    )
-                except Exception as error:
-                    logger.error("Secretary Notification Prompt Error: %s", error)
+                if self.msg_type:
+                    try:
+                        if self.user is None:
+                            logger.warning(
+                                "Secretary skipped notification (msg_type=%s, model=%s): "
+                                "no actor user supplied. Caller must pass 'user' arg.",
+                                self.msg_type, self.model_name,
+                            )
+                        else:
+                            restaurant_id = record.data.get('restaurant')
+                            make_notification_for_new_entry(
+                                restaurant_id=restaurant_id,
+                                user=self.user,
+                                item_name=record.data.get('name'),
+                                msg_type=self.msg_type,
+                            )
+                    except Exception as error:
+                        logger.error("Secretary Notification Prompt Error: %s", error)
 
                 return {
                     'status': 200,
