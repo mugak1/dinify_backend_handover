@@ -244,7 +244,7 @@ class SerializerPublicGetMenuItem(ModelSerializer):
         model = MenuItem
         fields = (
             'id', 'name', 'description', 'calories', 'primary_price',
-            'discounted_price', 'running_discount', 'image',
+            'discounted_price', 'running_discount', 'image', 'image_thumbnail',
             'available', 'in_stock', 'allergens', 'tags', 'discount_details',
             'has_options', 'options', 'section', 'group', 'extras', 'is_extra',
             'discount_percentage', 'has_extras', 'is_special',
@@ -635,6 +635,7 @@ class UpsellItemSerializer(ModelSerializer):
         source='menu_item.primary_price', max_digits=50, decimal_places=2, read_only=True
     )
     item_image = serializers.ImageField(source='menu_item.image', read_only=True)
+    item_image_thumbnail = serializers.ImageField(source='menu_item.image_thumbnail', read_only=True)
     item_available = serializers.BooleanField(source='menu_item.available', read_only=True)
     item_in_stock = serializers.BooleanField(source='menu_item.in_stock', read_only=True)
 
@@ -642,7 +643,8 @@ class UpsellItemSerializer(ModelSerializer):
         model = UpsellItem
         fields = [
             'id', 'menu_item', 'item_id', 'item_name', 'item_price',
-            'item_image', 'item_available', 'item_in_stock', 'listing_position'
+            'item_image', 'item_image_thumbnail', 'item_available',
+            'item_in_stock', 'listing_position'
         ]
 
 
