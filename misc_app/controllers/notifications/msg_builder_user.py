@@ -35,23 +35,6 @@ def make_user_messages(msg_data, footer) -> dict:
             'sms': sms
         }
 
-    elif msg_data.get('msg_type') == 'user-update':
-        email = f"""
-        <p><span style="font-weight:400;">Hello {msg_data.get('first_name', '')},</span></p>
-        <p><span style="font-weight:400;">Your Dinify account has been updated.&nbsp;</span></p>
-        <p>&nbsp;</p>
-        <p><span style="font-weight:400;">If you are aware of this change, you are all set.&nbsp;</span></p>
-        <p>&nbsp;</p>
-        <p><span style="font-weight:400;">Didn’t make this change? Please take these steps to secure your account.&nbsp;</span></p>
-        <p>&nbsp;</p>
-        {footer}
-        """
-        message = {
-            'subject': 'Dinify Account Details Updated',
-            'email': email,
-            'sms': "Your Dinify details have been updated."
-        }
-
     elif msg_data.get('msg_type') == 'password-change':
         email = f"""
         <p><span style="font-weight:400;">Hello {msg_data.get('first_name', '')},</span></p>
