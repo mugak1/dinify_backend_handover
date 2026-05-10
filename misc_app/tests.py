@@ -1,6 +1,9 @@
+from unittest.mock import patch, MagicMock
 from django.test import TestCase, RequestFactory
 from misc_app.controllers.check_required_information import check_required_information
-from misc_app.controllers.secretary import Secretary
+from misc_app.controllers.secretary import (
+    Secretary, make_notification_for_new_entry,
+)
 from misc_app.controllers.determine_changes import determine_changes
 from restaurants_app.serializers import SerializerPutRestaurantEmployee, SerializerPutRestaurant
 from restaurants_app.tests import seed_restaurant, TEST_RESTAURANT_NAME
@@ -375,3 +378,159 @@ class BackendTechDebtBundleTests(TestCase):
         self.assertFalse(pagination['has_previous'])
         self.assertTrue(pagination['paginated'])
         self.assertEqual(pagination['total_records'], 5)
+
+
+class MsgBuilderContractTests(TestCase):
+    """
+    Locks in the dual-contract msg_data shape produced by
+    `make_notification_for_new_entry`:
+
+      - **Recipient-greeted** (msg_type='new-restaurant-employee'):
+        the new entity's owner is the recipient; msg_data carries
+        first_name + user_id derived from record.instance.user.
+      - **Restaurant-greeted** (default, e.g. 'new-menu-section'):
+        the restaurant is the greetee; msg_data carries the actor's
+        full name as `user` plus item_name.
+
+    Pre-fix, the helper produced only the restaurant-greeted shape,
+    so the restaurant builder's `msg_data['first_name']` lookup raised
+    KeyError (silently swallowed) for 'new-restaurant-employee' — and
+    the recipient lookup downstream broke too because user_id wasn't
+    set. Also pins the msg_builder_menu_groups.py alignment to read
+    `item_name` instead of the outlier `group_name`.
+    """
+
+    def setUp(self):
+        self.actor = User.objects.create_user(
+            first_name='Bob', last_name='Actor',
+            email='bob_actor@test.com', phone_number='256700000080',
+            username='256700000080', country='Uganda', password='password',
+            roles=[],
+        )
+        self.recipient = User.objects.create_user(
+            first_name='Alice', last_name='Recipient',
+            email='alice_recipient@test.com', phone_number='256700000081',
+            username='256700000081', country='Uganda', password='password',
+            roles=[],
+        )
+        self.restaurant = Restaurant.objects.create(
+            name='Contract Test Restaurant', location='loc',
+            owner=self.actor,
+        )
+
+    def _patch_notification(self):
+        return patch('misc_app.controllers.secretary.Notification')
+
+    def test_recipient_greeted_contract_for_new_employee(self):
+        record = MagicMock()
+        record.instance.user = self.recipient
+        with self._patch_notification() as mock_notification:
+            make_notification_for_new_entry(
+                restaurant_id=str(self.restaurant.id),
+                user=self.actor,
+                item_name=None,
+                msg_type='new-restaurant-employee',
+                record=record,
+            )
+        mock_notification.assert_called_once()
+        msg_data = mock_notification.call_args.args[0]
+        self.assertEqual(msg_data['msg_type'], 'new-restaurant-employee')
+        self.assertEqual(msg_data['first_name'], 'Alice')
+        self.assertEqual(msg_data['user_id'], str(self.recipient.id))
+        self.assertEqual(msg_data['restaurant_name'], 'Contract Test Restaurant')
+        self.assertNotIn('user', msg_data)
+        self.assertNotIn('item_name', msg_data)
+
+    def test_restaurant_greeted_contract_for_menu_section(self):
+        with self._patch_notification() as mock_notification:
+            make_notification_for_new_entry(
+                restaurant_id=str(self.restaurant.id),
+                user=self.actor,
+                item_name='Starters',
+                msg_type='new-menu-section',
+                record=None,
+            )
+        mock_notification.assert_called_once()
+        msg_data = mock_notification.call_args.args[0]
+        self.assertEqual(msg_data['msg_type'], 'new-menu-section')
+        self.assertEqual(msg_data['user'], 'Bob Actor')
+        self.assertEqual(msg_data['item_name'], 'Starters')
+        self.assertEqual(msg_data['restaurant_name'], 'Contract Test Restaurant')
+        self.assertNotIn('first_name', msg_data)
+        self.assertNotIn('user_id', msg_data)
+
+    def test_recipient_greeted_skips_when_record_missing(self):
+        with self._patch_notification() as mock_notification, \
+                self.assertLogs('misc_app.controllers.secretary', level='WARNING') as logs:
+            make_notification_for_new_entry(
+                restaurant_id=str(self.restaurant.id),
+                user=self.actor,
+                item_name=None,
+                msg_type='new-restaurant-employee',
+                record=None,
+            )
+        mock_notification.assert_not_called()
+        self.assertTrue(any(
+            'recipient-greeted contract requires record.instance' in msg
+            for msg in logs.output
+        ), f"Expected warning not found in: {logs.output}")
+
+    def test_menu_group_uses_item_name(self):
+        from misc_app.controllers.notifications.msg_builder_menu_groups import (
+            make_menu_group_messages,
+        )
+        msg_data = {
+            'msg_type': 'new-menu-group',
+            'restaurant_name': 'Contract Test Restaurant',
+            'user': 'Bob Actor',
+            'item_name': 'Spicy Sides',
+        }
+        # Pre-fix this raised KeyError on 'group_name'. Post-fix the
+        # builder reads item_name and embeds it in the rendered email.
+        message = make_menu_group_messages(msg_data, footer='')
+        self.assertIn('Spicy Sides', message['email'])
+        self.assertEqual(message['subject'], 'Menu Group Created')
+
+    def test_create_employee_notification_succeeds_end_to_end(self):
+        """
+        Reproduces the catch-all endpoint flow at
+        restaurants_app/endpoints/restaurant_setup.py:596 — POST
+        /restaurant-setup/employees/ — which is the user-facing path
+        that sets msg_type='new-restaurant-employee' on Secretary args
+        and triggers `make_notification_for_new_entry`. Pre-fix this
+        raised KeyError('first_name') in
+        msg_builder_restaurant.py:65 (silently swallowed by the
+        Secretary try/except as ERROR-log noise).
+        """
+        secretary_args = {
+            'serializer': SerializerPutRestaurantEmployee,
+            'data': {
+                'user': str(self.recipient.id),
+                'restaurant': str(self.restaurant.id),
+                'roles': [ROLES.get('RESTAURANT_KITCHEN')],
+            },
+            'required_information': [],
+            'user_id': str(self.actor.id),
+            'username': self.actor.username,
+            'user': self.actor,
+            'msg_type': 'new-restaurant-employee',
+            'success_message': 'ok',
+            'error_message': 'err',
+        }
+        secretary_logger = 'misc_app.controllers.secretary'
+        with self.assertLogs(secretary_logger, level='DEBUG') as captured:
+            # Drop a benign DEBUG to satisfy assertLogs (it requires
+            # at least one record). Then assert no ERROR records fire
+            # — pre-fix the KeyError swallow logged ERROR here.
+            import logging
+            logging.getLogger(secretary_logger).debug('test marker')
+            result = Secretary(secretary_args).create()
+        self.assertEqual(result.get('status'), 200)
+        error_records = [
+            line for line in captured.output
+            if line.startswith(f'ERROR:{secretary_logger}')
+        ]
+        self.assertEqual(
+            error_records, [],
+            f"Unexpected ERROR log on {secretary_logger}: {error_records}",
+        )

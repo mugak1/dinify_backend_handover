@@ -9,7 +9,7 @@ def make_menu_group_messages(msg_data, footer) -> dict:
         email = f"""
         <p><span style="font-weight:400;">Hello {msg_data['restaurant_name']},</span></p>
         <p>&nbsp;</p>
-        <p><span style="font-weight:400;">{msg_data['user']} has added a new menu group, {msg_data['group_name']}.&nbsp;</span></p>
+        <p><span style="font-weight:400;">{msg_data['user']} has added a new menu group, {msg_data['item_name']}.&nbsp;</span></p>
         <p><span style="font-weight:400;">You can now add items to the group and customers will be able to order for respective accordingly.&nbsp;</span></p>
         {footer}
         """
@@ -23,7 +23,7 @@ def make_menu_group_messages(msg_data, footer) -> dict:
         email = f"""
         <p><span style="font-weight:400;">Hello {msg_data['restaurant_name']},</span></p>
         <p>&nbsp;</p>
-        <p><span style="font-weight:400;">{msg_data['user']} has updated the details for the menu group, {msg_data['group_name']}.&nbsp;</span></p>
+        <p><span style="font-weight:400;">{msg_data['user']} has updated the details for the menu group, {msg_data['item_name']}.&nbsp;</span></p>
         {footer}
         """
         message = {
@@ -36,7 +36,7 @@ def make_menu_group_messages(msg_data, footer) -> dict:
         email = f"""
         <p><span style="font-weight:400;">Hello {msg_data['restaurant_name']},</span></p>
         <p>&nbsp;</p>
-        <p><span style="font-weight:400;">{msg_data['user']} has disabled the menu group, {msg_data['group_name']}.&nbsp;</span></p>
+        <p><span style="font-weight:400;">{msg_data['user']} has disabled the menu group, {msg_data['item_name']}.&nbsp;</span></p>
         {footer}
         """
         message = {
@@ -49,7 +49,7 @@ def make_menu_group_messages(msg_data, footer) -> dict:
         email = f"""
         <p><span style="font-weight:400;">Hello {msg_data['restaurant_name']},</span></p>
         <p>&nbsp;</p>
-        <p><span style="font-weight:400;">{msg_data['user']} has enabled the menu group, {msg_data['group_name']}.&nbsp;</span></p>
+        <p><span style="font-weight:400;">{msg_data['user']} has enabled the menu group, {msg_data['item_name']}.&nbsp;</span></p>
         {footer}
         """
         message = {
@@ -61,7 +61,7 @@ def make_menu_group_messages(msg_data, footer) -> dict:
     elif msg_data.get('msg_type') == 'menu-group-deleted':
         email = f"""
         <p><span style="font-weight:400;">Hello {msg_data['restaurant_name']},</span></p>
-        <p><br><span style="font-weight:400;">{msg_data['user']} has deleted the menu group, {msg_data['group_name']}.&nbsp;</span></p>
+        <p><br><span style="font-weight:400;">{msg_data['user']} has deleted the menu group, {msg_data['item_name']}.&nbsp;</span></p>
         {footer}
         """
         message = {
