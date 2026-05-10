@@ -28,17 +28,58 @@ from restaurants_app.serializers import SerializerPutRestaurant
 from restaurants_app.controllers.get_review_summary import get_review_summary
 
 
+RECIPIENT_GREETED_MSG_TYPES = frozenset({'new-restaurant-employee'})
+
+
 def make_notification_for_new_entry(
     restaurant_id: str,
     user: User,
     item_name: str,
-    msg_type: str
+    msg_type: str,
+    record=None,
 ):
     """
-    make a notification
+    Build a notification msg_data for a newly-created entity.
+
+    Two contracts are supported, selected by msg_type:
+
+    - **Recipient-greeted** (msg_type in RECIPIENT_GREETED_MSG_TYPES):
+        the email greets the new entity's owner by first name.
+        msg_data shape: {msg_type, restaurant_name, restaurant_id,
+                         first_name, user_id}.
+        Requires `record` (with `.instance`) to extract recipient
+        identity.
+
+    - **Restaurant-greeted** (default):
+        the email greets the restaurant by name and mentions the
+        actor's full name.
+        msg_data shape: {msg_type, restaurant_name, restaurant_id,
+                         user, item_name}.
     """
-    if restaurant_id is not None:
-        restaurant_name = Restaurant.objects.values('name').get(id=restaurant_id)['name']
+    if restaurant_id is None:
+        return
+
+    restaurant_name = Restaurant.objects.values('name').get(
+        id=restaurant_id
+    )['name']
+
+    if msg_type in RECIPIENT_GREETED_MSG_TYPES:
+        if record is None or getattr(record, 'instance', None) is None:
+            logger.warning(
+                "Notification skipped (msg_type=%s): "
+                "recipient-greeted contract requires record.instance",
+                msg_type,
+            )
+            return
+        recipient = record.instance.user
+        msg_data = {
+            'msg_type': msg_type,
+            'restaurant_name': restaurant_name,
+            'restaurant_id': restaurant_id,
+            'first_name': recipient.first_name,
+            'user_id': str(recipient.id),
+        }
+    else:
         msg_data = {
             'msg_type': msg_type,
             'restaurant_name': restaurant_name,
@@ -46,7 +87,8 @@ def make_notification_for_new_entry(
             'user': f'{user.first_name} {user.last_name}',
             'item_name': item_name,
         }
-        Notification(msg_data).create_notification()
+
+    Notification(msg_data).create_notification()
 
 
 @dataclass
@@ -195,6 +237,7 @@ class Secretary:
                                 user=self.user,
                                 item_name=record.data.get('name'),
                                 msg_type=self.msg_type,
+                                record=record,
                             )
                     except Exception as error:
                         logger.error("Secretary Notification Prompt Error: %s", error)
