@@ -692,3 +692,89 @@ class SecretaryNotificationDispatchTests(TestCase):
             and 'no actor user supplied' in r.getMessage()
         ]
         self.assertEqual(actor_warnings, [])
+
+
+class SecretaryUpdateNotificationTests(TestCase):
+    """
+    Locks in Secretary.make_notification's null-safety contract for the
+    restaurant-activated / restaurant-rejected status transition path.
+
+    Pre-fix, secretary.py's make_notification dereferenced
+    new_record.instance.owner.first_name unconditionally. Restaurant.owner
+    is a non-nullable FK (restaurants_app/models.py:Restaurant.owner) but
+    User.first_name is nullable (users_app/models.py:User.first_name has
+    null=True, blank=True), so production rows do exist with first_name=''
+    or None — and any such owner triggered an AttributeError on the
+    f-string in msg_builder_restaurant.py rendering "Hello {first_name},".
+
+    The owner-None case is not directly reachable through the schema, so
+    we don't test it here; the guard added in secretary.py is
+    defence-in-depth for partial fixtures and any future schema change.
+    """
+
+    def setUp(self):
+        seed_user()
+        seed_restaurant()
+        self.actor = User.objects.get(username=TEST_PHONE)
+        self.restaurant = Restaurant.objects.get(name=TEST_RESTAURANT_NAME)
+
+    def _activate_restaurant(self):
+        # Drives the same code path RestaurantSetupEndpoint.put hits when
+        # an admin moves a restaurant from pending to active.
+        return Secretary({
+            'serializer': SerializerPutRestaurant,
+            'data': {
+                'id': str(self.restaurant.id),
+                'status': 'active',
+            },
+            'edit_considerations': EDIT_INFORMATION.get('restaurants'),
+            'user_id': str(self.actor.id),
+            'username': TEST_PHONE,
+            'success_message': 'ok',
+            'error_message': 'err',
+        }).update()
+
+    def test_update_notification_with_complete_owner(self):
+        """Regression: owner with a populated first_name dispatches normally."""
+        # The seed user already has first_name='Test' (users_app.tests.seed_user).
+        target = 'misc_app.controllers.secretary.Notification'
+        with patch(target) as MockNotification:
+            MockNotification.return_value.create_notification.return_value = None
+            result = self._activate_restaurant()
+        self.assertEqual(result.get('status'), 200)
+        MockNotification.assert_called_once()
+        msg_data = MockNotification.call_args.kwargs.get(
+            'msg_data', MockNotification.call_args.args[0]
+            if MockNotification.call_args.args else {}
+        )
+        self.assertEqual(msg_data['msg_type'], 'restaurant-activated')
+        self.assertEqual(msg_data['first_name'], 'Test')
+        self.assertEqual(msg_data['user_id'], str(self.actor.id))
+        self.assertEqual(msg_data['restaurant_id'], str(self.restaurant.id))
+
+    def test_update_notification_with_missing_first_name(self):
+        """Owner with first_name=None must dispatch the fallback greeting."""
+        # User.first_name is nullable, so this is the production-reachable case.
+        self.actor.first_name = None
+        self.actor.save(update_fields=['first_name'])
+
+        target = 'misc_app.controllers.secretary.Notification'
+        with patch(target) as MockNotification:
+            MockNotification.return_value.create_notification.return_value = None
+            try:
+                result = self._activate_restaurant()
+            except AttributeError as exc:
+                self.fail(
+                    f"Secretary.make_notification raised AttributeError on "
+                    f"null first_name: {exc}"
+                )
+        self.assertEqual(result.get('status'), 200)
+        MockNotification.assert_called_once()
+        msg_data = MockNotification.call_args.kwargs.get(
+            'msg_data', MockNotification.call_args.args[0]
+            if MockNotification.call_args.args else {}
+        )
+        self.assertEqual(msg_data['msg_type'], 'restaurant-activated')
+        # Fallback greeting target so the email reads "Hello there,".
+        self.assertEqual(msg_data['first_name'], 'there')
+        self.assertEqual(msg_data['user_id'], str(self.actor.id))
