@@ -10,14 +10,21 @@ with PostgreSQL on AWS RDS.
 - PostgreSQL on AWS RDS (primary database)
 - MongoDB Atlas (action logs and archiving only — currently unreachable from EC2)
 - Apache / mod_wsgi on AWS EC2 (35.177.46.58)
-- Repo: mugak1/dinify_backend_handover
+- Repo: mugak1/Dinify-Backend
 
 ## Current Implementation Status
 - Menu module (all phases 1a–1d): ✅ Complete
+- Menu item ordering: ✅ `listing_position` column + `reorder-section-items`
+  endpoint (handled by `ConMenuItem`) + section reorder via `restaurant_setup`
 - Dashboard endpoint: ✅ Exists at `api/v1/reports/restaurant/dashboard/`
   Do NOT create a new dashboard endpoint — it already exists
-- Tables module: 🔄 In progress — backend endpoints for reservations,
-  waitlist, and table_actions already exist
+- Tables module: ✅ Backend complete — `reservations`, `waitlist`,
+  `table_actions`, `dining_areas`, full QR/floor-plan fields wired through
+  EDIT_INFORMATION
+- KDS module: ✅ Backend ready — `KitchenTicket`/`KitchenTicketItem` models,
+  `orders_app/endpoints_kds.py`, mounted at `api/v1/kds/`
+- Auth: ✅ Refresh-token rotation + blacklist-on-logout + 7-day refresh lifetime
+  (SimpleJWT, `JWT_REFRESH_LIFETIME_DAYS`)
 - Login 500 regression: ⚠️ Outstanding — Apache error logs needed
 
 ## Deployment Rules — CRITICAL
@@ -42,7 +49,8 @@ New resource types get their own dedicated endpoint file in
 `restaurants_app/endpoints/`, NOT added to the RestaurantSetupEndpoint
 catch-all. Examples already following this pattern:
 - `reservations.py`, `waitlist.py`, `table_actions.py`, `preset_tags.py`,
-  `upsell_config.py`
+  `upsell_config.py`, `manager_actions.py`, `misc_public.py`,
+  `order_journey.py`
 Always register new endpoint files in `restaurants_app/urls.py` ABOVE
 the catch-all `<str:config_detail>/` route.
 
@@ -56,6 +64,10 @@ the catch-all `<str:config_detail>/` route.
   "no changes detected"
 - Current sections: `restaurants`, `restaurant_employee`, `menu_section`,
   `menu_item`, `table` (20+ fields), plus `EI_DINING_AREA` for dining areas
+  and `EI_SECTION_GROUP` for menu section groups
+- Secretary now honours absent-vs-None semantics: omitting a field leaves
+  it untouched, sending `null` clears it. The legacy `clear_<field>`
+  sentinels are deprecated — do not introduce new ones
 - Check this file before adding any editable field — it may already be there
 
 ## Monetary Fields — CRITICAL
@@ -90,6 +102,18 @@ the catch-all `<str:config_detail>/` route.
 - `first_time_menu_approval` defaults to `True`
 - Do not revert these
 
+## Canonical Data Shapes — CRITICAL
+- `MenuItem.tags` is the dietary-tag field (post-0043). `allergens` was
+  rewired into `tags`; do not reintroduce a separate allergens path
+- `MenuItem.discount_details` uses the canonical post-0042 shape. Use
+  `get_discount_percentage` (returns positive magnitude) — do not invert
+  the sign in callers
+- `Restaurant.branding_configuration` uses the four-key shape (post-0041).
+  Do not regress to the legacy nested shape
+- `MenuItem.listing_position` and `MenuSection.listing_position` are
+  authoritative for ordering; reorder writes go through `ConMenuItem`
+  / the section-reorder path, never ad-hoc updates
+
 ## Key Serializer Notes
 - `SerializerPublicGetMenuItem` includes `section` and `in_stock` —
   added deliberately for the diner menu. Do not remove them
@@ -97,16 +121,29 @@ the catch-all `<str:config_detail>/` route.
 ## Existing Management Commands
 - `optimize_images` in `restaurants_app/management/commands/` — resizes
   uploaded MenuItem images to 800px max. Do not recreate it
+- `check_item_data` in `restaurants_app/management/commands/` — debugging
+  helper that inspects MenuItem fields and can clean stray empty allergens
+  entries (`--clean-allergens`)
 
 ## Database
 - `CONN_MAX_AGE: 600` for persistent DB connections — do not remove
 - All migrations must be generated and included in PRs when models change
+- Latest migration: `restaurants_app/migrations/0043_migrate_menuitem_allergens_to_tags.py`,
+  `orders_app/migrations/0027_kitchenticket_kitchenticketitem.py`
+
+## CI — `.github/workflows/ci.yml`
+- Runs on push to `main`, `develop`, `claude/**` and on PRs to `main`/`develop`
+- Spins up a real Postgres 15, runs `django check` and
+  `makemigrations --check --dry-run` against `dinify_backend.test_settings`
+- Then runs the full Django test suite — a missing migration or a model
+  change without a generated migration will fail CI
 
 ## Verification
 Before raising any PR:
-1. Confirm migrations are generated for any model changes
+1. Confirm migrations are generated for any model changes (CI enforces this)
 2. Confirm new editable fields are added to EDIT_INFORMATION
 3. Confirm no synchronous SMS calls introduced (except where return value needed)
 4. Confirm no new hard MongoDB dependencies
 5. Confirm monetary fields use DecimalField
 6. If adding a new endpoint, confirm it's registered in urls.py above the catch-all
+7. Confirm no reintroduction of `clear_<field>` sentinels in PUT payloads
