@@ -96,6 +96,8 @@ class MiscAppTestFunctions(TestCase):
                 },
                 'user_id': str(User.objects.get(username=TEST_PHONE).id),
                 'username': TEST_PHONE,
+                'user': user,
+                'msg_type': 'new-restaurant-employee',
                 'success_message': 'The restaurant employee has been added successfully.',
                 'error_message': 'An error occurred while adding the restaurant employee.'
             }
@@ -534,3 +536,159 @@ class MsgBuilderContractTests(TestCase):
             error_records, [],
             f"Unexpected ERROR log on {secretary_logger}: {error_records}",
         )
+class SecretaryNotificationDispatchTests(TestCase):
+    """Locks in the actor-required contract for Secretary's create-time
+    notification dispatch:
+
+      - msg_type absent  -> notification skipped, no log noise
+      - msg_type set, user missing -> WARNING log, no AttributeError swallow
+      - msg_type set, user set -> dispatch reaches Notification.create_notification
+
+    Plus an end-to-end regression on create_employee, which previously
+    triggered the 'NoneType' object has no attribute 'first_name' swallow.
+    """
+
+    SECRETARY_LOGGER = 'misc_app.controllers.secretary'
+
+    def setUp(self):
+        seed_user()
+        seed_restaurant()
+        self.user = User.objects.get(username=TEST_PHONE)
+        self.restaurant = Restaurant.objects.get(name=TEST_RESTAURANT_NAME)
+
+    def _employee_args(self, *, include_user, include_msg_type):
+        # Builds the same kind of args dict the production callers pass.
+        # The 'data' payload's 'user' is the FK on the new RestaurantEmployee
+        # row and is unrelated to Secretary's top-level 'user' actor kwarg.
+        new_user = User.objects.create_user(
+            first_name='Notif', last_name='Target',
+            email='notif_target@test.com', phone_number='256700000099',
+            username='256700000099', country='Uganda', password='password',
+            roles=[],
+        )
+        args = {
+            'request': None,
+            'serializer': SerializerPutRestaurantEmployee,
+            'required_information': [],
+            'data': {
+                'user': str(new_user.id),
+                'restaurant': str(self.restaurant.id),
+                'roles': [ROLES.get('RESTAURANT_KITCHEN')],
+            },
+            'user_id': str(self.user.id),
+            'username': TEST_PHONE,
+            'success_message': 'ok',
+            'error_message': 'err',
+        }
+        if include_user:
+            args['user'] = self.user
+        if include_msg_type:
+            args['msg_type'] = 'new-restaurant-employee'
+        return args
+
+    def test_notification_skipped_when_msg_type_absent(self):
+        # Without msg_type the dispatch is a no-op: no ERROR log, record saved.
+        import logging
+        with self.assertLogs(self.SECRETARY_LOGGER, level=logging.WARNING) as cm:
+            # assertLogs requires at least one log record at the given level;
+            # emit a sentinel so the context manager doesn't fail when the
+            # production code is correctly silent.
+            logging.getLogger(self.SECRETARY_LOGGER).warning('sentinel')
+            result = Secretary(self._employee_args(
+                include_user=False, include_msg_type=False,
+            )).create()
+        self.assertEqual(result.get('status'), 200)
+        # Only the sentinel is allowed; nothing from secretary.py.
+        secretary_records = [
+            r for r in cm.records if r.getMessage() != 'sentinel'
+        ]
+        self.assertEqual(secretary_records, [])
+
+    def test_notification_warns_when_user_missing(self):
+        # msg_type set, user missing -> WARNING log, no swallowed ERROR.
+        import logging
+        with self.assertLogs(self.SECRETARY_LOGGER, level=logging.WARNING) as cm:
+            result = Secretary(self._employee_args(
+                include_user=False, include_msg_type=True,
+            )).create()
+        self.assertEqual(result.get('status'), 200)
+        warnings = [r for r in cm.records if r.levelno == logging.WARNING]
+        errors = [r for r in cm.records if r.levelno >= logging.ERROR]
+        self.assertTrue(
+            any('no actor user supplied' in r.getMessage() for r in warnings),
+            f'expected WARNING about missing actor, got: {[r.getMessage() for r in warnings]}',
+        )
+        self.assertEqual(
+            errors, [],
+            f'unexpected ERROR logs from secretary: {[r.getMessage() for r in errors]}',
+        )
+
+    def test_notification_dispatches_when_both_present(self):
+        # Both kwargs set -> Notification.create_notification is invoked once,
+        # and no swallowed ERROR fires from the secretary notification block.
+        from unittest.mock import patch
+        import logging
+        target = 'misc_app.controllers.secretary.Notification'
+        with patch(target) as MockNotification:
+            MockNotification.return_value.create_notification.return_value = None
+            with self.assertLogs(self.SECRETARY_LOGGER, level=logging.WARNING) as cm:
+                logging.getLogger(self.SECRETARY_LOGGER).warning('sentinel')
+                result = Secretary(self._employee_args(
+                    include_user=True, include_msg_type=True,
+                )).create()
+        self.assertEqual(result.get('status'), 200)
+        self.assertEqual(MockNotification.return_value.create_notification.call_count, 1)
+        secretary_errors = [
+            r for r in cm.records
+            if r.levelno >= logging.ERROR and r.name == self.SECRETARY_LOGGER
+        ]
+        self.assertEqual(secretary_errors, [])
+
+    def test_create_employee_does_not_log_secretary_error(self):
+        # End-to-end regression for the upstream fix only: create_employee
+        # previously triggered 'NoneType' object has no attribute 'first_name'
+        # inside Secretary because it forgot to pass 'user' and 'msg_type'.
+        # The downstream Notification stack has separate fragility for the
+        # 'new-restaurant-employee' msg_type (msg builder expects a
+        # 'first_name' key that make_notification_for_new_entry doesn't
+        # populate); that's flagged as out-of-scope follow-up. Mock the
+        # Notification class so this test isolates the Secretary layer.
+        from restaurants_app.controllers.create_employee import create_employee
+        from unittest.mock import patch
+        import logging
+        target = 'misc_app.controllers.secretary.Notification'
+        with patch(target) as MockNotification:
+            MockNotification.return_value.create_notification.return_value = None
+            with self.assertLogs(self.SECRETARY_LOGGER, level=logging.WARNING) as cm:
+                logging.getLogger(self.SECRETARY_LOGGER).warning('sentinel')
+                result = create_employee(
+                    first_name='New',
+                    last_name='Hire',
+                    email='new_hire@test.com',
+                    phone_number='256700000088',
+                    restaurant=self.restaurant,
+                    roles=[ROLES.get('RESTAURANT_KITCHEN')],
+                    creator=self.restaurant.owner,
+                    skip_otp=True,
+                )
+        self.assertEqual(result.get('status'), 200)
+        # The specific pre-fix error must be gone.
+        nonetype_errors = [
+            r for r in cm.records
+            if r.name == self.SECRETARY_LOGGER
+            and r.levelno >= logging.ERROR
+            and 'NoneType' in r.getMessage()
+        ]
+        self.assertEqual(
+            nonetype_errors, [],
+            f'pre-fix NoneType error still leaks: '
+            f'{[r.getMessage() for r in nonetype_errors]}',
+        )
+        # And the missing-actor warning must NOT fire — create_employee now
+        # passes the actor through.
+        actor_warnings = [
+            r for r in cm.records
+            if r.name == self.SECRETARY_LOGGER
+            and 'no actor user supplied' in r.getMessage()
+        ]
+        self.assertEqual(actor_warnings, [])
