@@ -2124,3 +2124,119 @@ class ReoptimiseMenuImagesCommandTests(_MediaTempDirMixin, TestCase):
         self.assertEqual(webp_count, 1)
         self.assertEqual(jpg_count, 2)
 
+
+class OptimizeImagePathNormalizationTests(_MediaTempDirMixin, TestCase):
+    """
+    Regression coverage for the upload_to path-duplication bug. The previous
+    implementation passed image_field.name (which already contains the
+    upload_to prefix) to image_field.save(), and Django then re-applied
+    upload_to on top of it — yielding menu_items/menu_items/foo.webp, and
+    nesting one level deeper on every subsequent re-run.
+    """
+
+    def setUp(self):
+        super().setUp()
+        seed_user()
+        seed_restaurant()
+        seed_menu_section()
+        self.section = MenuSection.objects.get(name=TEST_MENU_SECTION_NAME)
+
+    def test_optimize_image_applies_upload_to_exactly_once(self):
+        content, _ = _make_image_bytes(size=(1200, 1200), mode='RGB')
+        upload = SimpleUploadedFile('orig.jpg', content, content_type='image/jpeg')
+        # Bypass MenuItem.save()'s auto-optimisation so we end up with a
+        # stored .jpg whose name already carries the menu_items/ prefix —
+        # the exact precondition the management command operates on.
+        with patch(
+            'restaurants_app.utils.image_optimizer.optimize_image',
+            return_value=False,
+        ):
+            item = MenuItem.objects.create(
+                name='Path normalisation item',
+                section=self.section,
+                primary_price=1000.0,
+                image=upload,
+            )
+
+        self.assertTrue(item.image.name.startswith('menu_items/'))
+        self.assertNotIn('menu_items/menu_items/', item.image.name)
+
+        result = optimize_image(item.image, force=True)
+        self.assertTrue(result)
+
+        self.assertTrue(
+            item.image.name.startswith('menu_items/'),
+            f'Expected single menu_items/ prefix, got {item.image.name}',
+        )
+        self.assertNotIn('menu_items/menu_items/', item.image.name)
+        rest = item.image.name[len('menu_items/'):]
+        self.assertNotIn('/', rest)
+        self.assertTrue(rest.endswith('.webp'))
+
+
+class ReoptimiseCommandCountingTests(_MediaTempDirMixin, TestCase):
+    """
+    The management command's summary must distinguish exceptions (failed)
+    from legitimate skips (False return). Previously both collapsed into
+    'skipped', producing succeeded=0, failed=0, skipped=N even when every
+    item raised.
+    """
+
+    # The command imports optimize_image at module load time, so patches
+    # must target the command module's binding — not the source module.
+    _COMMAND_PATCH = (
+        'restaurants_app.management.commands.reoptimise_menu_images.optimize_image'
+    )
+    # MenuItem.save() lazily imports optimize_image, so the source-module
+    # binding is the right patch target for disabling auto-optimisation
+    # during fixture setup.
+    _MODEL_PATCH = 'restaurants_app.utils.image_optimizer.optimize_image'
+
+    def setUp(self):
+        super().setUp()
+        seed_user()
+        seed_restaurant()
+        seed_menu_section()
+        self.section = MenuSection.objects.get(name=TEST_MENU_SECTION_NAME)
+
+    def _seed_item_with_jpg(self, name):
+        content, _ = _make_image_bytes(size=(1200, 1200), mode='RGB')
+        upload = SimpleUploadedFile(f'{name}.jpg', content, content_type='image/jpeg')
+        with patch(self._MODEL_PATCH, return_value=False):
+            return MenuItem.objects.create(
+                name=name,
+                section=self.section,
+                primary_price=1000.0,
+                image=upload,
+            )
+
+    def test_exception_counted_as_failed(self):
+        self._seed_item_with_jpg('Failing Item 1')
+        self._seed_item_with_jpg('Failing Item 2')
+
+        out = io.StringIO()
+        err = io.StringIO()
+        with patch(self._COMMAND_PATCH, side_effect=RuntimeError('boom')):
+            call_command('reoptimise_menu_images', stdout=out, stderr=err)
+
+        summary = out.getvalue()
+        self.assertIn('processed=2', summary)
+        self.assertIn('succeeded=0', summary)
+        self.assertIn('failed=2', summary)
+        self.assertIn('skipped=0', summary)
+        self.assertIn('Failed for item', err.getvalue())
+
+    def test_false_return_counted_as_skipped(self):
+        self._seed_item_with_jpg('Skipping Item 1')
+        self._seed_item_with_jpg('Skipping Item 2')
+
+        out = io.StringIO()
+        with patch(self._COMMAND_PATCH, return_value=False):
+            call_command('reoptimise_menu_images', stdout=out)
+
+        summary = out.getvalue()
+        self.assertIn('processed=2', summary)
+        self.assertIn('succeeded=0', summary)
+        self.assertIn('failed=0', summary)
+        self.assertIn('skipped=2', summary)
+

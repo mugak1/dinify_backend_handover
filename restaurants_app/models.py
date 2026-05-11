@@ -1,6 +1,7 @@
 """
 models for the restaurant app
 """
+import logging
 from decimal import Decimal
 
 from django.db import models
@@ -10,6 +11,9 @@ from users_app.models import BaseModel, User
 from dinify_backend.configss.string_definitions import RestaurantStatus_Pending
 from rest_framework.serializers import ModelSerializer
 from misc_app.controllers.utils.archive_record import archive_record
+
+
+logger = logging.getLogger(__name__)
 
 
 # Create your models here.
@@ -299,7 +303,13 @@ class MenuItem(BaseModel):
 
         if optimize_new_image and self.image:
             from restaurants_app.utils.image_optimizer import optimize_image
-            optimize_image(self.image)
+            try:
+                optimize_image(self.image)
+            except Exception as e:
+                logger.error(
+                    "Image optimisation failed for MenuItem %s: %s",
+                    self.pk, e,
+                )
 
         super().save(*args, **kwargs)
 
