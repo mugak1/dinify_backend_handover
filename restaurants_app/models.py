@@ -218,7 +218,6 @@ class MenuItem(BaseModel):
     section = models.ForeignKey(MenuSection, on_delete=models.CASCADE)
     section_group = models.ForeignKey(SectionGroup, on_delete=models.CASCADE, null=True, blank=True)
     image = models.ImageField(null=True, blank=True, upload_to='menu_items/')
-    image_thumbnail = models.ImageField(null=True, blank=True, upload_to='menu_items/thumbnails/')
 
     name = models.CharField(max_length=255)
     description = models.TextField(null=True, blank=True)
@@ -287,33 +286,20 @@ class MenuItem(BaseModel):
         unique_together = ['name', 'section']
 
     def save(self, *args, **kwargs):
-        image_changed = False
+        optimize_new_image = False
         if self.pk:
             try:
                 old_instance = MenuItem.objects.get(pk=self.pk)
                 if old_instance.image != self.image:
-                    image_changed = True
+                    optimize_new_image = True
             except MenuItem.DoesNotExist:
-                image_changed = bool(self.image)
+                optimize_new_image = bool(self.image)
         else:
-            image_changed = bool(self.image)
+            optimize_new_image = bool(self.image)
 
-        if image_changed and self.image:
-            from restaurants_app.utils.image_optimizer import (
-                optimize_image, generate_thumbnail,
-            )
+        if optimize_new_image and self.image:
+            from restaurants_app.utils.image_optimizer import optimize_image
             optimize_image(self.image)
-            try:
-                generate_thumbnail(self.image, self.image_thumbnail)
-            except Exception as e:
-                import logging
-                logging.getLogger(__name__).error(
-                    "image_thumbnail generation failed for MenuItem %s: %s",
-                    self.pk, e,
-                )
-
-        if image_changed and not self.image and self.image_thumbnail:
-            self.image_thumbnail.delete(save=False)
 
         super().save(*args, **kwargs)
 
