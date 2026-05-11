@@ -4,12 +4,18 @@ from restaurants_app.endpoints.misc_public import MiscPublicEndpoint
 from restaurants_app.endpoints.manager_actions import RestaurantManagerActionsEndpoint
 from restaurants_app.endpoints.upsell_config import UpsellConfigEndpoint, UpsellItemsEndpoint
 from restaurants_app.endpoints.preset_tags import PresetTagsEndpoint
+from restaurants_app.endpoints.restaurant_tags import (
+    RestaurantTagsEndpoint, RestaurantTagDetailEndpoint,
+)
 from restaurants_app.endpoints.reservations import ReservationsEndpoint
 from restaurants_app.endpoints.waitlist import WaitlistEndpoint
 from restaurants_app.endpoints.table_actions import TableActionsEndpoint
 
 
 urlpatterns = [
+    # Restaurant tags catalog (must be before the catch-all)
+    path('restaurant-tags/', RestaurantTagsEndpoint.as_view()),
+    path('restaurant-tags/<uuid:tag_id>/', RestaurantTagDetailEndpoint.as_view()),
     # Preset tags endpoint (must be before the catch-all)
     path('preset-tags/', PresetTagsEndpoint.as_view()),
     # Upsell config endpoints (must be before the catch-all)

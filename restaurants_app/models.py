@@ -227,7 +227,17 @@ class MenuItem(BaseModel):
     description = models.TextField(null=True, blank=True)
     calories = models.PositiveIntegerField(null=True, blank=True, help_text="Calorie count (kcal)")
     allergens = models.JSONField(default=list)
-    tags = models.JSONField(default=list, blank=True)
+    # Legacy free-form tag column. Retained as a safety net for the
+    # tag-catalog rollout; reads have moved to the `tags` M2M below.
+    # Scheduled for removal in a follow-up PR once the new schema is verified.
+    _legacy_tags = models.JSONField(default=list, blank=True, db_column='tags')
+    # Structured tag catalog (post-0044). The legacy `_legacy_tags`
+    # JSON column above is preserved for one release as a safety net.
+    tags = models.ManyToManyField(
+        'RestaurantTag',
+        through='MenuItemTag',
+        related_name='menu_items',
+    )
     primary_price = models.DecimalField(max_digits=50, decimal_places=2)
 
     discounted_price = models.DecimalField(max_digits=50, decimal_places=2, null=True, blank=True)
@@ -312,6 +322,113 @@ class MenuItem(BaseModel):
                 )
 
         super().save(*args, **kwargs)
+
+
+TAG_CATEGORY_CHOICES = (
+    ('allergen', 'Allergen'),
+    ('dietary', 'Dietary'),
+    ('descriptor', 'Descriptor'),
+)
+
+TAG_COLOUR_CHOICES = (
+    ('gray', 'Gray'),
+    ('red', 'Red'),
+    ('orange', 'Orange'),
+    ('amber', 'Amber'),
+    ('yellow', 'Yellow'),
+    ('green', 'Green'),
+    ('emerald', 'Emerald'),
+    ('cyan', 'Cyan'),
+    ('blue', 'Blue'),
+    ('purple', 'Purple'),
+    ('rose', 'Rose'),
+)
+
+
+# System-default preset catalog seeded for every restaurant.
+# Ordering: display_order is implicit from list position (1-indexed).
+SYSTEM_PRESET_TAGS = [
+    {'name': 'Vegetarian',       'category': 'dietary',    'colour': 'green',   'icon': 'leaf',       'filterable': True},
+    {'name': 'Vegan',            'category': 'dietary',    'colour': 'emerald', 'icon': 'sprout',     'filterable': True},
+    {'name': 'Halal',            'category': 'dietary',    'colour': 'green',   'icon': 'moon-star',  'filterable': True},
+    {'name': 'Gluten-Free',      'category': 'dietary',    'colour': 'amber',   'icon': 'wheat-off',  'filterable': True},
+    {'name': 'Dairy-Free',       'category': 'dietary',    'colour': 'cyan',    'icon': 'milk-off',   'filterable': True},
+    {'name': 'Contains Gluten',  'category': 'allergen',   'colour': 'amber',   'icon': 'wheat',      'filterable': True},
+    {'name': 'Contains Dairy',   'category': 'allergen',   'colour': 'blue',    'icon': 'milk',       'filterable': True},
+    {'name': 'Contains Nuts',    'category': 'allergen',   'colour': 'orange',  'icon': 'nut',        'filterable': True},
+    {'name': 'Contains Eggs',    'category': 'allergen',   'colour': 'yellow',  'icon': 'egg',        'filterable': True},
+    {'name': 'Contains Fish',    'category': 'allergen',   'colour': 'cyan',    'icon': 'fish',       'filterable': True},
+    {'name': 'Contains Shellfish', 'category': 'allergen', 'colour': 'rose',    'icon': 'shell',      'filterable': True},
+    {'name': 'Contains Soy',     'category': 'allergen',   'colour': 'green',   'icon': 'bean',       'filterable': True},
+    {'name': 'Spicy',            'category': 'descriptor', 'colour': 'red',     'icon': 'flame',      'filterable': False},
+    {'name': "Chef's Special",   'category': 'descriptor', 'colour': 'purple',  'icon': 'award',      'filterable': False},
+]
+
+
+def seed_system_preset_tags(restaurant):
+    """Idempotently seed the 14 system-default presets for a restaurant.
+
+    Uses get_or_create keyed on (restaurant, name) so re-running the seed
+    on an existing restaurant is a no-op.
+    """
+    for index, preset in enumerate(SYSTEM_PRESET_TAGS, start=1):
+        RestaurantTag.objects.get_or_create(
+            restaurant=restaurant,
+            name=preset['name'],
+            defaults={
+                'category': preset['category'],
+                'colour': preset['colour'],
+                'icon': preset['icon'],
+                'filterable': preset['filterable'],
+                'display_order': index,
+                'is_system_preset': True,
+            },
+        )
+
+
+class RestaurantTag(BaseModel):
+    """
+    Restaurant-scoped catalog of menu-item tags.
+
+    Categories: allergen / dietary / descriptor. Each restaurant is seeded
+    with 14 system-default presets on creation and may add, edit, or delete
+    entries freely. is_system_preset marks the seeded rows for analytics
+    and bulk operations but does not constrain mutation.
+    """
+    restaurant = models.ForeignKey(
+        Restaurant, on_delete=models.CASCADE, db_index=True,
+        related_name='tag_catalog',
+    )
+    name = models.CharField(max_length=50)
+    category = models.CharField(max_length=20, choices=TAG_CATEGORY_CHOICES)
+    icon = models.CharField(max_length=50, null=True, blank=True)
+    colour = models.CharField(max_length=20, choices=TAG_COLOUR_CHOICES, default='gray')
+    filterable = models.BooleanField(default=True)
+    display_order = models.IntegerField(default=0)
+    is_system_preset = models.BooleanField(default=False)
+
+    class Meta:
+        db_table = 'restaurant_tags'
+        ordering = ['display_order', 'name']
+        unique_together = ['restaurant', 'name']
+
+
+class MenuItemTag(BaseModel):
+    """
+    Join table connecting MenuItem to RestaurantTag.
+    """
+    menu_item = models.ForeignKey(
+        'MenuItem', on_delete=models.CASCADE, db_index=True,
+        related_name='tag_links',
+    )
+    tag = models.ForeignKey(
+        RestaurantTag, on_delete=models.CASCADE, db_index=True,
+        related_name='item_links',
+    )
+
+    class Meta:
+        db_table = 'menu_item_tags'
+        unique_together = ['menu_item', 'tag']
 
 
 class DiningArea(BaseModel):
@@ -534,6 +651,17 @@ class SerArcRestaurant(ModelSerializer):
 def archive_restaurant(sender, instance, **kwargs):
     record_data = SerArcRestaurant(instance).data
     archive_record(record_data, 'archive_restaurants')
+
+
+@receiver(post_save, sender=Restaurant)
+def seed_restaurant_tag_catalog(sender, instance, created, **kwargs):
+    """Seed the 14 system-default presets when a Restaurant is created."""
+    if not created:
+        return
+    try:
+        seed_system_preset_tags(instance)
+    except Exception as error:
+        logger.error("Failed to seed restaurant tag catalog for %s: %s", instance.pk, error)
 
 
 class SerArcMenuSection(ModelSerializer):
