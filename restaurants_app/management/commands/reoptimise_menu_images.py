@@ -48,21 +48,28 @@ class Command(BaseCommand):
 
         for item in qs.iterator():
             processed += 1
-            try:
-                if dry_run:
-                    self.stdout.write(
-                        f'Would re-optimise item {item.id} ({item.image.name})'
-                    )
-                    continue
+            if dry_run:
+                self.stdout.write(
+                    f'Would re-optimise item {item.id} ({item.image.name})'
+                )
+                continue
 
-                if optimize_image(item.image, force=True):
-                    item.save(update_fields=['image'])
-                    succeeded += 1
-                else:
-                    skipped += 1
+            try:
+                result = optimize_image(item.image, force=True)
             except Exception as e:
                 failed += 1
                 self.stderr.write(f'Failed for item {item.id}: {e}')
+                logger.error(
+                    "Image optimisation failed for MenuItem %s: %s",
+                    item.id, e,
+                )
+                continue
+
+            if result:
+                item.save(update_fields=['image'])
+                succeeded += 1
+            else:
+                skipped += 1
 
         self.stdout.write(self.style.SUCCESS(
             f'Done{suffix}: processed={processed}, succeeded={succeeded}, '
