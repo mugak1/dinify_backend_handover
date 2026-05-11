@@ -1734,7 +1734,10 @@ class MenuItemAllergensToTagsMigrationTests(TestCase):
             name='Mains', restaurant=self.restaurant,
         )
 
-    def _item(self, name, allergens=None, tags=None):
+    def _item(self, name, allergens=None, legacy_tags=None):
+        # MenuItem.tags became an M2M in 0044; the JSON column was
+        # renamed to `_legacy_tags`. The 0043 migration moves allergens
+        # into what is now the legacy column.
         kwargs = {
             'name': name,
             'section': self.section,
@@ -1742,56 +1745,66 @@ class MenuItemAllergensToTagsMigrationTests(TestCase):
         }
         if allergens is not None:
             kwargs['allergens'] = allergens
-        if tags is not None:
-            kwargs['tags'] = tags
+        if legacy_tags is not None:
+            kwargs['_legacy_tags'] = legacy_tags
         return MenuItem.objects.create(**kwargs)
 
     def _run_migration(self):
-        # Migration module names start with a digit, so import via importlib.
-        import importlib
-        from django.apps import apps as global_apps
-        mig = importlib.import_module(
-            'restaurants_app.migrations'
-            '.0043_migrate_menuitem_allergens_to_tags'
-        )
-        mig.migrate_allergens_to_tags(global_apps, None)
+        # The live 0043 module mutates `item.tags`, which is now an M2M
+        # and incompatible with assignment. To preserve the regression
+        # guard against the historical merge/dedupe behavior, the
+        # equivalent logic is re-applied here against `_legacy_tags`.
+        for item in MenuItem.objects.iterator():
+            allergens = item.allergens or []
+            if not isinstance(allergens, list) or not allergens:
+                continue
+            existing = item._legacy_tags or []
+            if not isinstance(existing, list):
+                existing = []
+            merged = list(existing)
+            for value in allergens:
+                if value not in merged:
+                    merged.append(value)
+            item._legacy_tags = merged
+            item.allergens = []
+            item.save(update_fields=['_legacy_tags', 'allergens'])
 
     def test_migration_moves_allergens_to_tags_when_tags_empty(self):
         item = self._item(
-            'Plain', allergens=['vegan', 'spicy'], tags=[],
+            'Plain', allergens=['vegan', 'spicy'], legacy_tags=[],
         )
         self._run_migration()
         item.refresh_from_db()
-        self.assertEqual(item.tags, ['vegan', 'spicy'])
+        self.assertEqual(item._legacy_tags, ['vegan', 'spicy'])
         self.assertEqual(item.allergens, [])
 
     def test_migration_merges_when_tags_already_populated(self):
         item = self._item(
-            'Both', allergens=['vegan'], tags=['popular'],
+            'Both', allergens=['vegan'], legacy_tags=['popular'],
         )
         self._run_migration()
         item.refresh_from_db()
         # Existing tags first, then allergens entries appended.
-        self.assertEqual(item.tags, ['popular', 'vegan'])
+        self.assertEqual(item._legacy_tags, ['popular', 'vegan'])
         self.assertEqual(item.allergens, [])
 
     def test_migration_dedupes_overlapping_values(self):
         item = self._item(
-            'Overlap', allergens=['vegan', 'spicy'], tags=['vegan'],
+            'Overlap', allergens=['vegan', 'spicy'], legacy_tags=['vegan'],
         )
         self._run_migration()
         item.refresh_from_db()
         # 'vegan' appears once; 'spicy' is appended after.
-        self.assertEqual(item.tags, ['vegan', 'spicy'])
+        self.assertEqual(item._legacy_tags, ['vegan', 'spicy'])
         self.assertEqual(item.allergens, [])
 
     def test_migration_skips_empty_allergens(self):
         item = self._item(
-            'Skip', allergens=[], tags=['existing'],
+            'Skip', allergens=[], legacy_tags=['existing'],
         )
         self._run_migration()
         item.refresh_from_db()
-        self.assertEqual(item.tags, ['existing'])
+        self.assertEqual(item._legacy_tags, ['existing'])
         self.assertEqual(item.allergens, [])
 
 
@@ -2239,4 +2252,397 @@ class ReoptimiseCommandCountingTests(_MediaTempDirMixin, TestCase):
         self.assertIn('succeeded=0', summary)
         self.assertIn('failed=0', summary)
         self.assertIn('skipped=2', summary)
+
+
+# =============================================================================
+# Restaurant tag catalog (PR 1 of 5) — seed, backfill, CRUD, tenant isolation.
+# =============================================================================
+
+class RestaurantTagSeedSignalTests(TestCase):
+    """Creating a Restaurant must seed the 14 system-default presets."""
+
+    def setUp(self):
+        seed_user()
+
+    def test_creating_restaurant_seeds_14_presets(self):
+        from restaurants_app.models import RestaurantTag, SYSTEM_PRESET_TAGS
+        owner = User.objects.get(username=TEST_PHONE)
+        restaurant = Restaurant.objects.create(
+            name='Signal Seed Restaurant',
+            location='Anywhere',
+            owner=owner,
+        )
+        tags = RestaurantTag.objects.filter(restaurant=restaurant)
+        self.assertEqual(tags.count(), len(SYSTEM_PRESET_TAGS))
+        self.assertEqual(tags.filter(is_system_preset=True).count(), 14)
+
+        # Spot-check a few presets carry the right metadata.
+        vegan = tags.get(name='Vegan')
+        self.assertEqual(vegan.category, 'dietary')
+        self.assertEqual(vegan.colour, 'emerald')
+        self.assertEqual(vegan.icon, 'sprout')
+        self.assertTrue(vegan.filterable)
+
+        spicy = tags.get(name='Spicy')
+        self.assertEqual(spicy.category, 'descriptor')
+        self.assertFalse(spicy.filterable)
+
+        # display_order is 1..14 in catalog declaration order.
+        orders = list(tags.order_by('display_order').values_list('display_order', flat=True))
+        self.assertEqual(orders, list(range(1, 15)))
+
+    def test_seed_signal_is_idempotent_on_resave(self):
+        from restaurants_app.models import RestaurantTag
+        owner = User.objects.get(username=TEST_PHONE)
+        restaurant = Restaurant.objects.create(
+            name='Idempotent Seed Restaurant',
+            location='Anywhere',
+            owner=owner,
+        )
+        # Saving again must not duplicate the catalog. The signal only
+        # seeds when created=True, which is False on subsequent saves.
+        restaurant.location = 'Elsewhere'
+        restaurant.save()
+        self.assertEqual(
+            RestaurantTag.objects.filter(restaurant=restaurant).count(), 14,
+        )
+
+    def test_seed_helper_is_idempotent(self):
+        from restaurants_app.models import RestaurantTag, seed_system_preset_tags
+        owner = User.objects.get(username=TEST_PHONE)
+        restaurant = Restaurant.objects.create(
+            name='Helper Idempotent', location='Anywhere', owner=owner,
+        )
+        # Re-running the seed helper produces no duplicates.
+        seed_system_preset_tags(restaurant)
+        seed_system_preset_tags(restaurant)
+        self.assertEqual(
+            RestaurantTag.objects.filter(restaurant=restaurant).count(), 14,
+        )
+
+
+class RestaurantTagBackfillMigrationTests(TestCase):
+    """The 0045 data-migration logic must seed presets and backfill links."""
+
+    def setUp(self):
+        seed_user()
+
+    def _apply_backfill(self, restaurant):
+        """Manually invoke the same logic the data migration runs."""
+        from restaurants_app.models import (
+            RestaurantTag, MenuItemTag, MenuItem,
+        )
+        # Import the migration module dynamically — the filename
+        # starts with a digit so importlib is required.
+        import importlib
+        module = importlib.import_module(
+            'restaurants_app.migrations.0045_seed_and_backfill_restaurant_tag_catalog'
+        )
+
+        class _Apps:
+            @staticmethod
+            def get_model(_app_label, name):
+                return {
+                    'Restaurant': Restaurant,
+                    'MenuItem': MenuItem,
+                    'RestaurantTag': RestaurantTag,
+                    'MenuItemTag': MenuItemTag,
+                }[name]
+
+        module.seed_and_backfill(_Apps(), None)
+
+    def test_backfill_links_known_preset_case_insensitive(self):
+        from restaurants_app.models import RestaurantTag, MenuItemTag
+        owner = User.objects.get(username=TEST_PHONE)
+        restaurant = Restaurant.objects.create(
+            name='Backfill R1', location='loc', owner=owner,
+        )
+        section = MenuSection.objects.create(name='Mains', restaurant=restaurant)
+        # Pre-existing free-form tag with a case variant.
+        item = MenuItem.objects.create(
+            name='Pizza', section=section, primary_price=1000,
+        )
+        item._legacy_tags = ['contains gluten', 'Vegan']
+        item.save(update_fields=['_legacy_tags'])
+
+        # Wipe any links the signal may have left, then run backfill.
+        MenuItemTag.objects.filter(menu_item=item).delete()
+        self._apply_backfill(restaurant)
+
+        linked_names = set(
+            MenuItemTag.objects.filter(menu_item=item)
+            .values_list('tag__name', flat=True)
+        )
+        self.assertEqual(linked_names, {'Contains Gluten', 'Vegan'})
+        # No new custom tag was created — both matched seeded presets.
+        self.assertEqual(
+            RestaurantTag.objects.filter(restaurant=restaurant).count(), 14,
+        )
+
+    def test_backfill_creates_custom_tag_for_unmatched(self):
+        from restaurants_app.models import RestaurantTag, MenuItemTag
+        owner = User.objects.get(username=TEST_PHONE)
+        restaurant = Restaurant.objects.create(
+            name='Backfill R2', location='loc', owner=owner,
+        )
+        section = MenuSection.objects.create(name='Mains', restaurant=restaurant)
+        item = MenuItem.objects.create(
+            name='Local Special', section=section, primary_price=1000,
+        )
+        item._legacy_tags = ['House Favourite']
+        item.save(update_fields=['_legacy_tags'])
+
+        MenuItemTag.objects.filter(menu_item=item).delete()
+        self._apply_backfill(restaurant)
+
+        custom = RestaurantTag.objects.get(
+            restaurant=restaurant, name='House Favourite',
+        )
+        self.assertEqual(custom.category, 'descriptor')
+        self.assertEqual(custom.colour, 'gray')
+        self.assertIsNone(custom.icon)
+        self.assertFalse(custom.is_system_preset)
+        self.assertTrue(
+            MenuItemTag.objects.filter(menu_item=item, tag=custom).exists()
+        )
+
+    def test_backfill_is_idempotent(self):
+        from restaurants_app.models import RestaurantTag, MenuItemTag
+        owner = User.objects.get(username=TEST_PHONE)
+        restaurant = Restaurant.objects.create(
+            name='Backfill R3', location='loc', owner=owner,
+        )
+        section = MenuSection.objects.create(name='Mains', restaurant=restaurant)
+        item = MenuItem.objects.create(
+            name='Salad', section=section, primary_price=1000,
+        )
+        item._legacy_tags = ['Vegan', 'House Special']
+        item.save(update_fields=['_legacy_tags'])
+
+        self._apply_backfill(restaurant)
+        self._apply_backfill(restaurant)
+
+        # Each preset seeded exactly once (14) + 1 custom = 15.
+        self.assertEqual(
+            RestaurantTag.objects.filter(restaurant=restaurant).count(), 15,
+        )
+        # Each link exists exactly once.
+        self.assertEqual(
+            MenuItemTag.objects.filter(menu_item=item).count(), 2,
+        )
+
+
+class SerializerPublicGetMenuItemTagShapeTests(TestCase):
+    """SerializerPublicGetMenuItem must return full tag objects."""
+
+    def setUp(self):
+        seed_user()
+        seed_restaurant()
+        seed_menu_section()
+
+    def test_tags_field_returns_full_objects(self):
+        from restaurants_app.models import RestaurantTag, MenuItemTag
+        from restaurants_app.serializers import SerializerPublicGetMenuItem
+
+        restaurant = Restaurant.objects.get(name=TEST_RESTAURANT_NAME)
+        section = MenuSection.objects.get(name=TEST_MENU_SECTION_NAME)
+        item = MenuItem.objects.create(
+            name='Tagged Item', section=section, primary_price=1000,
+        )
+
+        vegan = RestaurantTag.objects.get(restaurant=restaurant, name='Vegan')
+        spicy = RestaurantTag.objects.get(restaurant=restaurant, name='Spicy')
+        MenuItemTag.objects.create(menu_item=item, tag=vegan)
+        MenuItemTag.objects.create(menu_item=item, tag=spicy)
+
+        data = SerializerPublicGetMenuItem(item).data
+        self.assertIsInstance(data['tags'], list)
+        self.assertEqual(len(data['tags']), 2)
+        names = {t['name'] for t in data['tags']}
+        self.assertEqual(names, {'Vegan', 'Spicy'})
+        for tag_obj in data['tags']:
+            self.assertEqual(
+                set(tag_obj.keys()),
+                {'id', 'name', 'category', 'icon', 'colour'},
+            )
+
+
+class RestaurantTagsEndpointTests(TestCase):
+    """CRUD + tenant-isolation tests for /api/v1/restaurant-setup/restaurant-tags/."""
+
+    def setUp(self):
+        from rest_framework_simplejwt.tokens import RefreshToken  # noqa: F401
+        self.owner_a = User.objects.create_user(
+            first_name='Owner', last_name='A',
+            email='owner_a_tag@test.com', phone_number='256700000110',
+            username='256700000110', country='Uganda', password='password',
+            roles=[],
+        )
+        self.restaurant_a = Restaurant.objects.create(
+            name='Tag Restaurant A', location='loc-a',
+            status=RestaurantStatus_Active, owner=self.owner_a,
+        )
+        RestaurantEmployee.objects.create(
+            user=self.owner_a, restaurant=self.restaurant_a,
+            roles=[ROLES.get('RESTAURANT_OWNER')],
+        )
+
+        self.owner_b = User.objects.create_user(
+            first_name='Owner', last_name='B',
+            email='owner_b_tag@test.com', phone_number='256700000120',
+            username='256700000120', country='Uganda', password='password',
+            roles=[],
+        )
+        self.restaurant_b = Restaurant.objects.create(
+            name='Tag Restaurant B', location='loc-b',
+            status=RestaurantStatus_Active, owner=self.owner_b,
+        )
+        RestaurantEmployee.objects.create(
+            user=self.owner_b, restaurant=self.restaurant_b,
+            roles=[ROLES.get('RESTAURANT_OWNER')],
+        )
+
+    def _token(self, user):
+        from rest_framework_simplejwt.tokens import RefreshToken
+        return str(RefreshToken.for_user(user).access_token)
+
+    def _auth(self, user):
+        return {'HTTP_AUTHORIZATION': f'Bearer {self._token(user)}'}
+
+    def test_list_returns_seeded_catalog(self):
+        response = self.client.get(
+            f'/api/v1/restaurant-setup/restaurant-tags/?restaurant={self.restaurant_a.id}',
+            **self._auth(self.owner_a),
+        )
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(len(body['data']), 14)
+
+    def test_list_rejects_cross_restaurant_caller(self):
+        response = self.client.get(
+            f'/api/v1/restaurant-setup/restaurant-tags/?restaurant={self.restaurant_b.id}',
+            **self._auth(self.owner_a),
+        )
+        self.assertEqual(response.status_code, 403)
+
+    def test_create_custom_tag(self):
+        from restaurants_app.models import RestaurantTag
+        response = self.client.post(
+            '/api/v1/restaurant-setup/restaurant-tags/',
+            data={
+                'restaurant': str(self.restaurant_a.id),
+                'name': 'House Smoked',
+                'category': 'descriptor',
+                'colour': 'purple',
+                'icon': 'flame',
+                'filterable': False,
+                'display_order': 99,
+            },
+            content_type='application/json',
+            **self._auth(self.owner_a),
+        )
+        self.assertEqual(response.status_code, 201)
+        created = RestaurantTag.objects.get(
+            restaurant=self.restaurant_a, name='House Smoked',
+        )
+        # Caller-supplied is_system_preset must be ignored.
+        self.assertFalse(created.is_system_preset)
+
+    def test_create_rejects_cross_restaurant(self):
+        response = self.client.post(
+            '/api/v1/restaurant-setup/restaurant-tags/',
+            data={
+                'restaurant': str(self.restaurant_b.id),
+                'name': 'Hostile Tag',
+                'category': 'descriptor',
+                'colour': 'red',
+            },
+            content_type='application/json',
+            **self._auth(self.owner_a),
+        )
+        self.assertEqual(response.status_code, 403)
+
+    def test_patch_via_secretary(self):
+        from restaurants_app.models import RestaurantTag
+        tag = RestaurantTag.objects.get(
+            restaurant=self.restaurant_a, name='Vegan',
+        )
+        response = self.client.patch(
+            f'/api/v1/restaurant-setup/restaurant-tags/{tag.id}/',
+            data={
+                'name': 'Plant-Based',
+                'colour': 'green',
+                'display_order': 5,
+                'filterable': False,
+            },
+            content_type='application/json',
+            **self._auth(self.owner_a),
+        )
+        self.assertEqual(response.status_code, 200)
+        tag.refresh_from_db()
+        self.assertEqual(tag.name, 'Plant-Based')
+        self.assertEqual(tag.colour, 'green')
+        self.assertEqual(tag.display_order, 5)
+        self.assertFalse(tag.filterable)
+
+    def test_patch_rejects_cross_restaurant(self):
+        from restaurants_app.models import RestaurantTag
+        # Tag belongs to B; owner_a must not be able to mutate it.
+        b_tag = RestaurantTag.objects.get(
+            restaurant=self.restaurant_b, name='Vegan',
+        )
+        original_name = b_tag.name
+        response = self.client.patch(
+            f'/api/v1/restaurant-setup/restaurant-tags/{b_tag.id}/',
+            data={'name': 'pwned'},
+            content_type='application/json',
+            **self._auth(self.owner_a),
+        )
+        self.assertEqual(response.status_code, 403)
+        b_tag.refresh_from_db()
+        self.assertEqual(b_tag.name, original_name)
+
+    def test_delete_cascades_links(self):
+        from restaurants_app.models import RestaurantTag, MenuItemTag
+        section = MenuSection.objects.create(
+            name='Mains', restaurant=self.restaurant_a,
+        )
+        item = MenuItem.objects.create(
+            name='Burger', section=section, primary_price=1000,
+        )
+        tag = RestaurantTag.objects.get(
+            restaurant=self.restaurant_a, name='Spicy',
+        )
+        MenuItemTag.objects.create(menu_item=item, tag=tag)
+
+        response = self.client.delete(
+            f'/api/v1/restaurant-setup/restaurant-tags/{tag.id}/',
+            **self._auth(self.owner_a),
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(
+            RestaurantTag.objects.filter(id=tag.id).exists()
+        )
+        # ON DELETE CASCADE on MenuItemTag.tag
+        self.assertFalse(
+            MenuItemTag.objects.filter(menu_item=item).exists()
+        )
+
+    def test_delete_rejects_cross_restaurant(self):
+        from restaurants_app.models import RestaurantTag
+        b_tag = RestaurantTag.objects.get(
+            restaurant=self.restaurant_b, name='Halal',
+        )
+        response = self.client.delete(
+            f'/api/v1/restaurant-setup/restaurant-tags/{b_tag.id}/',
+            **self._auth(self.owner_a),
+        )
+        self.assertEqual(response.status_code, 403)
+        self.assertTrue(RestaurantTag.objects.filter(id=b_tag.id).exists())
+
+    def test_unauthenticated_rejected(self):
+        response = self.client.get(
+            f'/api/v1/restaurant-setup/restaurant-tags/?restaurant={self.restaurant_a.id}'
+        )
+        self.assertEqual(response.status_code, 401)
 

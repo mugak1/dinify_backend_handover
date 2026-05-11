@@ -13,7 +13,7 @@ from rest_framework import serializers
 from restaurants_app.models import (
     Restaurant, RestaurantEmployee, MenuSection, MenuItem, Table,
     SectionGroup, DiningArea, UpsellConfig, UpsellItem,
-    Reservation, WaitlistEntry
+    Reservation, WaitlistEntry, RestaurantTag
 )
 from dinify_backend.configss.string_definitions import (
     OrderItemStatus_Initiated,
@@ -222,13 +222,25 @@ class SerializerPutMenuItem(ModelSerializer):
     """
     options = JSONStringCompatField(required=False)
     allergens = JSONStringCompatField(required=False)
-    tags = JSONStringCompatField(required=False)
     discount_details = JSONStringCompatField(required=False)
     extras_applicable = JSONStringCompatField(required=False)
 
     class Meta:
         model = MenuItem
         fields = '__all__'
+
+
+class SerializerRestaurantTag(ModelSerializer):
+    """Serializer for the restaurant-scoped tag catalog."""
+
+    class Meta:
+        model = RestaurantTag
+        fields = (
+            'id', 'restaurant', 'name', 'category',
+            'icon', 'colour', 'filterable',
+            'display_order', 'is_system_preset',
+        )
+        read_only_fields = ('is_system_preset',)
 
 
 class SerializerPublicGetMenuItem(ModelSerializer):
@@ -239,6 +251,7 @@ class SerializerPublicGetMenuItem(ModelSerializer):
     group = SerializerMethodField()
     extras = SerializerMethodField()
     discount_percentage = SerializerMethodField()
+    tags = SerializerMethodField()
 
     class Meta:
         model = MenuItem
@@ -250,6 +263,22 @@ class SerializerPublicGetMenuItem(ModelSerializer):
             'discount_percentage', 'has_extras', 'is_special',
             'is_featured', 'is_popular', 'is_new'
         )
+
+    def get_tags(self, menu_item):
+        # Returns the full tag objects linked via the M2M catalog. The
+        # legacy free-form `tags` text column lives on as `_legacy_tags`
+        # for one release before being dropped.
+        tags = menu_item.tags.all().order_by('display_order', 'name')
+        return [
+            {
+                'id': str(tag.id),
+                'name': tag.name,
+                'category': tag.category,
+                'icon': tag.icon,
+                'colour': tag.colour,
+            }
+            for tag in tags
+        ]
 
     def get_has_options(self, menu_item):
         options = menu_item.options

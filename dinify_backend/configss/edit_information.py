@@ -93,6 +93,16 @@ EI_SECTION_GROUP = [
 ]
 
 
+EI_RESTAURANT_TAG = [
+    {'key': 'name', 'label': 'name', 'type': 'char', 'min_length': 1, 'text_presentation': None},  # noqa
+    {'key': 'category', 'label': 'category', 'type': 'char', 'min_length': 5, 'text_presentation': str.lower},  # noqa
+    {'key': 'colour', 'label': 'colour', 'type': 'char', 'min_length': 3, 'text_presentation': str.lower},  # noqa
+    {'key': 'icon', 'label': 'icon', 'type': 'char', 'min_length': 0, 'text_presentation': None},  # noqa
+    {'key': 'filterable', 'label': 'filterable', 'type': 'bool', 'min_length': 0, 'text_presentation': None},  # noqa
+    {'key': 'display_order', 'label': 'display order', 'type': 'int', 'min_length': 0, 'text_presentation': None},  # noqa
+]
+
+
 EI_DINING_AREA = [
     {'key': 'name', 'label': 'name', 'type': 'char', 'min_length': 3, 'text_presentation': str.title},  # noqa
     {'key': 'description', 'label': 'description', 'type': 'char', 'min_length': 3, 'text_presentation': None},  # noqa
