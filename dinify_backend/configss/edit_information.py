@@ -54,7 +54,7 @@ EDIT_INFORMATION = {
         {'key': 'is_featured', 'label': 'is featured', 'type': 'bool', 'min_length': 5, 'text_presentation': None},  # noqa
         {'key': 'is_popular', 'label': 'is popular', 'type': 'bool', 'min_length': 5, 'text_presentation': None},  # noqa
         {'key': 'is_new', 'label': 'is new', 'type': 'bool', 'min_length': 5, 'text_presentation': None},  # noqa
-        {'key': 'tags', 'label': 'tags', 'type': 'list', 'min_length': 0, 'text_presentation': None},  # noqa
+        {'key': 'tag_ids', 'label': 'tag ids', 'type': 'list', 'min_length': 0, 'text_presentation': None},  # noqa
         {'key': 'in_stock', 'label': 'in stock', 'type': 'bool', 'min_length': 5, 'text_presentation': None},  # noqa
         {'key': 'listing_position', 'label': 'listing position', 'type': 'int', 'min_length': 1, 'text_presentation': None},  # noqa
     ],

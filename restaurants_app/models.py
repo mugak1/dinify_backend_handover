@@ -323,6 +323,30 @@ class MenuItem(BaseModel):
 
         super().save(*args, **kwargs)
 
+    def sync_tag_links(self, tag_ids):
+        """Atomically replace the menu_item_tags links with the given tag IDs.
+
+        Caller is responsible for tenant-isolation validation — this method
+        does not verify that the supplied tags belong to the item's
+        restaurant. SerializerPutMenuItem.validate() enforces that contract.
+        """
+        from django.db import transaction
+        unique_ids = []
+        seen = set()
+        for tid in tag_ids or []:
+            key = str(tid)
+            if key in seen:
+                continue
+            seen.add(key)
+            unique_ids.append(tid)
+        with transaction.atomic():
+            MenuItemTag.objects.filter(menu_item=self).delete()
+            if unique_ids:
+                MenuItemTag.objects.bulk_create([
+                    MenuItemTag(menu_item=self, tag_id=tid)
+                    for tid in unique_ids
+                ])
+
 
 TAG_CATEGORY_CHOICES = (
     ('allergen', 'Allergen'),

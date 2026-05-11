@@ -224,10 +224,73 @@ class SerializerPutMenuItem(ModelSerializer):
     allergens = JSONStringCompatField(required=False)
     discount_details = JSONStringCompatField(required=False)
     extras_applicable = JSONStringCompatField(required=False)
+    tag_ids = serializers.ListField(
+        child=serializers.UUIDField(),
+        write_only=True,
+        required=False,
+        allow_empty=True,
+    )
 
     class Meta:
         model = MenuItem
         fields = '__all__'
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        tag_ids = attrs.get('tag_ids')
+        if tag_ids is None:
+            return attrs
+
+        # Resolve the restaurant from the section (in attrs for create,
+        # in self.instance for update). All supplied tag IDs must belong
+        # to that restaurant — cross-tenant references are rejected.
+        section = attrs.get('section')
+        if section is None and self.instance is not None:
+            section = self.instance.section
+        if section is None:
+            raise serializers.ValidationError({
+                'tag_ids': 'Cannot apply tags without a section.'
+            })
+
+        section_id = getattr(section, 'id', section)
+        try:
+            restaurant_id = MenuSection.objects.values(
+                'restaurant_id'
+            ).get(id=section_id)['restaurant_id']
+        except MenuSection.DoesNotExist:
+            raise serializers.ValidationError({
+                'tag_ids': 'Section does not exist.'
+            })
+
+        unique_ids = list({str(tid) for tid in tag_ids})
+        if unique_ids:
+            valid_count = RestaurantTag.objects.filter(
+                restaurant_id=restaurant_id,
+                id__in=unique_ids,
+                deleted=False,
+            ).count()
+            if valid_count != len(unique_ids):
+                raise serializers.ValidationError({
+                    'tag_ids': (
+                        'One or more tag IDs do not belong to this '
+                        'restaurant or do not exist.'
+                    )
+                })
+        return attrs
+
+    def create(self, validated_data):
+        tag_ids = validated_data.pop('tag_ids', None)
+        instance = super().create(validated_data)
+        if tag_ids is not None:
+            instance.sync_tag_links(tag_ids)
+        return instance
+
+    def update(self, instance, validated_data):
+        tag_ids = validated_data.pop('tag_ids', None)
+        instance = super().update(instance, validated_data)
+        if tag_ids is not None:
+            instance.sync_tag_links(tag_ids)
+        return instance
 
 
 class SerializerRestaurantTag(ModelSerializer):
