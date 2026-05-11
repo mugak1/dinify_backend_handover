@@ -2646,3 +2646,318 @@ class RestaurantTagsEndpointTests(TestCase):
         )
         self.assertEqual(response.status_code, 401)
 
+
+class MenuItemTagIdsTests(TestCase):
+    """Tests for the tag_ids payload on menu item create / update.
+
+    Covers:
+    - POST /menuitems/ accepts tag_ids and persists MenuItemTag rows.
+    - PUT  /menuitems/ replaces the relation atomically.
+    - Cross-restaurant tag IDs are rejected (tenant isolation).
+    - Legacy `tags` text field is no longer Secretary-editable.
+    - SerializerPublicGetMenuItem returns full tag objects on both
+      operator-facing GET and diner-facing renders.
+    """
+
+    def setUp(self):
+        from rest_framework_simplejwt.tokens import RefreshToken  # noqa: F401
+        self.owner_a = User.objects.create_user(
+            first_name='Tag', last_name='OwnerA',
+            email='tag_owner_a@test.com', phone_number='256700000210',
+            username='256700000210', country='Uganda', password='password',
+            roles=[],
+        )
+        self.restaurant_a = Restaurant.objects.create(
+            name='Tag Items Restaurant A', location='loc-a',
+            status=RestaurantStatus_Active, owner=self.owner_a,
+        )
+        RestaurantEmployee.objects.create(
+            user=self.owner_a, restaurant=self.restaurant_a,
+            roles=[ROLES.get('RESTAURANT_OWNER')],
+        )
+        self.section_a = MenuSection.objects.create(
+            name='A Mains', restaurant=self.restaurant_a, listing_position=0,
+        )
+
+        self.owner_b = User.objects.create_user(
+            first_name='Tag', last_name='OwnerB',
+            email='tag_owner_b@test.com', phone_number='256700000220',
+            username='256700000220', country='Uganda', password='password',
+            roles=[],
+        )
+        self.restaurant_b = Restaurant.objects.create(
+            name='Tag Items Restaurant B', location='loc-b',
+            status=RestaurantStatus_Active, owner=self.owner_b,
+        )
+        RestaurantEmployee.objects.create(
+            user=self.owner_b, restaurant=self.restaurant_b,
+            roles=[ROLES.get('RESTAURANT_OWNER')],
+        )
+
+    def _token(self, user):
+        from rest_framework_simplejwt.tokens import RefreshToken
+        return str(RefreshToken.for_user(user).access_token)
+
+    def _auth(self, user):
+        return {'HTTP_AUTHORIZATION': f'Bearer {self._token(user)}'}
+
+    def test_create_menuitem_with_tag_ids_persists_relation(self):
+        from restaurants_app.models import RestaurantTag, MenuItemTag
+        vegan = RestaurantTag.objects.get(
+            restaurant=self.restaurant_a, name='Vegan',
+        )
+        spicy = RestaurantTag.objects.get(
+            restaurant=self.restaurant_a, name='Spicy',
+        )
+        response = self.client.post(
+            '/api/v1/restaurant-setup/menuitems/',
+            data={
+                'name': 'Veg Bowl',
+                'section': str(self.section_a.id),
+                'primary_price': '1200.00',
+                'tag_ids': [str(vegan.id), str(spicy.id)],
+            },
+            content_type='application/json',
+            **self._auth(self.owner_a),
+        )
+        self.assertEqual(response.status_code, 200, response.content)
+        item = MenuItem.objects.get(name='Veg Bowl', section=self.section_a)
+        tagged = set(
+            MenuItemTag.objects.filter(menu_item=item).values_list(
+                'tag_id', flat=True
+            )
+        )
+        self.assertEqual(tagged, {vegan.id, spicy.id})
+
+    def test_update_menuitem_with_tag_ids_replaces_relation(self):
+        from restaurants_app.models import RestaurantTag, MenuItemTag
+        item = MenuItem.objects.create(
+            name='Existing Item', section=self.section_a,
+            primary_price=1000,
+        )
+        vegan = RestaurantTag.objects.get(
+            restaurant=self.restaurant_a, name='Vegan',
+        )
+        spicy = RestaurantTag.objects.get(
+            restaurant=self.restaurant_a, name='Spicy',
+        )
+        gluten = RestaurantTag.objects.get(
+            restaurant=self.restaurant_a, name='Contains Gluten',
+        )
+        # Pre-seed with vegan + spicy.
+        MenuItemTag.objects.create(menu_item=item, tag=vegan)
+        MenuItemTag.objects.create(menu_item=item, tag=spicy)
+
+        # Replace with just gluten.
+        response = self.client.put(
+            '/api/v1/restaurant-setup/menuitems/',
+            data={
+                'id': str(item.id),
+                'tag_ids': [str(gluten.id)],
+            },
+            content_type='application/json',
+            **self._auth(self.owner_a),
+        )
+        self.assertEqual(response.status_code, 200, response.content)
+        tagged = set(
+            MenuItemTag.objects.filter(menu_item=item).values_list(
+                'tag_id', flat=True
+            )
+        )
+        self.assertEqual(tagged, {gluten.id})
+
+    def test_update_with_empty_tag_ids_clears_relation(self):
+        from restaurants_app.models import RestaurantTag, MenuItemTag
+        item = MenuItem.objects.create(
+            name='Clearable Item', section=self.section_a,
+            primary_price=1000,
+        )
+        vegan = RestaurantTag.objects.get(
+            restaurant=self.restaurant_a, name='Vegan',
+        )
+        MenuItemTag.objects.create(menu_item=item, tag=vegan)
+
+        response = self.client.put(
+            '/api/v1/restaurant-setup/menuitems/',
+            data={
+                'id': str(item.id),
+                'tag_ids': [],
+            },
+            content_type='application/json',
+            **self._auth(self.owner_a),
+        )
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertFalse(
+            MenuItemTag.objects.filter(menu_item=item).exists()
+        )
+
+    def test_create_rejects_cross_restaurant_tag_ids(self):
+        from restaurants_app.models import RestaurantTag, MenuItemTag
+        # A's section + B's tag → must be rejected.
+        b_vegan = RestaurantTag.objects.get(
+            restaurant=self.restaurant_b, name='Vegan',
+        )
+        response = self.client.post(
+            '/api/v1/restaurant-setup/menuitems/',
+            data={
+                'name': 'Hostile Item',
+                'section': str(self.section_a.id),
+                'primary_price': '1000.00',
+                'tag_ids': [str(b_vegan.id)],
+            },
+            content_type='application/json',
+            **self._auth(self.owner_a),
+        )
+        self.assertEqual(response.status_code, 400, response.content)
+        # Item must not have been created and no MenuItemTag link should exist.
+        self.assertFalse(
+            MenuItem.objects.filter(
+                name='Hostile Item', section=self.section_a
+            ).exists()
+        )
+        self.assertFalse(
+            MenuItemTag.objects.filter(tag=b_vegan).exists()
+        )
+
+    def test_update_rejects_cross_restaurant_tag_ids(self):
+        from restaurants_app.models import RestaurantTag, MenuItemTag
+        item = MenuItem.objects.create(
+            name='Item For Spoof', section=self.section_a,
+            primary_price=1000,
+        )
+        b_vegan = RestaurantTag.objects.get(
+            restaurant=self.restaurant_b, name='Vegan',
+        )
+        response = self.client.put(
+            '/api/v1/restaurant-setup/menuitems/',
+            data={
+                'id': str(item.id),
+                'tag_ids': [str(b_vegan.id)],
+            },
+            content_type='application/json',
+            **self._auth(self.owner_a),
+        )
+        self.assertEqual(response.status_code, 400, response.content)
+        self.assertFalse(
+            MenuItemTag.objects.filter(menu_item=item).exists()
+        )
+
+    def test_legacy_tags_field_no_longer_secretary_editable(self):
+        """Submitting `tags` (legacy free-text list) via PUT is a no-op.
+
+        Secretary only forwards keys listed in EDIT_INFORMATION. After
+        replacing `tags` with `tag_ids`, sending `tags: [...]` to the
+        menu item PUT endpoint must NOT write anywhere.
+        """
+        item = MenuItem.objects.create(
+            name='Legacy Tags Probe', section=self.section_a,
+            primary_price=1000,
+        )
+        response = self.client.put(
+            '/api/v1/restaurant-setup/menuitems/',
+            data={
+                'id': str(item.id),
+                'tags': ['vegan', 'spicy'],
+                'name': 'Renamed Probe',  # included so Secretary sees a change
+            },
+            content_type='application/json',
+            **self._auth(self.owner_a),
+        )
+        self.assertEqual(response.status_code, 200, response.content)
+        item.refresh_from_db()
+        # Legacy column must not have been written through Secretary.
+        self.assertEqual(item._legacy_tags, [])
+
+    def test_diner_facing_menuitem_returns_full_tag_objects(self):
+        """Confirm the serializer returns the documented tag shape.
+
+        Locks in the contract for the diner frontend: each tag entry
+        carries id/name/category/icon/colour.
+        """
+        from restaurants_app.models import RestaurantTag, MenuItemTag
+        from restaurants_app.serializers import SerializerPublicGetMenuItem
+        item = MenuItem.objects.create(
+            name='Tag Shape Item', section=self.section_a,
+            primary_price=1000,
+        )
+        dairy = RestaurantTag.objects.get(
+            restaurant=self.restaurant_a, name='Contains Dairy',
+        )
+        MenuItemTag.objects.create(menu_item=item, tag=dairy)
+        data = SerializerPublicGetMenuItem(item).data
+        self.assertEqual(len(data['tags']), 1)
+        tag_obj = data['tags'][0]
+        self.assertEqual(
+            set(tag_obj.keys()),
+            {'id', 'name', 'category', 'icon', 'colour'},
+        )
+        self.assertEqual(tag_obj['name'], 'Contains Dairy')
+        self.assertEqual(tag_obj['icon'], 'milk')
+        self.assertEqual(tag_obj['colour'], 'blue')
+
+
+class MenuItemSyncTagLinksTests(TestCase):
+    """Unit tests for MenuItem.sync_tag_links()."""
+
+    def setUp(self):
+        seed_user()
+        seed_restaurant()
+        seed_menu_section()
+        self.restaurant = Restaurant.objects.get(name=TEST_RESTAURANT_NAME)
+        self.section = MenuSection.objects.get(name=TEST_MENU_SECTION_NAME)
+        self.item = MenuItem.objects.create(
+            name='Sync Probe', section=self.section, primary_price=1000,
+        )
+
+    def test_sync_creates_links(self):
+        from restaurants_app.models import RestaurantTag, MenuItemTag
+        vegan = RestaurantTag.objects.get(
+            restaurant=self.restaurant, name='Vegan',
+        )
+        self.item.sync_tag_links([vegan.id])
+        self.assertEqual(
+            list(
+                MenuItemTag.objects.filter(menu_item=self.item).values_list(
+                    'tag_id', flat=True
+                )
+            ),
+            [vegan.id],
+        )
+
+    def test_sync_replaces_existing_links(self):
+        from restaurants_app.models import RestaurantTag, MenuItemTag
+        vegan = RestaurantTag.objects.get(
+            restaurant=self.restaurant, name='Vegan',
+        )
+        spicy = RestaurantTag.objects.get(
+            restaurant=self.restaurant, name='Spicy',
+        )
+        MenuItemTag.objects.create(menu_item=self.item, tag=vegan)
+        self.item.sync_tag_links([spicy.id])
+        tagged = set(
+            MenuItemTag.objects.filter(menu_item=self.item).values_list(
+                'tag_id', flat=True
+            )
+        )
+        self.assertEqual(tagged, {spicy.id})
+
+    def test_sync_dedupes_repeated_ids(self):
+        from restaurants_app.models import RestaurantTag, MenuItemTag
+        vegan = RestaurantTag.objects.get(
+            restaurant=self.restaurant, name='Vegan',
+        )
+        self.item.sync_tag_links([vegan.id, vegan.id, vegan.id])
+        self.assertEqual(
+            MenuItemTag.objects.filter(menu_item=self.item).count(), 1,
+        )
+
+    def test_sync_with_empty_list_clears_all(self):
+        from restaurants_app.models import RestaurantTag, MenuItemTag
+        vegan = RestaurantTag.objects.get(
+            restaurant=self.restaurant, name='Vegan',
+        )
+        MenuItemTag.objects.create(menu_item=self.item, tag=vegan)
+        self.item.sync_tag_links([])
+        self.assertFalse(
+            MenuItemTag.objects.filter(menu_item=self.item).exists()
+        )
