@@ -1912,3 +1912,215 @@ class BackendTechDebtBundleTests(TestCase):
         # Discount IS applied on the end_date itself under inclusive semantics.
         self.assertEqual(result['price'], Decimal('8000.00'))
 
+
+# ---------------------------------------------------------------------------
+# Image optimisation tests
+# ---------------------------------------------------------------------------
+
+import io  # noqa: E402
+import shutil  # noqa: E402
+import tempfile  # noqa: E402
+from unittest.mock import patch  # noqa: E402
+
+from django.core.files.uploadedfile import SimpleUploadedFile  # noqa: E402
+from django.core.management import call_command  # noqa: E402
+from django.test import override_settings  # noqa: E402
+from PIL import Image as PILImage  # noqa: E402
+
+from restaurants_app.utils.image_optimizer import optimize_image  # noqa: E402
+
+
+def _make_image_bytes(size=(1200, 1200), mode='RGB'):
+    """
+    Build an in-memory image in the requested PIL mode, encoded in a format
+    that preserves that mode on round-trip. Returns (bytes, extension).
+    """
+    if mode == 'CMYK':
+        img = PILImage.new(mode, size, color=(10, 20, 30, 40))
+        fmt = 'JPEG'
+        ext = 'jpg'
+    elif mode == 'RGBA':
+        img = PILImage.new(mode, size, color=(255, 0, 0, 200))
+        fmt = 'PNG'
+        ext = 'png'
+    elif mode == 'LA':
+        img = PILImage.new(mode, size, color=(128, 200))
+        fmt = 'PNG'
+        ext = 'png'
+    elif mode == 'P':
+        base = PILImage.new('RGB', size, color=(0, 128, 64))
+        img = base.convert('P', palette=PILImage.ADAPTIVE)
+        fmt = 'PNG'
+        ext = 'png'
+    else:
+        img = PILImage.new('RGB', size, color=(123, 200, 80))
+        fmt = 'JPEG'
+        ext = 'jpg'
+    buf = io.BytesIO()
+    img.save(buf, format=fmt)
+    buf.seek(0)
+    return buf.getvalue(), ext
+
+
+def _is_webp(blob):
+    return len(blob) >= 12 and blob[0:4] == b'RIFF' and blob[8:12] == b'WEBP'
+
+
+class _MediaTempDirMixin:
+    """
+    Per-test MEDIA_ROOT in a tempdir so writes don't pollute the repo
+    uploads/ directory and don't leak between tests.
+    """
+
+    def setUp(self):
+        self._media_tmp = tempfile.mkdtemp(prefix='dinify_test_media_')
+        self._media_override = override_settings(MEDIA_ROOT=self._media_tmp)
+        self._media_override.enable()
+        super().setUp()
+
+    def tearDown(self):
+        super().tearDown()
+        self._media_override.disable()
+        shutil.rmtree(self._media_tmp, ignore_errors=True)
+
+
+class ImageOptimizerTests(_MediaTempDirMixin, TestCase):
+    """Direct tests for restaurants_app.utils.image_optimizer.optimize_image."""
+
+    def setUp(self):
+        super().setUp()
+        seed_user()
+        seed_restaurant()
+        seed_menu_section()
+        self.section = MenuSection.objects.get(name=TEST_MENU_SECTION_NAME)
+
+    def _attach_image(self, item, filename, content):
+        """Attach a file to item.image WITHOUT triggering MenuItem.save()."""
+        upload = SimpleUploadedFile(filename, content)
+        item.image.save(filename, upload, save=False)
+
+    def _new_item_with_image(self, filename='photo.jpg', size=(1200, 1200), mode='RGB'):
+        item = MenuItem.objects.create(
+            name=f'Img test {filename}',
+            section=self.section,
+            primary_price=1000.0,
+        )
+        content, _ = _make_image_bytes(size=size, mode=mode)
+        self._attach_image(item, filename, content)
+        return item
+
+    def test_optimize_image_produces_webp_for_oversized_input(self):
+        item = self._new_item_with_image(filename='big.jpg', size=(1200, 1200))
+        result = optimize_image(item.image)
+        self.assertTrue(result)
+        self.assertTrue(item.image.name.endswith('.webp'))
+        with item.image.open('rb') as fh:
+            self.assertTrue(_is_webp(fh.read(16)))
+
+    def test_optimize_image_force_false_skips_small_image(self):
+        item = self._new_item_with_image(filename='small.jpg', size=(400, 400))
+        result = optimize_image(item.image)
+        self.assertFalse(result)
+        self.assertTrue(item.image.name.endswith('.jpg'))
+
+    def test_optimize_image_force_true_reprocesses_small_image(self):
+        item = self._new_item_with_image(filename='small2.jpg', size=(400, 400))
+        result = optimize_image(item.image, force=True)
+        self.assertTrue(result)
+        self.assertTrue(item.image.name.endswith('.webp'))
+        with item.image.open('rb') as fh:
+            self.assertTrue(_is_webp(fh.read(16)))
+
+    def test_optimize_image_handles_non_rgb_modes(self):
+        for mode in ('RGBA', 'P', 'LA', 'CMYK'):
+            with self.subTest(mode=mode):
+                content, ext = _make_image_bytes(size=(1200, 1200), mode=mode)
+                item = MenuItem.objects.create(
+                    name=f'Mode {mode}',
+                    section=self.section,
+                    primary_price=1000.0,
+                )
+                self._attach_image(item, f'mode_{mode.lower()}.{ext}', content)
+                result = optimize_image(item.image)
+                self.assertTrue(result, f'optimize_image failed for mode={mode}')
+                self.assertTrue(item.image.name.endswith('.webp'))
+
+
+class ReoptimiseMenuImagesCommandTests(_MediaTempDirMixin, TestCase):
+    """Tests for the reoptimise_menu_images management command."""
+
+    # Patch target: MenuItem.save() imports optimize_image lazily from this
+    # module path, so patching it here disables auto-optimisation during
+    # fixture setup, letting us seed real .jpg-named rows.
+    _PATCH_TARGET = 'restaurants_app.utils.image_optimizer.optimize_image'
+
+    def setUp(self):
+        super().setUp()
+        seed_user()
+        seed_restaurant()
+        seed_menu_section()
+        self.section = MenuSection.objects.get(name=TEST_MENU_SECTION_NAME)
+
+    def _seed_item_with_jpg(self, name, size=(1200, 1200)):
+        content, _ = _make_image_bytes(size=size, mode='RGB')
+        upload = SimpleUploadedFile(f'{name}.jpg', content, content_type='image/jpeg')
+        with patch(self._PATCH_TARGET, return_value=False):
+            item = MenuItem.objects.create(
+                name=name,
+                section=self.section,
+                primary_price=1000.0,
+                image=upload,
+            )
+        return item
+
+    def _seed_item_no_image(self, name):
+        return MenuItem.objects.create(
+            name=name,
+            section=self.section,
+            primary_price=1000.0,
+        )
+
+    def test_processes_items_and_skips_empty(self):
+        a = self._seed_item_with_jpg('Item A')
+        b = self._seed_item_with_jpg('Item B')
+        c = self._seed_item_no_image('Item C')
+        self.assertTrue(a.image.name.endswith('.jpg'))
+        self.assertTrue(b.image.name.endswith('.jpg'))
+        self.assertFalse(bool(c.image))
+
+        call_command('reoptimise_menu_images')
+
+        a.refresh_from_db()
+        b.refresh_from_db()
+        c.refresh_from_db()
+        self.assertTrue(a.image.name.endswith('.webp'))
+        self.assertTrue(b.image.name.endswith('.webp'))
+        self.assertFalse(bool(c.image))
+
+    def test_dry_run_makes_no_writes(self):
+        item = self._seed_item_with_jpg('Dry Run Item')
+        original_name = item.image.name
+        self.assertTrue(original_name.endswith('.jpg'))
+
+        call_command('reoptimise_menu_images', '--dry-run')
+
+        item.refresh_from_db()
+        self.assertEqual(item.image.name, original_name)
+        self.assertTrue(item.image.name.endswith('.jpg'))
+
+    def test_respects_limit(self):
+        items = [self._seed_item_with_jpg(f'Limit Item {i}') for i in range(3)]
+
+        call_command('reoptimise_menu_images', '--limit', '1')
+
+        webp_count = 0
+        jpg_count = 0
+        for it in items:
+            it.refresh_from_db()
+            if it.image.name.endswith('.webp'):
+                webp_count += 1
+            elif it.image.name.endswith('.jpg'):
+                jpg_count += 1
+        self.assertEqual(webp_count, 1)
+        self.assertEqual(jpg_count, 2)
+

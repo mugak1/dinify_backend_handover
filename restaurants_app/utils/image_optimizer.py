@@ -6,20 +6,24 @@ from django.core.files.uploadedfile import InMemoryUploadedFile
 logger = logging.getLogger(__name__)
 
 
-def optimize_image(image_field, max_width=800, max_height=800, quality=80):
+def optimize_image(image_field, max_width=600, max_height=600, quality=75, force=False):
     """
-    Resizes and compresses an image if it exceeds max dimensions.
-    Converts to JPEG for consistent compression.
-    Only processes if the image is actually larger than the max dimensions.
+    Resizes and compresses an image, writing it back as WebP.
+
+    By default the function skips images that already fit within
+    max_width x max_height. Pass force=True to re-encode regardless of
+    size (used by the reoptimise_menu_images management command to
+    migrate existing JPEGs to WebP).
 
     Args:
         image_field: Django ImageField instance
         max_width: Maximum width in pixels
         max_height: Maximum height in pixels
-        quality: JPEG compression quality (1-100)
+        quality: WebP compression quality (1-100)
+        force: If True, re-encode even when the image is already within bounds
 
     Returns:
-        True if image was optimized, False if no optimization needed
+        True if image was re-encoded, False if skipped or on failure
     """
     try:
         if not image_field or not image_field.name:
@@ -30,33 +34,31 @@ def optimize_image(image_field, max_width=800, max_height=800, quality=80):
 
         original_width, original_height = img.size
 
-        # Skip if already small enough
-        if original_width <= max_width and original_height <= max_height:
+        if not force and original_width <= max_width and original_height <= max_height:
             image_field.seek(0)
             return False
 
-        # Convert RGBA/P to RGB for JPEG compatibility
-        if img.mode in ('RGBA', 'P'):
+        if img.mode in ('RGBA', 'P', 'LA', 'CMYK'):
+            img = img.convert('RGB')
+        elif img.mode != 'RGB':
             img = img.convert('RGB')
 
-        # Resize maintaining aspect ratio
         img.thumbnail((max_width, max_height), Image.LANCZOS)
 
-        # Save to buffer
         buffer = BytesIO()
-        img.save(buffer, format='JPEG', quality=quality, optimize=True)
+        img.save(buffer, format='WEBP', quality=quality, method=6)
         buffer.seek(0)
 
-        # Generate new filename with .jpg extension
         name = image_field.name
         if '.' in name:
-            name = name.rsplit('.', 1)[0] + '.jpg'
+            name = name.rsplit('.', 1)[0] + '.webp'
+        else:
+            name = name + '.webp'
 
-        # Save back to the field
         image_field.save(
             name,
             InMemoryUploadedFile(
-                buffer, 'ImageField', name, 'image/jpeg',
+                buffer, 'ImageField', name, 'image/webp',
                 buffer.getbuffer().nbytes, None
             ),
             save=False  # Don't trigger another model save
