@@ -227,12 +227,6 @@ class MenuItem(BaseModel):
     description = models.TextField(null=True, blank=True)
     calories = models.PositiveIntegerField(null=True, blank=True, help_text="Calorie count (kcal)")
     allergens = models.JSONField(default=list)
-    # Legacy free-form tag column. Retained as a safety net for the
-    # tag-catalog rollout; reads have moved to the `tags` M2M below.
-    # Scheduled for removal in a follow-up PR once the new schema is verified.
-    _legacy_tags = models.JSONField(default=list, blank=True, db_column='tags')
-    # Structured tag catalog (post-0044). The legacy `_legacy_tags`
-    # JSON column above is preserved for one release as a safety net.
     tags = models.ManyToManyField(
         'RestaurantTag',
         through='MenuItemTag',
