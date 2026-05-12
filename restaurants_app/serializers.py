@@ -328,9 +328,6 @@ class SerializerPublicGetMenuItem(ModelSerializer):
         )
 
     def get_tags(self, menu_item):
-        # Returns the full tag objects linked via the M2M catalog. The
-        # legacy free-form `tags` text column lives on as `_legacy_tags`
-        # for one release before being dropped.
         tags = menu_item.tags.all().order_by('display_order', 'name')
         return [
             {

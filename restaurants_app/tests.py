@@ -1706,108 +1706,6 @@ class DedicatedEndpointAuthorizationTests(TestCase):
         )
 
 
-class MenuItemAllergensToTagsMigrationTests(TestCase):
-    """
-    Locks in the data migration in
-    restaurants_app/migrations/0043_migrate_menuitem_allergens_to_tags.py.
-    The migration moves every saved value out of MenuItem.allergens and
-    into MenuItem.tags, deduplicating while preserving order. allergens
-    is reset to [] for the future allergen-warning feature.
-
-    The migration function is invoked directly with django's live app
-    registry — no schema changes are exercised.
-    """
-
-    def setUp(self):
-        owner = User.objects.create_user(
-            first_name='AllergenMig', last_name='Owner',
-            email='allergen_mig_owner@test.com',
-            phone_number='256700000080',
-            username='256700000080', country='Uganda', password='password',
-            roles=[],
-        )
-        self.restaurant = Restaurant.objects.create(
-            name='Allergen Migration Restaurant', location='loc',
-            status=RestaurantStatus_Active, owner=owner,
-        )
-        self.section = MenuSection.objects.create(
-            name='Mains', restaurant=self.restaurant,
-        )
-
-    def _item(self, name, allergens=None, legacy_tags=None):
-        # MenuItem.tags became an M2M in 0044; the JSON column was
-        # renamed to `_legacy_tags`. The 0043 migration moves allergens
-        # into what is now the legacy column.
-        kwargs = {
-            'name': name,
-            'section': self.section,
-            'primary_price': 1000.0,
-        }
-        if allergens is not None:
-            kwargs['allergens'] = allergens
-        if legacy_tags is not None:
-            kwargs['_legacy_tags'] = legacy_tags
-        return MenuItem.objects.create(**kwargs)
-
-    def _run_migration(self):
-        # The live 0043 module mutates `item.tags`, which is now an M2M
-        # and incompatible with assignment. To preserve the regression
-        # guard against the historical merge/dedupe behavior, the
-        # equivalent logic is re-applied here against `_legacy_tags`.
-        for item in MenuItem.objects.iterator():
-            allergens = item.allergens or []
-            if not isinstance(allergens, list) or not allergens:
-                continue
-            existing = item._legacy_tags or []
-            if not isinstance(existing, list):
-                existing = []
-            merged = list(existing)
-            for value in allergens:
-                if value not in merged:
-                    merged.append(value)
-            item._legacy_tags = merged
-            item.allergens = []
-            item.save(update_fields=['_legacy_tags', 'allergens'])
-
-    def test_migration_moves_allergens_to_tags_when_tags_empty(self):
-        item = self._item(
-            'Plain', allergens=['vegan', 'spicy'], legacy_tags=[],
-        )
-        self._run_migration()
-        item.refresh_from_db()
-        self.assertEqual(item._legacy_tags, ['vegan', 'spicy'])
-        self.assertEqual(item.allergens, [])
-
-    def test_migration_merges_when_tags_already_populated(self):
-        item = self._item(
-            'Both', allergens=['vegan'], legacy_tags=['popular'],
-        )
-        self._run_migration()
-        item.refresh_from_db()
-        # Existing tags first, then allergens entries appended.
-        self.assertEqual(item._legacy_tags, ['popular', 'vegan'])
-        self.assertEqual(item.allergens, [])
-
-    def test_migration_dedupes_overlapping_values(self):
-        item = self._item(
-            'Overlap', allergens=['vegan', 'spicy'], legacy_tags=['vegan'],
-        )
-        self._run_migration()
-        item.refresh_from_db()
-        # 'vegan' appears once; 'spicy' is appended after.
-        self.assertEqual(item._legacy_tags, ['vegan', 'spicy'])
-        self.assertEqual(item.allergens, [])
-
-    def test_migration_skips_empty_allergens(self):
-        item = self._item(
-            'Skip', allergens=[], legacy_tags=['existing'],
-        )
-        self._run_migration()
-        item.refresh_from_db()
-        self.assertEqual(item._legacy_tags, ['existing'])
-        self.assertEqual(item.allergens, [])
-
-
 class BackendTechDebtBundleTests(TestCase):
     """Regression guards for the con_orders.py structural fixes:
     if/elif conversion of mutually-exclusive discount branches and the
@@ -2321,117 +2219,6 @@ class RestaurantTagSeedSignalTests(TestCase):
         )
 
 
-class RestaurantTagBackfillMigrationTests(TestCase):
-    """The 0045 data-migration logic must seed presets and backfill links."""
-
-    def setUp(self):
-        seed_user()
-
-    def _apply_backfill(self, restaurant):
-        """Manually invoke the same logic the data migration runs."""
-        from restaurants_app.models import (
-            RestaurantTag, MenuItemTag, MenuItem,
-        )
-        # Import the migration module dynamically — the filename
-        # starts with a digit so importlib is required.
-        import importlib
-        module = importlib.import_module(
-            'restaurants_app.migrations.0045_seed_and_backfill_restaurant_tag_catalog'
-        )
-
-        class _Apps:
-            @staticmethod
-            def get_model(_app_label, name):
-                return {
-                    'Restaurant': Restaurant,
-                    'MenuItem': MenuItem,
-                    'RestaurantTag': RestaurantTag,
-                    'MenuItemTag': MenuItemTag,
-                }[name]
-
-        module.seed_and_backfill(_Apps(), None)
-
-    def test_backfill_links_known_preset_case_insensitive(self):
-        from restaurants_app.models import RestaurantTag, MenuItemTag
-        owner = User.objects.get(username=TEST_PHONE)
-        restaurant = Restaurant.objects.create(
-            name='Backfill R1', location='loc', owner=owner,
-        )
-        section = MenuSection.objects.create(name='Mains', restaurant=restaurant)
-        # Pre-existing free-form tag with a case variant.
-        item = MenuItem.objects.create(
-            name='Pizza', section=section, primary_price=1000,
-        )
-        item._legacy_tags = ['contains gluten', 'Vegan']
-        item.save(update_fields=['_legacy_tags'])
-
-        # Wipe any links the signal may have left, then run backfill.
-        MenuItemTag.objects.filter(menu_item=item).delete()
-        self._apply_backfill(restaurant)
-
-        linked_names = set(
-            MenuItemTag.objects.filter(menu_item=item)
-            .values_list('tag__name', flat=True)
-        )
-        self.assertEqual(linked_names, {'Contains Gluten', 'Vegan'})
-        # No new custom tag was created — both matched seeded presets.
-        self.assertEqual(
-            RestaurantTag.objects.filter(restaurant=restaurant).count(), 14,
-        )
-
-    def test_backfill_creates_custom_tag_for_unmatched(self):
-        from restaurants_app.models import RestaurantTag, MenuItemTag
-        owner = User.objects.get(username=TEST_PHONE)
-        restaurant = Restaurant.objects.create(
-            name='Backfill R2', location='loc', owner=owner,
-        )
-        section = MenuSection.objects.create(name='Mains', restaurant=restaurant)
-        item = MenuItem.objects.create(
-            name='Local Special', section=section, primary_price=1000,
-        )
-        item._legacy_tags = ['House Favourite']
-        item.save(update_fields=['_legacy_tags'])
-
-        MenuItemTag.objects.filter(menu_item=item).delete()
-        self._apply_backfill(restaurant)
-
-        custom = RestaurantTag.objects.get(
-            restaurant=restaurant, name='House Favourite',
-        )
-        self.assertEqual(custom.category, 'descriptor')
-        self.assertEqual(custom.colour, 'gray')
-        self.assertIsNone(custom.icon)
-        self.assertFalse(custom.is_system_preset)
-        self.assertTrue(
-            MenuItemTag.objects.filter(menu_item=item, tag=custom).exists()
-        )
-
-    def test_backfill_is_idempotent(self):
-        from restaurants_app.models import RestaurantTag, MenuItemTag
-        owner = User.objects.get(username=TEST_PHONE)
-        restaurant = Restaurant.objects.create(
-            name='Backfill R3', location='loc', owner=owner,
-        )
-        section = MenuSection.objects.create(name='Mains', restaurant=restaurant)
-        item = MenuItem.objects.create(
-            name='Salad', section=section, primary_price=1000,
-        )
-        item._legacy_tags = ['Vegan', 'House Special']
-        item.save(update_fields=['_legacy_tags'])
-
-        self._apply_backfill(restaurant)
-        self._apply_backfill(restaurant)
-
-        # Each preset seeded exactly once (14) + 1 custom = 15.
-        self.assertEqual(
-            RestaurantTag.objects.filter(restaurant=restaurant).count(), 15,
-        )
-        # Each link exists exactly once.
-        self.assertEqual(
-            MenuItemTag.objects.filter(menu_item=item).count(), 2,
-        )
-
-
 class SerializerPublicGetMenuItemTagShapeTests(TestCase):
     """SerializerPublicGetMenuItem must return full tag objects."""
 
@@ -2849,6 +2636,7 @@ class MenuItemTagIdsTests(TestCase):
         replacing `tags` with `tag_ids`, sending `tags: [...]` to the
         menu item PUT endpoint must NOT write anywhere.
         """
+        from restaurants_app.models import MenuItemTag
         item = MenuItem.objects.create(
             name='Legacy Tags Probe', section=self.section_a,
             primary_price=1000,
@@ -2865,8 +2653,10 @@ class MenuItemTagIdsTests(TestCase):
         )
         self.assertEqual(response.status_code, 200, response.content)
         item.refresh_from_db()
-        # Legacy column must not have been written through Secretary.
-        self.assertEqual(item._legacy_tags, [])
+        # Free-form `tags` payload must not have created any M2M links.
+        self.assertFalse(
+            MenuItemTag.objects.filter(menu_item=item).exists()
+        )
 
     def test_diner_facing_menuitem_returns_full_tag_objects(self):
         """Confirm the serializer returns the documented tag shape.
