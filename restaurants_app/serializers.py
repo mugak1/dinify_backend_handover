@@ -529,7 +529,12 @@ class SerializerPublicGetTableDetails(ModelSerializer):
             'cover_photo': cover_photo,
             'branding_configuration': restaurant.branding_configuration,
             'menu_approval_status': restaurant.first_time_menu_approval_decision,
-            'preset_tags': restaurant.preset_tags or []
+            'preset_tags': SerializerRestaurantTag(
+                RestaurantTag.objects.filter(
+                    restaurant=restaurant, deleted=False,
+                ).order_by('display_order', 'name'),
+                many=True,
+            ).data
         }
 
     def get_available(self, table):
