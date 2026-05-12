@@ -2751,3 +2751,62 @@ class MenuItemSyncTagLinksTests(TestCase):
         self.assertFalse(
             MenuItemTag.objects.filter(menu_item=self.item).exists()
         )
+
+
+class PublicTableScanPresetTagsTests(TestCase):
+    """
+    The diner-side table-scan response must surface the restaurant's
+    RestaurantTag rows as `preset_tags`, NOT the legacy
+    Restaurant.preset_tags JSONField. The JSONField is never written at
+    seed time, so reading it left the diner filter button hidden on every
+    freshly-onboarded restaurant.
+    """
+
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            first_name='Scan', last_name='Owner',
+            email='scan_owner@test.com', phone_number='256700000061',
+            username='256700000061', country='Uganda', password='password',
+            roles=[],
+        )
+        self.restaurant = Restaurant.objects.create(
+            name='Scan Tags Restaurant', location='loc',
+            status=RestaurantStatus_Active, owner=self.owner,
+        )
+        self.table = Table.objects.create(
+            number=901, restaurant=self.restaurant,
+        )
+
+    def test_table_scan_returns_restaurant_tag_rows_not_jsonfield(self):
+        from restaurants_app.controllers.handle_diner_journey import handle_table_scan
+        result = handle_table_scan(table_id=str(self.table.id))
+        self.assertEqual(result['status'], 200)
+        preset_tags = result['data']['restaurant']['preset_tags']
+        self.assertEqual(len(preset_tags), 14)
+        for tag in preset_tags:
+            self.assertIn('id', tag)
+            self.assertIn('name', tag)
+            self.assertIn('category', tag)
+            self.assertIn('filterable', tag)
+            self.assertIn('colour', tag)
+            self.assertIn('icon', tag)
+
+    def test_table_scan_omits_soft_deleted_tags(self):
+        from restaurants_app.models import RestaurantTag
+        from restaurants_app.controllers.handle_diner_journey import handle_table_scan
+        tag = RestaurantTag.objects.filter(restaurant=self.restaurant).first()
+        tag.deleted = True
+        tag.save(update_fields=['deleted'])
+        result = handle_table_scan(table_id=str(self.table.id))
+        ids = [t['id'] for t in result['data']['restaurant']['preset_tags']]
+        self.assertNotIn(str(tag.id), ids)
+        self.assertEqual(len(result['data']['restaurant']['preset_tags']), 13)
+
+    def test_table_scan_ignores_legacy_jsonfield(self):
+        from restaurants_app.controllers.handle_diner_journey import handle_table_scan
+        self.restaurant.preset_tags = [{'id': 'stale-uuid', 'name': 'Stale'}]
+        self.restaurant.save(update_fields=['preset_tags'])
+        result = handle_table_scan(table_id=str(self.table.id))
+        names = [t['name'] for t in result['data']['restaurant']['preset_tags']]
+        self.assertNotIn('Stale', names)
+        self.assertEqual(len(result['data']['restaurant']['preset_tags']), 14)
